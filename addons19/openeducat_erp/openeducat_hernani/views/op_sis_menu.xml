@@ -2,6 +2,11 @@
 <odoo>
     <data>
 
+        <!-- Menú raíz del SIS: acción por defecto = dashboard -->
+        <record id="openeducat_core.menu_op_school_root" model="ir.ui.menu">
+            <field name="action" ref="openeducat_hernani.action_sis_dashboard"/>
+        </record>
+
         <!-- 1 · Mintegiak -->
         <menuitem id="menu_op_department_sis_main"
                   name="Mintegiak"

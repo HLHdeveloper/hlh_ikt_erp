@@ -19,11 +19,12 @@ Gestión del centro educativo CIFP Gizarte Berrikuntza LHII (Hernani) con Odoo 1
 ## Comandos habituales
 
 ```bash
-# Actualizar módulo personalizado
+# Actualizar módulo personalizado y relanzar el servidor web
 docker exec odoo19 odoo -u openeducat_hernani -d kudeaketa --stop-after-init
-
-# Relanzar Odoo tras actualización
-docker start odoo19
+docker restart odoo19
+# IMPORTANTE: usar siempre `docker restart`, nunca `docker start`.
+# `docker start` es no-op si el contenedor ya corre y el proceso web
+# queda con la caché de menús/vistas antigua.
 
 # Relanzar Odoo cuando se añade un directorio static/ nuevo al módulo
 # (docker start es no-op si el contenedor ya corre; hay que hacer restart
