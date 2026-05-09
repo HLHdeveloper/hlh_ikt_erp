@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- ══════════════════════════════════════════════════════
+             1. IKASLEAK TALDEKA (Alumnos por grupo)
+        ══════════════════════════════════════════════════════ -->
+
+        <record id="view_report_batch_student_tree" model="ir.ui.view">
+            <field name="name">op.report.batch.student.tree</field>
+            <field name="model">op.report.batch.student</field>
+            <field name="arch" type="xml">
+                <tree string="Ikasleak taldeka" default_order="batch_name">
+                    <field name="batch_name" string="Taldea"/>
+                    <field name="student_count" string="Ikasle kop."/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_report_batch_student_graph" model="ir.ui.view">
+            <field name="name">op.report.batch.student.graph</field>
+            <field name="model">op.report.batch.student</field>
+            <field name="arch" type="xml">
+                <graph string="Ikasleak taldeka" type="bar">
+                    <field name="batch_name" type="row"/>
+                    <field name="student_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_report_batch_student_pivot" model="ir.ui.view">
+            <field name="name">op.report.batch.student.pivot</field>
+            <field name="model">op.report.batch.student</field>
+            <field name="arch" type="xml">
+                <pivot string="Ikasleak taldeka">
+                    <field name="batch_name" type="row"/>
+                    <field name="student_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="act_report_batch_student" model="ir.actions.act_window">
+            <field name="name">Ikasleak taldeka</field>
+            <field name="res_model">op.report.batch.student</field>
+            <field name="view_mode">tree,graph,pivot</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════
+             2. IRAKASLEAK MINTEGIKA (Profesores por departamento)
+        ══════════════════════════════════════════════════════ -->
+
+        <record id="view_report_dept_faculty_tree" model="ir.ui.view">
+            <field name="name">op.report.dept.faculty.tree</field>
+            <field name="model">op.report.dept.faculty</field>
+            <field name="arch" type="xml">
+                <tree string="Irakasleak mintegika" default_order="faculty_count desc">
+                    <field name="department_name" string="Mintegia"/>
+                    <field name="faculty_count" string="Irakasle kop."/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_report_dept_faculty_graph" model="ir.ui.view">
+            <field name="name">op.report.dept.faculty.graph</field>
+            <field name="model">op.report.dept.faculty</field>
+            <field name="arch" type="xml">
+                <graph string="Irakasleak mintegika" type="bar">
+                    <field name="department_name" type="row"/>
+                    <field name="faculty_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_report_dept_faculty_pivot" model="ir.ui.view">
+            <field name="name">op.report.dept.faculty.pivot</field>
+            <field name="model">op.report.dept.faculty</field>
+            <field name="arch" type="xml">
+                <pivot string="Irakasleak mintegika">
+                    <field name="department_name" type="row"/>
+                    <field name="faculty_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="act_report_dept_faculty" model="ir.actions.act_window">
+            <field name="name">Irakasleak mintegika</field>
+            <field name="res_model">op.report.dept.faculty</field>
+            <field name="view_mode">tree,graph,pivot</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════
+             3. GREBAK MINTEGIKA (Bajas por departamento)
+        ══════════════════════════════════════════════════════ -->
+
+        <record id="view_report_dept_greba_tree" model="ir.ui.view">
+            <field name="name">op.report.dept.greba.tree</field>
+            <field name="model">op.report.dept.greba</field>
+            <field name="arch" type="xml">
+                <tree string="Grebak mintegika" default_order="greba_count desc">
+                    <field name="department_name" string="Mintegia"/>
+                    <field name="greba_count" string="Greba parte-hartzeak"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_report_dept_greba_graph" model="ir.ui.view">
+            <field name="name">op.report.dept.greba.graph</field>
+            <field name="model">op.report.dept.greba</field>
+            <field name="arch" type="xml">
+                <graph string="Grebak mintegika" type="bar">
+                    <field name="department_name" type="row"/>
+                    <field name="greba_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_report_dept_greba_pivot" model="ir.ui.view">
+            <field name="name">op.report.dept.greba.pivot</field>
+            <field name="model">op.report.dept.greba</field>
+            <field name="arch" type="xml">
+                <pivot string="Grebak mintegika">
+                    <field name="department_name" type="row"/>
+                    <field name="greba_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="act_report_dept_greba" model="ir.actions.act_window">
+            <field name="name">Grebak mintegika</field>
+            <field name="res_model">op.report.dept.greba</field>
+            <field name="view_mode">tree,graph,pivot</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════
+             4. ORDEZKAPENAK MINTEGIKA (Sustituciones por departamento)
+        ══════════════════════════════════════════════════════ -->
+
+        <record id="view_report_dept_ordezkapen_tree" model="ir.ui.view">
+            <field name="name">op.report.dept.ordezkapen.tree</field>
+            <field name="model">op.report.dept.ordezkapen</field>
+            <field name="arch" type="xml">
+                <tree string="Ordezkapenak mintegika" default_order="ordezkapen_count desc">
+                    <field name="department_name" string="Mintegia"/>
+                    <field name="ordezkapen_count" string="Ordezkapen kop."/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_report_dept_ordezkapen_graph" model="ir.ui.view">
+            <field name="name">op.report.dept.ordezkapen.graph</field>
+            <field name="model">op.report.dept.ordezkapen</field>
+            <field name="arch" type="xml">
+                <graph string="Ordezkapenak mintegika" type="bar">
+                    <field name="department_name" type="row"/>
+                    <field name="ordezkapen_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_report_dept_ordezkapen_pivot" model="ir.ui.view">
+            <field name="name">op.report.dept.ordezkapen.pivot</field>
+            <field name="model">op.report.dept.ordezkapen</field>
+            <field name="arch" type="xml">
+                <pivot string="Ordezkapenak mintegika">
+                    <field name="department_name" type="row"/>
+                    <field name="ordezkapen_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="act_report_dept_ordezkapen" model="ir.actions.act_window">
+            <field name="name">Ordezkapenak mintegika</field>
+            <field name="res_model">op.report.dept.ordezkapen</field>
+            <field name="view_mode">tree,graph,pivot</field>
+        </record>
+
+        <!-- ══════════════════════════════════════════════════════
+             5. IRAKASLE GREBA PARTE-HARTZAILEAK
+             (Profesores con más bajas, orden descendente)
+        ══════════════════════════════════════════════════════ -->
+
+        <record id="view_report_faculty_greba_tree" model="ir.ui.view">
+            <field name="name">op.report.faculty.greba.tree</field>
+            <field name="model">op.report.faculty.greba</field>
+            <field name="arch" type="xml">
+                <tree string="Irakasleak greba kopuruaren arabera"
+                      default_order="greba_count desc">
+                    <field name="faculty_name" string="Irakaslea"/>
+                    <field name="department_name" string="Mintegia"/>
+                    <field name="greba_count" string="Greba kop."/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_report_faculty_greba_graph" model="ir.ui.view">
+            <field name="name">op.report.faculty.greba.graph</field>
+            <field name="model">op.report.faculty.greba</field>
+            <field name="arch" type="xml">
+                <graph string="Irakasleak greba kopuruaren arabera" type="bar">
+                    <field name="faculty_name" type="row"/>
+                    <field name="greba_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="act_report_faculty_greba" model="ir.actions.act_window">
+            <field name="name">Irakasleak greba kopuruaren arabera</field>
+            <field name="res_model">op.report.faculty.greba</field>
+            <field name="view_mode">tree,graph</field>
+        </record>
+
+        <!-- Client action del dashboard -->
+        <record id="action_sis_dashboard" model="ir.actions.client">
+            <field name="name">Txostenak</field>
+            <field name="tag">sis_dashboard_action</field>
+        </record>
+
+    </data>
+</odoo>

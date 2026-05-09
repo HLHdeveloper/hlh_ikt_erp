@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Taldeen fitxan irakasleak eta ikasleak gehitu -->
+        <record id="view_op_batch_form_hernani" model="ir.ui.view">
+            <field name="name">op.batch.form.hernani</field>
+            <field name="model">op.batch</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_batch_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+
+                <!-- Notebook nagusiaren ondoren gehitu -->
+                <xpath expr="//sheet/group" position="after">
+                    <notebook>
+
+                        <!-- Irakasleak -->
+                        <page name="profesores" string="Irakasleak">
+                            <field name="faculty_ids" nolabel="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="email"/>
+                                    <field name="main_department_id" string="Mintegi nagusia"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Matrikulatutako ikasleak -->
+                        <page name="alumnos" string="Matrikulatutako ikasleak">
+                            <field name="student_course_ids" nolabel="1" readonly="1">
+                                <tree>
+                                    <field name="student_id" string="Ikaslea"/>
+                                    <field name="roll_number" string="Matrikula zk."/>
+                                    <field name="academic_years_id" string="Ikasturtea"/>
+                                    <field name="state" string="Egoera"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                    </notebook>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

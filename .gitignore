@@ -1,0 +1,23 @@
+# Volúmenes Docker — datos de BD y filestore de Odoo
+odoo-data19/
+postgres-data19/
+
+# Configuración con credenciales
+config19/
+
+# Archivos temporales y POT/PO de trabajo
+*.pot
+openeducat_eu.pot
+base_eu.pot
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude Code local settings
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

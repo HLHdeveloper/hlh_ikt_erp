@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- 1 · Mintegiak -->
+        <menuitem id="menu_op_department_sis_main"
+                  name="Mintegiak"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="10"
+                  action="openeducat_core.act_open_op_department_view"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+        <!-- 2 · Irakasleak (seq 20, ya existe en openeducat_core) -->
+
+        <!-- 3 · Taldeak (renombrar "Grupos", seq 30) -->
+        <record id="openeducat_core.menu_op_batch_main" model="ir.ui.menu">
+            <field name="name">Taldeak</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <!-- 4 · Moduluak (seq 40) -->
+        <menuitem id="menu_op_subject_sis_main"
+                  name="Moduluak"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="40"
+                  action="openeducat_core.act_open_op_subject_view"
+                  groups="openeducat_core.group_op_back_office_admin,openeducat_core.group_op_faculty"/>
+
+        <!-- 5 · Ikasleak (seq 50) -->
+        <record id="openeducat_core.menu_op_school_main" model="ir.ui.menu">
+            <field name="sequence">50</field>
+        </record>
+
+        <!-- 6 · General (seq 60) -->
+        <record id="openeducat_core.menu_op_general_main" model="ir.ui.menu">
+            <field name="sequence">60</field>
+        </record>
+
+        <!-- 7 · Reporting (seq 70) → dashboard directo, sin submenús -->
+        <record id="openeducat_core.menu_op_report_main" model="ir.ui.menu">
+            <field name="sequence">70</field>
+            <field name="action" ref="openeducat_hernani.action_sis_dashboard"/>
+        </record>
+
+        <!-- Eliminar los submenús del Reporting anterior -->
+        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_batch_student"/>
+        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_dept_faculty"/>
+        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_dept_greba"/>
+        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_dept_ordezkapen"/>
+        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_faculty_greba"/>
+
+        <!-- Mover Fees Analysis a Konfigurazioa para que Reporting no tenga hijos -->
+        <record id="openeducat_fees.menu_op_fees_analysis_report_main" model="ir.ui.menu">
+            <field name="parent_id" ref="openeducat_core.menu_op_school_config"/>
+        </record>
+
+        <!-- 8 · Konfigurazioa (seq 80) -->
+        <record id="openeducat_core.menu_op_school_config" model="ir.ui.menu">
+            <field name="name">Konfigurazioa</field>
+            <field name="sequence">80</field>
+        </record>
+
+    </data>
+</odoo>

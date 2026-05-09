@@ -1,0 +1,33 @@
+{
+    'name': 'OpenEduCat Hernani - CIFP Gizarte Berrikuntza',
+    'version': '17.0.1.0',
+    'license': 'LGPL-3',
+    'category': 'Education',
+    'sequence': 5,
+    'summary': 'Extensión de OpenEduCat para el CIFP Gizarte Berrikuntza LHII (Hernani)',
+    'author': 'CIFP Gizarte Berrikuntza',
+    'depends': ['openeducat_core', 'openeducat_parent', 'openeducat_classroom'],
+    'assets': {
+        'web.assets_backend': [
+            'openeducat_hernani/static/src/css/hernani.css',
+            'openeducat_hernani/static/src/components/sis_dashboard.js',
+            'openeducat_hernani/static/src/xml/sis_dashboard.xml',
+        ],
+    },
+    'data': [
+        'security/ir.model.access.csv',
+        'views/op_kargu_views.xml',
+        'views/op_greba_views.xml',
+        'views/op_ordezkapen_views.xml',
+        'views/op_faculty_views.xml',
+        'views/op_batch_views.xml',
+        'views/op_department_views.xml',
+        'views/op_course_views.xml',
+        'views/op_report_views.xml',
+        'views/op_sis_menu.xml',
+        'views/op_sis_translations.xml',
+    ],
+    'installable': True,
+    'auto_install': False,
+    'application': False,
+}

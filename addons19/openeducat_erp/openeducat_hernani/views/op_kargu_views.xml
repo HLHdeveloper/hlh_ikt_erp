@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Tree -->
+        <record id="view_op_kargu_tree" model="ir.ui.view">
+            <field name="name">op.kargu.tree</field>
+            <field name="model">op.kargu</field>
+            <field name="arch" type="xml">
+                <tree string="Karguak">
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="gsuite_email"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Form -->
+        <record id="view_op_kargu_form" model="ir.ui.view">
+            <field name="name">op.kargu.form</field>
+            <field name="model">op.kargu</field>
+            <field name="arch" type="xml">
+                <form string="Kargua">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="code"/>
+                                <field name="name"/>
+                            </group>
+                            <group>
+                                <field name="gsuite_email"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page name="faculty" string="Irakasleak">
+                                <field name="faculty_ids" nolabel="1">
+                                    <tree>
+                                        <field name="name"/>
+                                        <field name="email"/>
+                                        <field name="main_department_id"/>
+                                        <field name="active"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Search -->
+        <record id="view_op_kargu_search" model="ir.ui.view">
+            <field name="name">op.kargu.search</field>
+            <field name="model">op.kargu</field>
+            <field name="arch" type="xml">
+                <search string="Karguak">
+                    <field name="code"/>
+                    <field name="name"/>
+                </search>
+            </field>
+        </record>
+
+        <!-- Action -->
+        <record model="ir.actions.act_window" id="act_open_op_kargu_view">
+            <field name="name">Irakasleen Karguak</field>
+            <field name="res_model">op.kargu</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="view_op_kargu_search"/>
+        </record>
+
+        <!-- Menu bajo SIS > Configuración -->
+        <menuitem id="menu_op_kargu"
+                  name="Irakasleen Karguak"
+                  parent="openeducat_core.menu_op_school_config"
+                  sequence="80"
+                  action="act_open_op_kargu_view"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+    </data>
+</odoo>

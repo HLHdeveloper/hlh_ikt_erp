@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Tree -->
+        <record id="view_op_greba_tree" model="ir.ui.view">
+            <field name="name">op.greba.tree</field>
+            <field name="model">op.greba</field>
+            <field name="arch" type="xml">
+                <tree string="Grebak">
+                    <field name="code"/>
+                    <field name="date"/>
+                    <field name="reason"/>
+                    <field name="faculty_count" string="Parte-hartzaileak"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Form -->
+        <record id="view_op_greba_form" model="ir.ui.view">
+            <field name="name">op.greba.form</field>
+            <field name="model">op.greba</field>
+            <field name="arch" type="xml">
+                <form string="Greba">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="code"/>
+                                <field name="date"/>
+                            </group>
+                            <group>
+                                <field name="reason"/>
+                                <field name="faculty_count" string="Parte-hartzaileen kop."/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page name="faculty" string="Parte-hartutako irakasleak">
+                                <field name="faculty_ids" nolabel="1">
+                                    <tree>
+                                        <field name="name"/>
+                                        <field name="email"/>
+                                        <field name="main_department_id"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Search -->
+        <record id="view_op_greba_search" model="ir.ui.view">
+            <field name="name">op.greba.search</field>
+            <field name="model">op.greba</field>
+            <field name="arch" type="xml">
+                <search string="Grebak">
+                    <field name="code"/>
+                    <field name="date"/>
+                    <field name="reason"/>
+                    <group expand="0" string="Taldekatu...">
+                        <filter name="group_by_date" string="Data"
+                                context="{'group_by':'date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Action -->
+        <record model="ir.actions.act_window" id="act_open_op_greba_view">
+            <field name="name">Irakasleen Grebak</field>
+            <field name="res_model">op.greba</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="view_op_greba_search"/>
+        </record>
+
+        <!-- Menu bajo SIS > Configuración -->
+        <menuitem id="menu_op_greba"
+                  name="Irakasleen Grebak"
+                  parent="openeducat_core.menu_op_school_config"
+                  sequence="85"
+                  action="act_open_op_greba_view"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+    </data>
+</odoo>

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: openeducat_postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo123
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  odoo:
+    image: odoo:15.0
+    container_name: openeducat_odoo
+    depends_on:
+      - postgres
+    ports:
+      - "8069:8069"
+    volumes:
+      - ./addons:/mnt/extra-addons
+      - ./config:/etc/odoo
+      - ./odoo-data:/var/lib/odoo
+    environment:
+      - HOST=postgres
+      - USER=odoo
+      - PASSWORD=odoo123
+    restart: unless-stopped
+    command: -- --dev=reload

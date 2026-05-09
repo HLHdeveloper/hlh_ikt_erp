@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Tree -->
+        <record id="view_op_ordezkapen_tree" model="ir.ui.view">
+            <field name="name">op.ordezkapen.tree</field>
+            <field name="model">op.ordezkapen</field>
+            <field name="arch" type="xml">
+                <tree string="Ordezkapenak">
+                    <field name="titular_id" string="Titularra"/>
+                    <field name="ordezko_id" string="Ordezkoa"/>
+                    <field name="start_date" string="Hasiera"/>
+                    <field name="end_date" string="Amaiera"/>
+                    <field name="notes" string="Oharrak"/>
+                    <button name="action_bukatu" type="object"
+                            string="Bukatu ordezkapena"
+                            invisible="end_date"
+                            class="btn-primary"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Form -->
+        <record id="view_op_ordezkapen_form" model="ir.ui.view">
+            <field name="name">op.ordezkapen.form</field>
+            <field name="model">op.ordezkapen</field>
+            <field name="arch" type="xml">
+                <form string="Ordezkapen bat">
+                    <header>
+                        <button name="action_bukatu" type="object"
+                                string="Bukatu ordezkapena"
+                                invisible="end_date"
+                                class="btn-primary"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Irakasleak">
+                                <field name="titular_id" string="Irakasle titularra"/>
+                                <field name="ordezko_id" string="Ordezkatzaile irakaslea"/>
+                            </group>
+                            <group string="Epea">
+                                <field name="start_date" string="Hasiera data"/>
+                                <field name="end_date" string="Amaiera data"/>
+                            </group>
+                        </group>
+                        <group string="Oharrak">
+                            <field name="notes" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Search -->
+        <record id="view_op_ordezkapen_search" model="ir.ui.view">
+            <field name="name">op.ordezkapen.search</field>
+            <field name="model">op.ordezkapen</field>
+            <field name="arch" type="xml">
+                <search string="Ordezkapenak">
+                    <field name="titular_id"/>
+                    <field name="ordezko_id"/>
+                    <field name="start_date"/>
+                    <group expand="0" string="Taldekatu...">
+                        <filter name="group_by_titular" string="Titularra"
+                                context="{'group_by':'titular_id'}"/>
+                        <filter name="group_by_ordezko" string="Ordezkoa"
+                                context="{'group_by':'ordezko_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Action -->
+        <record model="ir.actions.act_window" id="act_open_op_ordezkapen_view">
+            <field name="name">Irakasleen Ordezkapenak</field>
+            <field name="res_model">op.ordezkapen</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="view_op_ordezkapen_search"/>
+        </record>
+
+        <!-- Menu bajo SIS > Configuración -->
+        <menuitem id="menu_op_ordezkapen"
+                  name="Ordezkapenak"
+                  parent="openeducat_core.menu_op_school_config"
+                  sequence="90"
+                  action="act_open_op_ordezkapen_view"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+    </data>
+</odoo>

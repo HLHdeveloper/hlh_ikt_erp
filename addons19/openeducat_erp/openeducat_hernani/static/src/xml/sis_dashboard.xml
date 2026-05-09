@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="openeducat_hernani.SisDashboard">
+        <div class="o_sis_dashboard o_action">
+            <div class="o_content p-4">
+
+                <h5 class="mb-3 text-muted fw-semibold text-uppercase">Irakasleak</h5>
+
+                <!-- Cards -->
+                <div class="d-flex gap-3 flex-wrap mb-4">
+
+                    <div t-attf-class="sdb-card{{ state.activeCard === 'total' ? ' sdb-card--active' : '' }}"
+                         t-on-click="() => this.onCardClick('total')">
+                        <div class="sdb-number" t-esc="state.counts.total"/>
+                        <div class="sdb-label">Irakasleak</div>
+                    </div>
+
+                    <div t-attf-class="sdb-card{{ state.activeCard === 'funtzionarioa' ? ' sdb-card--active' : '' }}"
+                         t-on-click="() => this.onCardClick('funtzionarioa')">
+                        <div class="sdb-number" t-esc="state.counts.funtzionarioak"/>
+                        <div class="sdb-label">Funtzionarioak</div>
+                    </div>
+
+                    <div t-attf-class="sdb-card{{ state.activeCard === 'ordezkoa' ? ' sdb-card--active' : '' }}"
+                         t-on-click="() => this.onCardClick('ordezkoa')">
+                        <div class="sdb-number" t-esc="state.counts.ordezkoak"/>
+                        <div class="sdb-label">Ordezkoak</div>
+                    </div>
+
+                    <div class="sdb-card sdb-card--warning"
+                         t-on-click="() => this.onCardClick('bajan')">
+                        <div class="sdb-number" t-esc="state.counts.bajan"/>
+                        <div class="sdb-label">Bajan daudenak <i class="fa fa-arrow-right ms-1"/></div>
+                    </div>
+
+                </div>
+
+                <!-- Drill-down panel -->
+                <div class="sdb-drilldown card shadow-sm" t-if="showDrilldown">
+                    <div class="card-body">
+
+                        <t t-if="state.loading">
+                            <div class="text-center py-4">
+                                <i class="fa fa-spinner fa-spin fa-2x text-muted"/>
+                            </div>
+                        </t>
+
+                        <t t-elif="!state.selectedDept">
+                            <h6 class="card-title mb-3" t-esc="state.drillTitle"/>
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mintegia</th>
+                                        <th class="text-end" style="width:70px">Kop.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.deptBreakdown" t-as="dept" t-key="dept.id">
+                                        <tr class="sdb-dept-row" t-on-click="() => this.onDeptClick(dept)">
+                                            <td><t t-esc="dept.name"/></td>
+                                            <td class="text-end fw-semibold"><t t-esc="dept.count"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+
+                        <t t-else="">
+                            <div class="d-flex align-items-center mb-3">
+                                <button class="btn btn-sm btn-outline-secondary me-2"
+                                        t-on-click="() => this.backToDepts()">
+                                    <i class="fa fa-arrow-left me-1"/>Mintegiak
+                                </button>
+                                <span class="fw-bold" t-esc="state.selectedDept.name"/>
+                            </div>
+                            <table class="table table-hover table-sm mb-0">
+                                <tbody>
+                                    <t t-foreach="state.facultyList" t-as="faculty" t-key="faculty.id">
+                                        <tr class="sdb-faculty-row" t-on-click="() => this.onFacultyClick(faculty)">
+                                            <td><t t-esc="faculty.name"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </t>
+</templates>

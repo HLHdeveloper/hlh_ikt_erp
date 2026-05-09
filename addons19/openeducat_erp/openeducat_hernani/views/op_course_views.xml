@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Extender form de ciclo: renombrar pestaña Subjects → Moduluak -->
+        <record id="view_op_course_form_hernani" model="ir.ui.view">
+            <field name="name">op.course.form.hernani</field>
+            <field name="model">op.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_course_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+
+                <page name="subject" position="attributes">
+                    <attribute name="string">Moduluak</attribute>
+                </page>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Extender el form de profesor con nuevas pestañas -->
+        <record id="view_op_faculty_form_hernani" model="ir.ui.view">
+            <field name="name">op.faculty.form.hernani</field>
+            <field name="model">op.faculty</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_faculty_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+
+                <!-- Botoia: "Create Employee" → "Irakasle Berria" -->
+                <xpath expr="//button[@name='%(openeducat_core.faculty_create_employee_act)d']" position="attributes">
+                    <attribute name="string">Irakasle Berria</attribute>
+                </xpath>
+
+                <!-- Pestañak gehitu "Subjects" fitxaren ondoren -->
+                <xpath expr="//page[@name='subjects']" position="after">
+
+                    <!-- Mintegiak -->
+                    <page name="departamentos" string="Mintegiak">
+                        <field name="allowed_department_ids" nolabel="1">
+                            <tree>
+                                <field name="code"/>
+                                <field name="name"/>
+                            </tree>
+                        </field>
+                    </page>
+
+                    <!-- Irakaslea ematen duen taldeak -->
+                    <page name="grupos" string="Taldeak">
+                        <field name="batch_ids" nolabel="1">
+                            <tree>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="course_id" string="Zikloa"/>
+                                <field name="start_date"/>
+                                <field name="end_date"/>
+                            </tree>
+                        </field>
+                    </page>
+
+                    <!-- Karguak -->
+                    <page name="cargos" string="Karguak">
+                        <field name="kargu_ids" nolabel="1">
+                            <tree>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="gsuite_email"/>
+                            </tree>
+                        </field>
+                    </page>
+
+                    <!-- Grebak -->
+                    <page name="huelgas" string="Grebak">
+                        <field name="greba_ids" nolabel="1">
+                            <tree>
+                                <field name="code"/>
+                                <field name="date"/>
+                                <field name="reason"/>
+                            </tree>
+                        </field>
+                    </page>
+
+                    <!-- Ordezkapenak -->
+                    <page name="sustituciones" string="Ordezkapenak">
+                        <separator string="Titularra bezala (beste batek ordeztua)"/>
+                        <field name="titular_ordezkapen_ids" nolabel="1">
+                            <tree editable="bottom">
+                                <field name="ordezko_id" string="Ordezkoa"/>
+                                <field name="start_date" string="Hasiera"/>
+                                <field name="end_date" string="Amaiera"/>
+                                <field name="notes" string="Oharrak"/>
+                            </tree>
+                        </field>
+                        <separator string="Ordezkoa bezala (beste bat ordeztuz)"/>
+                        <field name="ordezko_ordezkapen_ids" nolabel="1">
+                            <tree>
+                                <field name="titular_id" string="Titularra"/>
+                                <field name="start_date" string="Hasiera"/>
+                                <field name="end_date" string="Amaiera"/>
+                                <field name="notes" string="Oharrak"/>
+                            </tree>
+                        </field>
+                    </page>
+
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+"""
+Adds eu_ES translations to all ir_ui_menu items that lack them.
+Also translates ir_act_window action names.
+"""
+import json
+import odoo
+from odoo import api, SUPERUSER_ID
+
+odoo.tools.config.parse_config(['--config=/etc/odoo/odoo.conf'])
+
+# Maps English (or Spanish) source → Basque
+# Covers all menus visible in the SIS app + app switcher
+MENU_EU = {
+    # App switcher (top-level)
+    "Discuss": "Eztabaida",
+    "Dashboards": "Aginte Panelak",
+    "Invoicing": "Fakturaketa",
+    "Website": "Webgunea",
+    "Human Resources": "Giza Baliabideak",
+    "Purchase": "Erosketak",
+    "Maintenance": "Mantentze Lanak",
+    "Admissions": "Onarpenak",
+    "Link Tracker": "Esteka Jarraipena",
+    "TimeTables": "Ordutegia",
+    "Attendances": "Presentzia",
+    " Attendances": "Presentzia",
+    "Assignments": "Lanak",
+    "Exams": "Azterketak",
+    "Library": "Liburutegia",
+    "Parents": "Gurasoak",
+    "Apps": "Aplikazioak",
+    "Settings": "Ezarpenak",
+    "Tests": "Probak",
+    # SIS submenus
+    "SIS": "SIS",
+    "Faculties": "Irakasleak",
+    "Students": "Ikasleak",
+    "Batches": "Taldeak",
+    "Courses": "Zikloak",
+    "Subjects": "Moduluak",
+    "Departments": "Mintegiak",
+    "Classrooms": "Gelak",
+    "Classroom": "Gela",
+    "Academic Years": "Ikasturteak",
+    "Academic Terms": "Hiruhilekoak",
+    "Categories": "Kategoriak",
+    "General": "Orokorra",
+    "General Management": "Kudeaketa Orokorra",
+    "Configuration": "Konfigurazioa",
+    "Reporting": "Txostenak",
+    "Student Migration": "Ikasleen Migrazioa",
+    "Activity Management": "Jarduera Kudeaketa",
+    "Activity Types": "Jarduera Motak",
+    "Facilities": "Instalazioak",
+    "Fees Analysis": "Tasen Analisia",
+    "Fees Terms": "Tasen Epeak",
+    "Subject Management": "Moduluen Kudeaketa",
+    "Student Course Detail": "Matrikula Xehetasunak",
+    "Subject Registration": "Modulu Erregistroa",
+    "Mass Subject Registration": "Modulu Matrikula Masiboa",
+    # Settings submenus
+    "Access Rights": "Sarbide Eskubideak",
+    "Actions": "Ekintzak",
+    "Alias Domains": "Alias Domeinuak",
+    "Aliases": "Aliasak",
+    "Apply Scheduled Upgrades": "Programatutako Eguneraketak Aplikatu",
+    "Application Terms": "Aplikazioaren Baldintzak",
+    "Applications": "Aplikazioak",
+    "Automation": "Automatizazioa",
+    "Automated Actions": "Ekintza Automatikoak",
+    "Base Setup": "Oinarrizko Konfigurazioa",
+    "Base Automation": "Oinarrizko Automatizazioa",
+    "Companies": "Enpresak",
+    "Contact Tags": "Kontaktu Etiketak",
+    "Countries": "Herrialdeak",
+    "Country Groups": "Herrialde Taldeak",
+    "Currencies": "Monetak",
+    "Data Cleaning": "Datuen Garbiketa",
+    "Database Structure": "Datu-base Egitura",
+    "Date & Time": "Data eta Ordua",
+    "Email Aliases": "Email Aliasak",
+    "Email Templates": "Email Txantiloiak",
+    "Employees": "Langileak",
+    "External Identity Providers": "Kanpoko Identitate Hornitzaileak",
+    "Filters": "Iragazkiak",
+    "General Settings": "Ezarpen Orokorrak",
+    "Industries": "Industriak",
+    "Interface": "Interfazea",
+    "Languages": "Hizkuntzak",
+    "Menus": "Menuak",
+    "Models": "Modeloak",
+    "Outgoing Mail Servers": "Irteera Posta Zerbitzariak",
+    "Payment Providers": "Ordainketa Hornitzaileak",
+    "Payment Methods": "Ordainketa Metodoak",
+    "PDF Reports": "PDF Txostenak",
+    "Personalise Dashboard": "Aginte Panela Pertsonalizatu",
+    "Portal Access": "Portal Sarbidea",
+    "Sequences & Identifiers": "Sekuentziak eta Identifikatzaileak",
+    "Server Actions": "Zerbitzari Ekintzak",
+    "Sharing & Collaboration": "Partekatzea eta Lankidetza",
+    "Technical": "Teknikoa",
+    "Terms & Conditions": "Baldintzak",
+    "Translations": "Itzulpenak",
+    "UI Customization": "UI Pertsonalizazioa",
+    "Update Translations": "Itzulpenak Eguneratu",
+    "Users": "Erabiltzaileak",
+    "Users & Companies": "Erabiltzaileak eta Enpresak",
+    "Webhooks": "Webhookak",
+    "Website Pages": "Webgune Orriak",
+    # Accounting submenus
+    "Accounting": "Kontabilitatea",
+    "Analytic Accounting": "Kontabilitate Analitikoa",
+    "Analytic Accounts": "Kontu Analitikoak",
+    "Analytic Distribution Models": "Banaketa Modelo Analitikoak",
+    "Analytic Items": "Idatzi Analitikoak",
+    "Analytic Plans": "Plan Analitikoak",
+    "Analytic Reporting": "Txosten Analitikoak",
+    "Analytics": "Analitika",
+    "Add a Bank Account": "Banku Kontua Gehitu",
+    "Assets": "Aktiboak",
+    "Bank Accounts": "Banku Kontuak",
+    "Chart of Accounts": "Kontu Plana",
+    "Customer Invoices": "Bezero Fakturak",
+    "Customer Payments": "Bezero Ordainketak",
+    "Deferred Revenue": "Atzeratutako Diru-sarrerak",
+    "Fiscal Positions": "Zerga Posizioak",
+    "Fiscal Years": "Zerga Urteak",
+    "Intrastat Reports": "Intrastat Txostenak",
+    "Invoices": "Fakturak",
+    "Invoicing": "Fakturaketa",
+    "Journal Entries": "Aldizkari Sarrerak",
+    "Journals": "Aldizkariak",
+    "Lock Dates": "Blokeatzeko Datak",
+    "Overview": "Ikuspegi Orokorra",
+    "Payment Terms": "Ordainketa Baldintzak",
+    "Products": "Produktuak",
+    "Reporting": "Txostenak",
+    "Tax Groups": "Zerga Taldeak",
+    "Taxes": "Zergak",
+    "Vendor Bills": "Hornitzaile Fakturak",
+    "Vendor Payments": "Hornitzaile Ordainketak",
+    # HR submenus
+    "Contracts": "Kontratuak",
+    "Departments": "Sailak",
+    "Job Positions": "Lan Posizioak",
+    "Jobs": "Lanpostuak",
+    "New Employees": "Langile Berriak",
+    # Discuss submenus
+    "All Channels": "Kanal Guztiak",
+    "Channel Members": "Kanal Kideak",
+    "Direct Messages": "Mezu Zuzenak",
+    # Admissions submenus
+    "Admission Registers": "Onarpenen Erregistroak",
+    "Admission Report": "Onarpenen Txostena",
+    "Admission Status": "Onarpenen Egoera",
+    # Library submenus
+    "All Media": "Multimedia Guztia",
+    "Book Movements": "Liburuen Mugimenduak",
+    "Books": "Liburuak",
+    "Issue/Return": "Utzi/Itzuli",
+    "Library Cards": "Liburutegi Txartelak",
+    "Media Category": "Multimedia Kategoria",
+    # Timetable submenus
+    "Timetable": "Ordutegia",
+    "TimeTable": "Ordutegia",
+    "Timetables": "Ordutegia",
+    # Exam submenus
+    "Exam Sessions": "Azterketaldiak",
+    "Exam Settings": "Azterketa Ezarpenak",
+    "Grades": "Notak",
+    "Results": "Emaitzak",
+    "Room Distribution": "Gela Banaketa",
+    # Assignment submenus
+    "Assignment Types": "Lan Motak",
+    "Assignment Submissions": "Lanen Entregantzak",
+    # Attendance submenus
+    "Attendance Report": "Presentziaren Txostena",
+    "Attendance Sheets": "Presentzia Orriak",
+    "Student Attendance": "Ikasleen Presentzia",
+    # Parents submenus
+    "Parent Relations": "Guraso Harremanak",
+    # Remaining menus
+    "Attachments": "Eranskinak",
+    "Attendance": "Presentzia",
+    "Attendance Lines": "Presentzia Lerroak",
+    "Attendance Type": "Presentzia Mota",
+    "Authors": "Autoreentzat",
+    "Automation Rules": "Automatizazio Arauak",
+    "Banks": "Bankuak",
+    "Bills": "Hornitzaile Fakturak",
+    "Campaigns": "Kanpainak",
+    "Cash Roundings": "Diruzko Biribilketak",
+    "Certificates": "Ziurtagiriak",
+    "Channels": "Kanalak",
+    "Channels/Members": "Kanalak/Kideak",
+    "Client Actions": "Bezero Ekintzak",
+    "Company Properties": "Enpresaren Propietateak",
+    "Configuration Wizards": "Konfigurazioaren Laguntzaileak",
+    "Content": "Edukia",
+    "Credit Notes": "Kredituen Oharrak",
+    "Custom Shortcuts": "Lasterbide Pertsonalizatuak",
+    "Customers": "Bezeroak",
+    "Customized Views": "Pertsonalizatutako Ikuspegiak",
+    "Dashboard": "Aginte Panela",
+    "Decimal Accuracy": "Zehaztasun Hamartarra",
+    "Departure Reasons": "Irteeraren Arrazoiak",
+    "Digest Emails": "Laburpen Emailak",
+    "Digest Tips": "Laburpen Aholkuak",
+    "Directory": "Direktorioa",
+    "Edit Menu": "Menua Editatu",
+    "Email": "Helbide Elektronikoa",
+    "Email Blacklist": "Email Zerrenda Beltza",
+    "Emails": "Emailak",
+    "Employee": "Langilea",
+    "Employment Types": "Lan Mota",
+    "Equipment": "Ekipamendua",
+    "Equipment Categories": "Ekipamendu Kategoriak",
+    "Exam Attendees": "Azterketa Parte-hartzaileak",
+    "Exam Rooms": "Azterketa Gelak",
+    "Exam Types": "Azterketa Motak",
+    "Export Translation": "Itzulpena Esportatu",
+    "External Identifiers": "Kanpoko Identifikatzaileak",
+    "Fields": "Eremuak",
+    "Fields Selection": "Eremu Hautaketa",
+    "Followers": "Jarraitzaileak",
+    "GIF favorite": "GIF Gogokoenak",
+    "Generate Entries": "Sarrerak Sortu",
+    "Generate Timetable": "Ordutegia Sortu",
+    "Generate Timetable Report": "Ordutegien Txostena Sortu",
+    "Grade Configuration": "Notaketa Konfigurazioa",
+    "Groups": "Taldeak",
+    "Guests": "Gonbidatuak",
+    "HTML / CSS Editor": "HTML / CSS Editorea",
+    "Homepage": "Hasierako Orria",
+    "IAP": "IAP",
+    "IAP Accounts": "IAP Kontuak",
+    "ICE servers": "ICE Zerbitzariak",
+    "Import / Export": "Inportatu / Esportatu",
+    "Import Module": "Modulua Inportatu",
+    "Import Translation": "Itzulpena Inportatu",
+    "Incoming Mail Servers": "Sarrera Posta Zerbitzariak",
+    "Incoterms": "Incoterms",
+    "Integrations": "Integrazioak",
+    "Invoice Analysis": "Fakturen Analisia",
+    "Journal Groups": "Aldizkari Taldeak",
+    "Journal Items": "Aldizkariaren Sarrerak",
+    "Library Card Types": "Liburutegi Txartel Motak",
+    "Line Types": "Lerro Motak",
+    "Link Previews": "Esteka Aurrebistak",
+    "Logging": "Erregistroa",
+    "Losses Analysis": "Galerak Analisia",
+    "Mail Gateway Allowed": "Posta Sarrera Baimendua",
+    "Main Apps": "Aplikazio Nagusiak",
+    "Maintenance Calendar": "Mantentze Lanen Egutegia",
+    "Maintenance Stages": "Mantentze Lanen Faseak",
+    "Management": "Kudeaketa",
+    "ManyToMany Relations": "Erlazio Anizkoitzak",
+    "Marksheet Lines": "Kalifikazio Orriko Lerroak",
+    "Marksheet Registers": "Kalifikazio Orri Erregistroak",
+    "Media": "Multimedia",
+    "Media Movements": "Multimedia Mugimenduak",
+    "Media Purchase Requests": "Multimedia Erosketa Eskaerak",
+    "Media Queue Requests": "Multimedia Ilara Eskaerak",
+    "Media Type": "Multimedia Mota",
+    "Media Units": "Multimedia Unitateak",
+    "Mediums": "Baliabideak",
+    "Menu Editor": "Menu Editorea",
+    "Menu Items": "Menu Elementuak",
+    "Message Reactions": "Mezu Erreakzioak",
+    "Messages": "Mezuak",
+    "Model Constraints": "Modelo Murrizketak",
+    "Model Pages": "Modelo Orriak",
+    "My Dashboard": "Nire Aginte Panela",
+    "Notifications": "Jakinarazpenak",
+    "On/Offboarding Plans": "Sarrera/Irteera Planak",
+    "Onboardings": "Sarrera Planak",
+    "Onboardings Steps": "Sarrera Planen Urratsak",
+    "Online Payments": "Online Ordainketak",
+    "Optimize SEO": "SEO Optimizatu",
+    "Org Chart": "Erakunde Diagrama",
+    "Overall Equipment Effectiveness (OEE)": "Ekipamenduaren Eraginkortasun Orokorra",
+    "Page Views": "Orri Ikuspegiak",
+    "Pages": "Orriak",
+    "Paper Format": "Paper Formatua",
+    "Parameters": "Parametroak",
+    "Payment Tokens": "Ordainketa Tokenak",
+    "Payment Transactions": "Ordainketa Transakzioak",
+    "Payments": "Ordainketak",
+    "Phone / SMS": "Telefonoa / SMS",
+    "Phone Blacklist": "Telefono Zerrenda Beltza",
+    "Privacy": "Pribatutasuna",
+    "Privacy Logs": "Pribatutasun Erregistroak",
+    "Product Attributes": "Produktuaren Atributuak",
+    "Profiling": "Errendimendu Analisia",
+    "Properties": "Propietateak",
+    "Publishers": "Argitaletxeak",
+    "RTC sessions": "Denbora Errealeko Saio",
+    "Receipts": "Ordainagiriak",
+    "Reconciliation Models": "Kontziliazio Modeloak",
+    "Record Rules": "Erregistro Arauak",
+    "Recruitment": "Hautaketa",
+    "Redirects": "Birbideratze",
+    "Refunds": "Itzulketak",
+    "Registers": "Erregistroak",
+    "Reports": "Txostenak",
+    "Resource": "Baliabidea",
+    "Resource Time Off": "Baliabidearen Baimena",
+    "Resources": "Baliabideak",
+    "Result Lines": "Emaitza Lerroak",
+    "Result Templates": "Emaitza Txantiloiak",
+    "Resume": "Curriculuma",
+    "SMS": "SMS",
+    "SMS Templates": "SMS Txantiloiak",
+    "Scheduled Actions": "Ekintza Programatuak",
+    "Scheduled Actions Triggers": "Ekintza Programatuen Abiarazleak",
+    "Scheduled Messages": "Mezu Programatuak",
+    "Security": "Segurtasuna",
+    "Sequences": "Sekuentziak",
+    "Sheets": "Orriak",
+    "Site": "Gunea",
+    "Skill Types": "Gaitasun Motak",
+    "Skills": "Gaitasunak",
+    "Snailmail Letters": "Posta Gutunakk",
+    "Sources": "Iturriak",
+    "Spain Facturae EDI": "Espainia Facturae EDI",
+    "Statement Reports": "Egoera Txostenak",
+    "Student Hall Tickets": "Ikasle Sarrera Txartelak",
+    "Subtypes": "Azpimota",
+    "System Parameters": "Sistemaren Parametroak",
+    "Tags": "Etiketak",
+    "Theme Store": "Gai Denda",
+    "Third-Party Apps": "Hirugarrenen Aplikazioak",
+    "This page": "Orri hau",
+    "Tours": "Ibilbideak",
+    "Tracking Values": "Jarraipen Balioak",
+    "UTMs": "UTMak",
+    "Units of Measure Categories": "Neurri Unitate Kategoriak",
+    "Units of Measures": "Neurri Unitateak",
+    "Update Apps List": "Aplikazioen Zerrenda Eguneratu",
+    "User Interface": "Erabiltzaile Interfazea",
+    "User Settings": "Erabiltzaile Ezarpenak",
+    "User-defined Defaults": "Erabiltzaileak Definitutako Lehenetsiak",
+    "User-defined Filters": "Erabiltzaileak Definitutako Iragazkiak",
+    "Vendors": "Hornitzaileak",
+    "Views": "Ikuspegiak",
+    "Visitors": "Bisitariak",
+    "Websites": "Webguneak",
+    "Window Actions": "Leiho Ekintzak",
+    "Work Locations": "Lan Lekuak",
+    "Working Schedules": "Lan Ordutegia",
+    "eCommerce": "Merkataritza Elektronikoa",
+    # Maintenance
+    "Maintenance": "Mantentze Lanak",
+    "Maintenance Requests": "Mantentze Eskaerak",
+    "Maintenance Teams": "Mantentze Taldeak",
+    "Activity Planning": "Jarduera Plangintza",
+    "Activity Plans": "Jarduera Planak",
+    "Activity Logs": "Jarduera Erregistroak",
+    "Activities": "Jarduerak",
+    # Purchase
+    "Orders": "Aginduak",
+    "Purchase Orders": "Erosketa Aginduak",
+    "Requests for Quotation": "Eskaintza Eskaerak",
+    "Products": "Produktuak",
+    "Product Categories": "Produktu Kategoriak",
+    "Product Variants": "Produktuaren Aldaerak",
+    "Vendor Pricelists": "Hornitzaileen Prezioak",
+    "Purchase Reporting": "Erosketa Txostenak",
+    "Purchase Analysis": "Erosketa Analisia",
+}
+
+with odoo.registry('kudeaketa').cursor() as cr:
+    # 1. Update ir_ui_menu
+    cr.execute("""
+        SELECT id, name FROM ir_ui_menu
+        WHERE name::text NOT LIKE '%eu_ES%'
+    """)
+    rows = cr.fetchall()
+    print(f"Menus without eu_ES: {len(rows)}")
+
+    menu_updated = 0
+    for menu_id, name_json in rows:
+        data = name_json if isinstance(name_json, dict) else json.loads(name_json)
+        en = data.get('en_US', '').strip()
+        es = data.get('es_ES', '').strip()
+
+        eu = MENU_EU.get(en) or MENU_EU.get(es)
+        if not eu and en:
+            # fall back: keep English as-is if no translation available
+            eu = None
+        if eu:
+            data['eu_ES'] = eu
+            cr.execute("UPDATE ir_ui_menu SET name = %s WHERE id = %s",
+                       (json.dumps(data), menu_id))
+            menu_updated += 1
+
+    print(f"  Updated {menu_updated} menus")
+
+    # 2. Update ir_act_window action names (for app switcher labels)
+    cr.execute("""
+        SELECT id, name FROM ir_act_window
+        WHERE name::text NOT LIKE '%eu_ES%'
+          AND name IS NOT NULL
+    """)
+    rows = cr.fetchall()
+    print(f"Actions without eu_ES: {len(rows)}")
+
+    act_updated = 0
+    for act_id, name_json in rows:
+        try:
+            data = name_json if isinstance(name_json, dict) else json.loads(name_json)
+        except Exception:
+            continue
+        en = data.get('en_US', '').strip()
+        es = data.get('es_ES', '').strip()
+        eu = MENU_EU.get(en) or MENU_EU.get(es)
+        if eu:
+            data['eu_ES'] = eu
+            cr.execute("UPDATE ir_act_window SET name = %s WHERE id = %s",
+                       (json.dumps(data), act_id))
+            act_updated += 1
+
+    print(f"  Updated {act_updated} actions")
+    cr.commit()
+    print("Done.")

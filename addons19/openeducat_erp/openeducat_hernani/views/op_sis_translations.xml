@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- ================================================================
+             IRAKASLEAK (op.faculty)
+        ================================================================ -->
+
+        <record id="view_op_faculty_tree_eu" model="ir.ui.view">
+            <field name="name">op.faculty.tree.eu</field>
+            <field name="model">op.faculty</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_faculty_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Irakasleak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_faculty_form_eu" model="ir.ui.view">
+            <field name="name">op.faculty.form.eu</field>
+            <field name="model">op.faculty</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_faculty_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Irakaslea</attribute>
+                </xpath>
+                <xpath expr="//widget[@name='web_ribbon']" position="attributes">
+                    <attribute name="title">Artxibatua</attribute>
+                </xpath>
+                <page name="personal_information" position="attributes">
+                    <attribute name="string">Informazio pertsonala</attribute>
+                </page>
+                <page name="subjects" position="attributes">
+                    <attribute name="string">Moduluak</attribute>
+                </page>
+                <xpath expr="//label[@for='street']" position="attributes">
+                    <attribute name="string">Helbidea</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_faculty_search_eu" model="ir.ui.view">
+            <field name="name">op.faculty.search.eu</field>
+            <field name="model">op.faculty</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_faculty_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Irakasleak</attribute>
+                </xpath>
+                <xpath expr="//group[@expand='0']" position="attributes">
+                    <attribute name="string">Taldekatu...</attribute>
+                </xpath>
+                <filter name="blood_group" position="attributes">
+                    <attribute name="string">Odol taldea</attribute>
+                </filter>
+                <filter name="nationality" position="attributes">
+                    <attribute name="string">Nazionalitatea</attribute>
+                </filter>
+                <filter name="language" position="attributes">
+                    <attribute name="string">Hizkuntza</attribute>
+                </filter>
+                <filter name="inactive" position="attributes">
+                    <attribute name="string">Artxibatutakoak</attribute>
+                </filter>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_faculty_view" model="ir.actions.act_window">
+            <field name="name">Irakasleak</field>
+        </record>
+        <record id="openeducat_core.act_open_op_faculty_view_2" model="ir.actions.act_window">
+            <field name="name">Irakasleak</field>
+        </record>
+
+
+        <!-- ================================================================
+             TALDEAK (op.batch)
+        ================================================================ -->
+
+        <record id="view_op_batch_tree_eu" model="ir.ui.view">
+            <field name="name">op.batch.tree.eu</field>
+            <field name="model">op.batch</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_batch_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Taldeak</attribute>
+                </xpath>
+                <field name="course_id" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_op_batch_form_eu" model="ir.ui.view">
+            <field name="name">op.batch.form.eu</field>
+            <field name="model">op.batch</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_batch_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Taldea</attribute>
+                </xpath>
+                <xpath expr="//widget[@name='web_ribbon']" position="attributes">
+                    <attribute name="title">Artxibatua</attribute>
+                </xpath>
+                <xpath expr="//field[@name='course_id']" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_batch_search_eu" model="ir.ui.view">
+            <field name="name">op.batch.search.eu</field>
+            <field name="model">op.batch</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_batch_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Taldeak</attribute>
+                </xpath>
+                <field name="course_id" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </field>
+                <xpath expr="//group[@expand='0']" position="attributes">
+                    <attribute name="string">Taldekatu...</attribute>
+                </xpath>
+                <filter name="group_by_batch_start_date" position="attributes">
+                    <attribute name="string">Hasiera data</attribute>
+                </filter>
+                <filter name="group_by_batch_end_date" position="attributes">
+                    <attribute name="string">Amaiera data</attribute>
+                </filter>
+                <filter name="group_by_batch_course" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </filter>
+                <filter name="inactive" position="attributes">
+                    <attribute name="string">Artxibatutakoak</attribute>
+                </filter>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_batch_view" model="ir.actions.act_window">
+            <field name="name">Taldeak</field>
+        </record>
+
+
+        <!-- ================================================================
+             MINTEGIAK (op.department)
+        ================================================================ -->
+
+        <record id="view_op_department_tree_eu" model="ir.ui.view">
+            <field name="name">op.department.tree.eu</field>
+            <field name="model">op.department</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_department_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Mintegiak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_department_form_eu" model="ir.ui.view">
+            <field name="name">op.department.form.eu</field>
+            <field name="model">op.department</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_department_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Mintegia</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_department_search_eu" model="ir.ui.view">
+            <field name="name">op.department.search.eu</field>
+            <field name="model">op.department</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_department_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Mintegiak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_department_view" model="ir.actions.act_window">
+            <field name="name">Mintegiak</field>
+        </record>
+
+
+        <!-- ================================================================
+             ZIKLOAK (op.course)
+        ================================================================ -->
+
+        <record id="view_op_course_tree_eu" model="ir.ui.view">
+            <field name="name">op.course.tree.eu</field>
+            <field name="model">op.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_course_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Zikloak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- La pestaña "Moduluak" ya está en op_course_views.xml -->
+        <record id="view_op_course_form_eu" model="ir.ui.view">
+            <field name="name">op.course.form.eu</field>
+            <field name="model">op.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_course_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </xpath>
+                <xpath expr="//widget[@name='web_ribbon']" position="attributes">
+                    <attribute name="title">Artxibatua</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_course_search_eu" model="ir.ui.view">
+            <field name="name">op.course.search.eu</field>
+            <field name="model">op.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_course_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Zikloak</attribute>
+                </xpath>
+                <xpath expr="//group[@expand='0']" position="attributes">
+                    <attribute name="string">Taldekatu...</attribute>
+                </xpath>
+                <filter name="group_by_evaluation_type" position="attributes">
+                    <attribute name="string">Ebaluazio mota</attribute>
+                </filter>
+                <filter name="group_by_partner_course" position="attributes">
+                    <attribute name="string">Guraso zikloa</attribute>
+                </filter>
+                <filter name="inactive" position="attributes">
+                    <attribute name="string">Artxibatutakoak</attribute>
+                </filter>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_course_view" model="ir.actions.act_window">
+            <field name="name">Zikloak</field>
+        </record>
+
+
+        <!-- ================================================================
+             MODULUAK (op.subject)
+        ================================================================ -->
+
+        <record id="view_op_subject_tree_eu" model="ir.ui.view">
+            <field name="name">op.subject.tree.eu</field>
+            <field name="model">op.subject</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_subject_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Moduluak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_subject_form_eu" model="ir.ui.view">
+            <field name="name">op.subject.form.eu</field>
+            <field name="model">op.subject</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_subject_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Modulua</attribute>
+                </xpath>
+                <xpath expr="//widget[@name='web_ribbon']" position="attributes">
+                    <attribute name="title">Artxibatua</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_subject_search_eu" model="ir.ui.view">
+            <field name="name">op.subject.search.eu</field>
+            <field name="model">op.subject</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_subject_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Moduluak</attribute>
+                </xpath>
+                <xpath expr="//group[@expand='0']" position="attributes">
+                    <attribute name="string">Taldekatu...</attribute>
+                </xpath>
+                <filter name="group_by_subject_type" position="attributes">
+                    <attribute name="string">Mota</attribute>
+                </filter>
+                <filter name="inactive" position="attributes">
+                    <attribute name="string">Artxibatutakoak</attribute>
+                </filter>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_subject_view" model="ir.actions.act_window">
+            <field name="name">Moduluak</field>
+        </record>
+
+
+        <!-- ================================================================
+             IKASLEAK (op.student)
+        ================================================================ -->
+
+        <record id="view_op_student_tree_eu" model="ir.ui.view">
+            <field name="name">op.student.tree.eu</field>
+            <field name="model">op.student</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Ikasleak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_student_form_eu" model="ir.ui.view">
+            <field name="name">op.student.form.eu</field>
+            <field name="model">op.student</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Ikaslea</attribute>
+                </xpath>
+                <xpath expr="//button[@name='create_student_user']" position="attributes">
+                    <attribute name="string">Ikasle Erabiltzailea Sortu</attribute>
+                </xpath>
+                <xpath expr="//widget[@name='web_ribbon']" position="attributes">
+                    <attribute name="title">Artxibatua</attribute>
+                </xpath>
+                <page name="personal_information" position="attributes">
+                    <attribute name="string">Informazio pertsonala</attribute>
+                </page>
+                <xpath expr="//label[@for='street']" position="attributes">
+                    <attribute name="string">Helbidea</attribute>
+                </xpath>
+                <xpath expr="//field[@name='user_id']" position="attributes">
+                    <attribute name="string">Erabiltzailea</attribute>
+                </xpath>
+                <xpath expr="//separator[@colspan='2']" position="attributes">
+                    <attribute name="string">Bestelakoak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_student_search_eu" model="ir.ui.view">
+            <field name="name">op.student.search.eu</field>
+            <field name="model">op.student</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Ikasleak</attribute>
+                </xpath>
+                <xpath expr="//group[@expand='0']" position="attributes">
+                    <attribute name="string">Taldekatu...</attribute>
+                </xpath>
+                <filter name="blood_group" position="attributes">
+                    <attribute name="string">Odol taldea</attribute>
+                </filter>
+                <filter name="nationality" position="attributes">
+                    <attribute name="string">Nazionalitatea</attribute>
+                </filter>
+                <filter name="language" position="attributes">
+                    <attribute name="string">Hizkuntza</attribute>
+                </filter>
+                <filter name="inactive" position="attributes">
+                    <attribute name="string">Artxibatutakoak</attribute>
+                </filter>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_student_view" model="ir.actions.act_window">
+            <field name="name">Ikasleak</field>
+        </record>
+        <record id="openeducat_core.act_open_op_student_view_2" model="ir.actions.act_window">
+            <field name="name">Ikasleak</field>
+        </record>
+
+
+        <!-- ================================================================
+             IKASTURTEA (op.academic.year)
+        ================================================================ -->
+
+        <record id="view_op_academic_year_tree_eu" model="ir.ui.view">
+            <field name="name">op.academic.year.tree.eu</field>
+            <field name="model">op.academic.year</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_academic_year_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Ikasturteak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_academic_year_form_eu" model="ir.ui.view">
+            <field name="name">op.academic.year.form.eu</field>
+            <field name="model">op.academic.year</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_academic_year_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Ikasturtea</attribute>
+                </xpath>
+                <xpath expr="//button[@name='term_create']" position="attributes">
+                    <attribute name="string">Hiruhilekoak Sortu</attribute>
+                </xpath>
+                <page name="academic_term_ids" position="attributes">
+                    <attribute name="string">Hiruhilekoak</attribute>
+                </page>
+            </field>
+        </record>
+
+        <record id="view_op_academic_year_search_eu" model="ir.ui.view">
+            <field name="name">op.academic.year.search.eu</field>
+            <field name="model">op.academic.year</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_academic_year_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Ikasturteak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_op_academic_year_view" model="ir.actions.act_window">
+            <field name="name">Ikasturteak</field>
+        </record>
+
+
+        <!-- ================================================================
+             HIRUHILEKOA (op.academic.term)
+        ================================================================ -->
+
+        <record id="view_op_academic_term_tree_eu" model="ir.ui.view">
+            <field name="name">op.academic.term.tree.eu</field>
+            <field name="model">op.academic.term</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_academic_term_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Hiruhilekoak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_academic_term_form_eu" model="ir.ui.view">
+            <field name="name">op.academic.term.form.eu</field>
+            <field name="model">op.academic.term</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_academic_term_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Hiruhilekoa</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_op_academic_term_search_eu" model="ir.ui.view">
+            <field name="name">op.academic.term.search.eu</field>
+            <field name="model">op.academic.term</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_academic_term_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Hiruhilekoak</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_op_academic_term_view" model="ir.actions.act_window">
+            <field name="name">Hiruhilekoak</field>
+        </record>
+
+
+        <!-- ================================================================
+             MATRIKULAK (op.student.course)
+        ================================================================ -->
+
+        <record id="view_op_student_course_tree_eu" model="ir.ui.view">
+            <field name="name">op.student.course.tree.eu</field>
+            <field name="model">op.student.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_course_tree"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree" position="attributes">
+                    <attribute name="string">Matrikula xehetasunak</attribute>
+                </xpath>
+                <field name="course_id" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </field>
+                <field name="batch_id" position="attributes">
+                    <attribute name="string">Taldea</attribute>
+                </field>
+                <field name="roll_number" position="attributes">
+                    <attribute name="string">Matrikula zk.</attribute>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_op_student_course_form_eu" model="ir.ui.view">
+            <field name="name">op.student.course.form.eu</field>
+            <field name="model">op.student.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_course_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="string">Matrikula xehetasunak</attribute>
+                </xpath>
+                <xpath expr="//field[@name='batch_id']" position="attributes">
+                    <attribute name="string">Taldea</attribute>
+                </xpath>
+                <xpath expr="//field[@name='course_id']" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </xpath>
+                <xpath expr="//field[@name='roll_number']" position="attributes">
+                    <attribute name="string">Matrikula zk.</attribute>
+                </xpath>
+                <page name="subjects" position="attributes">
+                    <attribute name="string">Moduluak</attribute>
+                </page>
+            </field>
+        </record>
+
+        <record id="view_op_student_course_search_eu" model="ir.ui.view">
+            <field name="name">op.student.course.search.eu</field>
+            <field name="model">op.student.course</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_course_search"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="attributes">
+                    <attribute name="string">Matrikulak</attribute>
+                </xpath>
+                <field name="course_id" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </field>
+                <field name="batch_id" position="attributes">
+                    <attribute name="string">Taldea</attribute>
+                </field>
+                <field name="roll_number" position="attributes">
+                    <attribute name="string">Matrikula zk.</attribute>
+                </field>
+                <xpath expr="//group[@expand='0']" position="attributes">
+                    <attribute name="string">Taldekatu...</attribute>
+                </xpath>
+                <filter name="group_by_adm_course_id" position="attributes">
+                    <attribute name="string">Zikloa</attribute>
+                </filter>
+                <filter name="group_by_adm_batch_id" position="attributes">
+                    <attribute name="string">Taldea</attribute>
+                </filter>
+                <filter name="group_by_adm_academic_years_id" position="attributes">
+                    <attribute name="string">Ikasturtea</attribute>
+                </filter>
+                <filter name="group_by_adm_academic_term_id" position="attributes">
+                    <attribute name="string">Hiruhilekoa</attribute>
+                </filter>
+            </field>
+        </record>
+
+        <record id="openeducat_core.act_open_op_student_course_view" model="ir.actions.act_window">
+            <field name="name">Matrikula xehetasunak</field>
+        </record>
+
+        <!-- ================================================================
+             GELAK (op.classroom)
+        ================================================================ -->
+
+        <record id="openeducat_classroom.act_open_op_classroom_view" model="ir.actions.act_window">
+            <field name="name">Gelak</field>
+        </record>
+
+    </data>
+</odoo>

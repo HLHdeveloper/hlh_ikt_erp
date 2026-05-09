@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Mintegi fitxan zikloak eta irakasleak gehitu -->
+        <record id="view_op_department_form_hernani" model="ir.ui.view">
+            <field name="name">op.department.form.hernani</field>
+            <field name="model">op.department</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_department_form"/>
+            <field name="priority" eval="12"/>
+            <field name="arch" type="xml">
+
+                <!-- Oinarrizko eremuen taldearen ondoren notebook gehitu -->
+                <xpath expr="//sheet/group" position="after">
+                    <notebook>
+
+                        <!-- Mintegiko lanbide zikloak -->
+                        <page name="ciclos" string="Lanbide zikloak">
+                            <field name="course_ids" nolabel="1">
+                                <tree>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="evaluation_type" string="Ebaluazioa"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Mintegiko irakasleak -->
+                        <page name="profesores" string="Irakasleak">
+                            <field name="faculty_ids" nolabel="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="email"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                    </notebook>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
