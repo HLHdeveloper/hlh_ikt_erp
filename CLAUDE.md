@@ -78,14 +78,13 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 [40] Moduluak         → op.subject
 [50] Ikasleak         → op.student
 [60] General
-[70] Reporting
-      [10] Ikasleak taldeka                    → op.report.batch.student
-      [20] Irakasleak mintegika                → op.report.dept.faculty
-      [30] Grebak mintegika                    → op.report.dept.greba
-      [35] Ordezkapenak mintegika              → op.report.dept.ordezkapen
-      [40] Irakasleak greba kopuruaren arabera → op.report.faculty.greba
+[70] Txostenak        → Dashboard OWL (sis_dashboard_action)
 [80] Konfigurazioa
 ```
+
+El menú Txostenak abre directamente el **SIS Dashboard** (OWL component):
+- 4 tarjetas: total irakasleak, funtzionarioak, ordezkoak, bajan (ordezkapenetan)
+- Drill-down: tarjeta → lista de departamentos con recuento → lista de irakasleak → formulario
 
 ## Migración de datos (migrate_laravel_to_odoo.py)
 
@@ -105,7 +104,23 @@ Script idempotente (829 líneas). Mapeo principal:
 | `IRAKASLEAK_GREBAK` | `op_greba` |
 | `IRAKASLE_KARGU` | `op_faculty_kargu_rel` |
 | `ORDEZKAPENAK` | `op_ordezkapen` |
-| `IRAKASLEAK_TALDEAK` | `op_faculty_batch_rel` + `op_department_op_faculty_rel` |
+| `IRAKASLEAK_TALDEAK` | `op_faculty_batch_rel` |
+| `MINTEGI_IRAKASLE` | `op_department_op_faculty_rel` |
+
+### patch_mintegi_irakasle.py
+
+Repuebla `op_department_op_faculty_rel` desde `MINTEGI_IRAKASLE` (membresía directa de departamento).
+**Ejecutar al inicio de cada curso**, después de `migrate_laravel_to_odoo.py`.
+
+```bash
+docker cp patch_mintegi_irakasle.py odoo19:/tmp/
+docker exec odoo19 python3 /tmp/patch_mintegi_irakasle.py
+```
+
+- Borra todos los registros anteriores de `op_department_op_faculty_rel`
+- Reinserta desde MySQL uniendo `MINTEGI_IRAKASLE` + `IRAKASLEAK` (suspenditua=0) + `MINTEGIAK`
+- El join de departamento usa `code` (mIZ sin prefijo `MINTEGIA-`), no el nombre
+- Nota: MySQL `MINTEGIA-LPO` (`izena='FOL'`) → Odoo departamento `code='LPO'`
 
 ## Datos migrados (estado actual)
 
@@ -204,3 +219,6 @@ Botón en la **vista lista** (columna) y en la **cabecera del formulario** (`<he
 - Los menús de Konfigurazioa del SIS se gestionan en `views/op_sis_menu.xml`.
 - Al añadir campos o modelos al módulo hernani, actualizar también `security/ir.model.access.csv`.
 - `openeducat_classroom` está en `depends` del módulo hernani (necesario para la referencia XML al action de Gelak).
+- El campo `active` (Aktiboa) está **oculto** en todas las listas embebidas del módulo (faculty_ids, course_ids, etc.). El archivado sigue funcionando internamente.
+- `op_department_op_faculty_rel` se gestiona con `patch_mintegi_irakasle.py` (fuente: `MINTEGI_IRAKASLE`). Los cambios manuales desde la UI del departamento se perderán al re-ejecutar el script.
+- CSS personalizado en `static/src/css/hernani.css`: dashboard, columnas ajustadas al contenido (`table-layout: auto`), cabecera "Ezabatu Mintegitik" en lista de facultad.

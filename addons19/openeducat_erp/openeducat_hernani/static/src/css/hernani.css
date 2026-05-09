@@ -54,6 +54,25 @@
     cursor: pointer;
 }
 
+/* Listas embebidas del departamento: columnas ajustadas al contenido */
+.o_field_widget[name="faculty_ids"] .o_list_table,
+.o_field_widget[name="course_ids"] .o_list_table {
+    table-layout: auto;
+    width: 100%;
+}
+
+/* Cabecera columna "Ezabatu Mintegitik": anular el width:32px de Odoo */
+.o_field_widget[name="faculty_ids"] th.o_list_actions_header {
+    width: auto !important;
+    min-width: max-content !important;
+    overflow: visible !important;
+    white-space: nowrap;
+    font-weight: 500;
+}
+.o_field_widget[name="faculty_ids"] th.o_list_actions_header::before {
+    content: "Ezabatu Mintegitik";
+}
+
 /* Sustituciones: aplicar el mismo ancho completo que Odoo da al :first-child del tab-pane.
    Sin esto, solo la tabla que sea :first-child hereda --ListRenderer-margin-x.
    Como en este tab el primer hijo es un <separator>, ambas tablas quedan estrechas. */

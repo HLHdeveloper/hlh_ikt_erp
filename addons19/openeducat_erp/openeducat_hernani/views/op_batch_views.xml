@@ -21,7 +21,6 @@
                                     <field name="name"/>
                                     <field name="email"/>
                                     <field name="main_department_id" string="Mintegi nagusia"/>
-                                    <field name="active"/>
                                 </tree>
                             </field>
                         </page>
