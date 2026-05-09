@@ -2,6 +2,28 @@
 odoo-data19/
 postgres-data19/
 
+# Módulos upstream OpenEducat (repo externo, no nuestro código)
+addons19/openeducat_erp/openeducat_activity/
+addons19/openeducat_erp/openeducat_admission/
+addons19/openeducat_erp/openeducat_assignment/
+addons19/openeducat_erp/openeducat_attendance/
+addons19/openeducat_erp/openeducat_classroom/
+addons19/openeducat_erp/openeducat_core/
+addons19/openeducat_erp/openeducat_erp/
+addons19/openeducat_erp/openeducat_exam/
+addons19/openeducat_erp/openeducat_facility/
+addons19/openeducat_erp/openeducat_fees/
+addons19/openeducat_erp/openeducat_library/
+addons19/openeducat_erp/openeducat_parent/
+addons19/openeducat_erp/openeducat_timetable/
+addons19/openeducat_erp/web_openeducat/
+addons19/openeducat_erp/.git/
+addons19/openeducat_erp/.gitattributes
+addons19/openeducat_erp/.gitignore
+addons19/openeducat_erp/.coveragerc
+addons19/openeducat_erp/LICENSE
+addons19/openeducat_erp/README.md
+
 # Configuración con credenciales
 config19/
 
