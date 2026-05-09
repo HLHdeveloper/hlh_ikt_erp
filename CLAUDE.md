@@ -207,10 +207,26 @@ Los informes de grebas y ordezkapenak mostrarán datos reales cuando se registre
 
 ## Botón "Bukatu ordezkapena" (op.ordezkapen)
 
-Botón en la **vista lista** (columna) y en la **cabecera del formulario** (`<header>`).
-- Solo visible cuando `end_date` está vacío (`invisible="end_date"`)
+Botón en la **vista lista** (columna), en la **cabecera del formulario** (`<header>`) y en el **SIS Dashboard** (historial de bajas).
+- Solo visible cuando `end_date` está vacío (`invisible="end_date"` en vistas Odoo)
 - Al pulsar llama a `action_bukatu()` que escribe `end_date = Date.today()`
 - Desaparece automáticamente tras establecer la fecha
+
+## SIS Dashboard (OWL — `sis_dashboard_action`)
+
+5 tarjetas con drill-down. Métodos RPC en `op.faculty`:
+
+| Tarjeta | Nivel 1 | Nivel 2 | Nivel 3 |
+|---|---|---|---|
+| Irakasleak / Funtzionarioak / Ordezkoak | `get_dept_breakdown(kidergoa)` | `get_faculty_by_dept(dept_id, kidergoa)` | → form |
+| Bajan daudenak | `get_bajan_depts()` | `get_bajan_faculty_by_dept(dept_id)` — titular / ordezkoa actual / kop. total | `get_bajan_history(titular_id)` — con botón "Bukatu ordezkapena" inline |
+| Karguak | `get_kargu_depts()` | `get_kargu_types_for_dept(dept_id)` — MB-%, TUTO_%, DUAL | `get_faculty_for_dept_kargu(dept_id, code_pattern)` — con columna Taldea para Tutoreak |
+
+**Notas de implementación:**
+- `get_bajan_faculty_by_dept`: `ordezko_count` cuenta todos los sustitutos históricos (`COUNT DISTINCT` sin filtro `end_date IS NULL`)
+- `get_bajan_history`: devuelve `id` del `op.ordezkapen` para el botón Bukatu; `end_date=null` → botón; `end_date` con valor → fecha
+- Kargu types: `MB-%%` = mintegi buruak, `TUTO_%%` = tutoreak, `DUAL_ARDURADUNAK` = dual; campo `type` ('mb'/'tuto'/'dual') para lógica de template
+- Tutoreak muestra columna extra "Taldea" con `STRING_AGG(k.code)` del cargo
 
 ## Notas importantes
 
