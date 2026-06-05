@@ -1,3 +1,6 @@
+# Backups de base de datos
+BD_backup/
+
 # Volúmenes Docker — datos de BD y filestore de Odoo
 odoo-data19/
 postgres-data19/
