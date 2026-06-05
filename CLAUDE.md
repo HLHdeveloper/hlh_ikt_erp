@@ -84,8 +84,10 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 ```
 
 El menú Txostenak abre directamente el **SIS Dashboard** (OWL component):
-- 4 tarjetas: total irakasleak, funtzionarioak, ordezkoak, bajan (ordezkapenetan)
-- Drill-down: tarjeta → lista de departamentos con recuento → lista de irakasleak → formulario
+- **Sección Irakasleak**: 6 tarjetas (total, funtzionarioak, ordezkoak, bajan, karguak, gainontzeko karguak)
+- **Sección Ikasleak**: 1 tarjeta con drill-down 3 niveles
+- Drill-down irakasleak: tarjeta → mintegiak → irakasleak / kargu types → irakasleak → formulario
+- Drill-down ikasleak: tarjeta → mintegiak → taldeak → ikasleak → formulario (editable)
 
 ## Migración de datos (migrate_laravel_to_odoo.py)
 
@@ -214,19 +216,37 @@ Botón en la **vista lista** (columna), en la **cabecera del formulario** (`<hea
 
 ## SIS Dashboard (OWL — `sis_dashboard_action`)
 
-5 tarjetas con drill-down. Métodos RPC en `op.faculty`:
+6 tarjetas Irakasleak + 1 tarjeta Ikasleak. Métodos RPC:
 
 | Tarjeta | Nivel 1 | Nivel 2 | Nivel 3 |
 |---|---|---|---|
 | Irakasleak / Funtzionarioak / Ordezkoak | `get_dept_breakdown(kidergoa)` | `get_faculty_by_dept(dept_id, kidergoa)` | → form |
 | Bajan daudenak | `get_bajan_depts()` | `get_bajan_faculty_by_dept(dept_id)` — titular / ordezkoa actual / kop. total | `get_bajan_history(titular_id)` — con botón "Bukatu ordezkapena" inline |
 | Karguak | `get_kargu_depts()` | `get_kargu_types_for_dept(dept_id)` — MB-%, TUTO_%, DUAL | `get_faculty_for_dept_kargu(dept_id, code_pattern)` — con columna Taldea para Tutoreak |
+| Gainontzeko karguak | `get_gainontzeko_kargu_types()` — karguak NOT MB/TUTO/DUAL | `get_faculty_for_gainontzeko_kargu(kargu_id)` | → form |
+
+**Métodos RPC en `op.student`:**
+
+| Sección | Nivel 1 | Nivel 2 | Nivel 3 |
+|---|---|---|---|
+| Ikasleak | `get_ikasleak_dept_breakdown()` | `get_ikasleak_batch_breakdown(dept_id)` | `get_ikasleak_by_batch(batch_id)` → form editable |
+
+**Nota:** El contador de la tarjeta Ikasleak muestra el total de alumnos activos (278); el drill-down muestra solo los 261 que tienen matrícula activa en un taldea con departamento asignado.
 
 **Notas de implementación:**
 - `get_bajan_faculty_by_dept`: `ordezko_count` cuenta todos los sustitutos históricos (`COUNT DISTINCT` sin filtro `end_date IS NULL`)
 - `get_bajan_history`: devuelve `id` del `op.ordezkapen` para el botón Bukatu; `end_date=null` → botón; `end_date` con valor → fecha
 - Kargu types: `MB-%%` = mintegi buruak, `TUTO_%%` = tutoreak, `DUAL_ARDURADUNAK` = dual; campo `type` ('mb'/'tuto'/'dual') para lógica de template
 - Tutoreak muestra columna extra "Taldea" con `STRING_AGG(k.code)` del cargo
+- Gainontzeko karguak: drill-down de 2 niveles (sin filtro de departamento), basado en `op.kargu.id`
+
+## Vistas personalizadas (op_student_views.xml, op_faculty_views.xml)
+
+- Botón "Create Student User" (`create_student_user`) **oculto** en el formulario de alumno — los alumnos no acceden a Odoo.
+- Campos de nombre renombrados en **ambos** formularios (alumno e irakasle):
+  - `last_name` → etiqueta **Abizena_1** (antes "Abizenak" / "Last Name")
+  - `middle_name` → etiqueta **Abizena_2** (antes "Bigarren Izena" / "Middle Name")
+  - Cambio solo de etiqueta en la vista; el nombre de columna en BD no varía.
 
 ## Notas importantes
 

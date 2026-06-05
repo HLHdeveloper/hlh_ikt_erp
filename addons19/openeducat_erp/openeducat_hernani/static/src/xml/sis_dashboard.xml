@@ -39,6 +39,12 @@
                         <div class="sdb-label">Karguak</div>
                     </div>
 
+                    <div t-attf-class="sdb-card{{ state.activeCard === 'gainontzeko' ? ' sdb-card--active' : '' }}"
+                         t-on-click="() => this.onCardClick('gainontzeko')">
+                        <div class="sdb-number" t-esc="state.counts.gainontzeko"/>
+                        <div class="sdb-label">Gainontzeko karguak</div>
+                    </div>
+
                 </div>
 
                 <!-- Drill-down panel -->
@@ -142,6 +148,27 @@
                             </table>
                         </t>
 
+                        <!-- Nivel 1 GAINONTZEKO: lista de kargu types -->
+                        <t t-elif="state.activeCard === 'gainontzeko' &amp;&amp; !state.selectedGainontzekoType">
+                            <h6 class="card-title mb-3">Gainontzeko karguak</h6>
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Kargua</th>
+                                        <th class="text-end" style="width:70px">Kop.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.gainontzekoTypes" t-as="ktype" t-key="ktype.id">
+                                        <tr class="sdb-dept-row" t-on-click="() => this.onGainontzekoTypeClick(ktype)">
+                                            <td><t t-esc="ktype.name"/></td>
+                                            <td class="text-end fw-semibold"><t t-esc="ktype.count"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+
                         <!-- Nivel 2 KARGUAK: tipos de kargo -->
                         <t t-elif="state.activeCard === 'karguak' &amp;&amp; !state.selectedKarguType">
                             <div class="d-flex align-items-center mb-3">
@@ -169,7 +196,7 @@
                             </table>
                         </t>
 
-                        <!-- Nivel 2/3: lista de irakasleak (total/funtz/ordezko/karguak) -->
+                        <!-- Nivel 2/3: lista de irakasleak (total/funtz/ordezko/karguak/gainontzeko) -->
                         <t t-else="">
                             <div class="d-flex align-items-center mb-3">
                                 <t t-if="state.activeCard === 'karguak'">
@@ -181,6 +208,13 @@
                                         <t t-esc="state.selectedDept.name"/> /
                                         <t t-esc="state.selectedKarguType.label"/>
                                     </span>
+                                </t>
+                                <t t-elif="state.activeCard === 'gainontzeko'">
+                                    <button class="btn btn-sm btn-outline-secondary me-2"
+                                            t-on-click="() => this.backToGainontzekoTypes()">
+                                        <i class="fa fa-arrow-left me-1"/>Karguak
+                                    </button>
+                                    <span class="fw-bold" t-esc="state.selectedGainontzekoType.name"/>
                                 </t>
                                 <t t-else="">
                                     <button class="btn btn-sm btn-outline-secondary me-2"
@@ -206,6 +240,101 @@
                                                 class="text-muted">
                                                 <t t-esc="faculty.kargu"/>
                                             </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+
+                    </div>
+                </div>
+
+                <h5 class="mb-3 mt-4 text-muted fw-semibold text-uppercase">Ikasleak</h5>
+
+                <!-- Ikasleak card -->
+                <div class="d-flex gap-3 flex-wrap mb-4">
+                    <div t-attf-class="sdb-card{{ state.ikasleakActive ? ' sdb-card--active' : '' }}"
+                         t-on-click="() => this.onIkasleakCardClick()">
+                        <div class="sdb-number" t-esc="state.counts.ikasleak"/>
+                        <div class="sdb-label">Ikasleak</div>
+                    </div>
+                </div>
+
+                <!-- Ikasleak drill-down panel -->
+                <div class="sdb-drilldown card shadow-sm" t-if="state.ikasleakActive">
+                    <div class="card-body">
+
+                        <t t-if="state.ikasleakLoading">
+                            <div class="text-center py-4">
+                                <i class="fa fa-spinner fa-spin fa-2x text-muted"/>
+                            </div>
+                        </t>
+
+                        <!-- Nivel 1: Mintegiak -->
+                        <t t-elif="!state.ikasleakSelectedDept">
+                            <h6 class="card-title mb-3">Ikasleak — mintegika</h6>
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mintegia</th>
+                                        <th class="text-end" style="width:70px">Kop.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.ikasleakDeptBreakdown" t-as="dept" t-key="dept.id">
+                                        <tr class="sdb-dept-row" t-on-click="() => this.onIkasleakDeptClick(dept)">
+                                            <td><t t-esc="dept.name"/></td>
+                                            <td class="text-end fw-semibold"><t t-esc="dept.count"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+
+                        <!-- Nivel 2: Taldeak -->
+                        <t t-elif="!state.ikasleakSelectedBatch">
+                            <div class="d-flex align-items-center mb-3">
+                                <button class="btn btn-sm btn-outline-secondary me-2"
+                                        t-on-click="() => this.backToIkasleakDepts()">
+                                    <i class="fa fa-arrow-left me-1"/>Mintegiak
+                                </button>
+                                <span class="fw-bold" t-esc="state.ikasleakSelectedDept.name"/>
+                            </div>
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Taldea</th>
+                                        <th class="text-end" style="width:70px">Kop.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.ikasleakBatchBreakdown" t-as="batch" t-key="batch.id">
+                                        <tr class="sdb-dept-row" t-on-click="() => this.onIkasleakBatchClick(batch)">
+                                            <td><t t-esc="batch.name"/></td>
+                                            <td class="text-end fw-semibold"><t t-esc="batch.count"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+
+                        <!-- Nivel 3: lista de ikasleak -->
+                        <t t-else="">
+                            <div class="d-flex align-items-center mb-3">
+                                <button class="btn btn-sm btn-outline-secondary me-2"
+                                        t-on-click="() => this.backToIkasleakBatches()">
+                                    <i class="fa fa-arrow-left me-1"/>Taldeak
+                                </button>
+                                <span class="fw-bold" t-esc="state.ikasleakSelectedBatch.name"/>
+                            </div>
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr><th>Ikasleak</th></tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.ikasleakList" t-as="ikaslea" t-key="ikaslea.id">
+                                        <tr class="sdb-faculty-row" t-on-click="() => this.onIkasleaClick(ikaslea)">
+                                            <td><t t-esc="ikaslea.name"/></td>
                                         </tr>
                                     </t>
                                 </tbody>

@@ -9,6 +9,7 @@ const CARD_LABELS = {
     ordezkoa: "Ordezkoak",
     bajan: "Bajan daudenak",
     karguak: "Karguak",
+    gainontzeko: "Gainontzeko karguak",
 };
 
 class SisDashboard extends Component {
@@ -19,7 +20,7 @@ class SisDashboard extends Component {
         this.orm = useService("orm");
         this.action = useService("action");
         this.state = useState({
-            counts: { total: 0, funtzionarioak: 0, ordezkoak: 0, bajan: 0, karguak: 0 },
+            counts: { total: 0, funtzionarioak: 0, ordezkoak: 0, bajan: 0, karguak: 0, gainontzeko: 0, ikasleak: 0 },
             activeCard: null,
             drillTitle: "",
             deptBreakdown: [],
@@ -27,12 +28,23 @@ class SisDashboard extends Component {
             // karguak drill-down
             karguTypes: [],
             selectedKarguType: null,
+            // gainontzeko karguak drill-down
+            gainontzekoTypes: [],
+            selectedGainontzekoType: null,
             // bajan drill-down
             selectedBajanFaculty: null,
             bajanHistory: [],
             // shared faculty list
             facultyList: [],
             loading: false,
+            // ikasleak section
+            ikasleakActive: false,
+            ikasleakLoading: false,
+            ikasleakDeptBreakdown: [],
+            ikasleakSelectedDept: null,
+            ikasleakBatchBreakdown: [],
+            ikasleakSelectedBatch: null,
+            ikasleakList: [],
         });
         onWillStart(() => this.loadCounts());
     }
@@ -51,6 +63,8 @@ class SisDashboard extends Component {
         this.state.selectedDept = null;
         this.state.karguTypes = [];
         this.state.selectedKarguType = null;
+        this.state.gainontzekoTypes = [];
+        this.state.selectedGainontzekoType = null;
         this.state.selectedBajanFaculty = null;
         this.state.bajanHistory = [];
         this.state.facultyList = [];
@@ -70,6 +84,10 @@ class SisDashboard extends Component {
             this.state.deptBreakdown = await this.orm.call("op.faculty", "get_bajan_depts", []);
         } else if (cardType === "karguak") {
             this.state.deptBreakdown = await this.orm.call("op.faculty", "get_kargu_depts", []);
+        } else if (cardType === "gainontzeko") {
+            this.state.gainontzekoTypes = await this.orm.call(
+                "op.faculty", "get_gainontzeko_kargu_types", []
+            );
         } else {
             const kidergoa = cardType === "total" ? null : cardType;
             this.state.deptBreakdown = await this.orm.call(
@@ -132,6 +150,20 @@ class SisDashboard extends Component {
         this.state.facultyList = [];
     }
 
+    async onGainontzekoTypeClick(ktype) {
+        this.state.selectedGainontzekoType = ktype;
+        this.state.loading = true;
+        this.state.facultyList = await this.orm.call(
+            "op.faculty", "get_faculty_for_gainontzeko_kargu", [ktype.id]
+        );
+        this.state.loading = false;
+    }
+
+    backToGainontzekoTypes() {
+        this.state.selectedGainontzekoType = null;
+        this.state.facultyList = [];
+    }
+
     backToBajanFaculty() {
         this.state.selectedBajanFaculty = null;
         this.state.bajanHistory = [];
@@ -152,6 +184,71 @@ class SisDashboard extends Component {
             type: "ir.actions.act_window",
             res_model: "op.faculty",
             res_id: faculty.id,
+            views: [[false, "form"]],
+            target: "current",
+        });
+    }
+
+    // ── Ikasleak section ────────────────────────────────────────────
+
+    _resetIkasleakDrill() {
+        this.state.ikasleakDeptBreakdown = [];
+        this.state.ikasleakSelectedDept = null;
+        this.state.ikasleakBatchBreakdown = [];
+        this.state.ikasleakSelectedBatch = null;
+        this.state.ikasleakList = [];
+    }
+
+    async onIkasleakCardClick() {
+        if (this.state.ikasleakActive) {
+            this.state.ikasleakActive = false;
+            this._resetIkasleakDrill();
+            return;
+        }
+        this.state.ikasleakActive = true;
+        this._resetIkasleakDrill();
+        this.state.ikasleakLoading = true;
+        this.state.ikasleakDeptBreakdown = await this.orm.call(
+            "op.student", "get_ikasleak_dept_breakdown", []
+        );
+        this.state.ikasleakLoading = false;
+    }
+
+    async onIkasleakDeptClick(dept) {
+        this.state.ikasleakSelectedDept = dept;
+        this.state.ikasleakLoading = true;
+        this.state.ikasleakBatchBreakdown = await this.orm.call(
+            "op.student", "get_ikasleak_batch_breakdown", [dept.id]
+        );
+        this.state.ikasleakLoading = false;
+    }
+
+    async onIkasleakBatchClick(batch) {
+        this.state.ikasleakSelectedBatch = batch;
+        this.state.ikasleakLoading = true;
+        this.state.ikasleakList = await this.orm.call(
+            "op.student", "get_ikasleak_by_batch", [batch.id]
+        );
+        this.state.ikasleakLoading = false;
+    }
+
+    backToIkasleakDepts() {
+        this.state.ikasleakSelectedDept = null;
+        this.state.ikasleakBatchBreakdown = [];
+        this.state.ikasleakSelectedBatch = null;
+        this.state.ikasleakList = [];
+    }
+
+    backToIkasleakBatches() {
+        this.state.ikasleakSelectedBatch = null;
+        this.state.ikasleakList = [];
+    }
+
+    async onIkasleaClick(ikaslea) {
+        await this.action.doAction({
+            type: "ir.actions.act_window",
+            res_model: "op.student",
+            res_id: ikaslea.id,
             views: [[false, "form"]],
             target: "current",
         });

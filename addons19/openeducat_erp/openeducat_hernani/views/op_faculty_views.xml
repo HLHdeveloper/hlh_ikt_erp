@@ -15,6 +15,16 @@
                     <attribute name="string">Irakasle Berria</attribute>
                 </xpath>
 
+                <!-- Renombrar campos de nombre: last_name → Abizena_1, middle_name → Abizena_2 -->
+                <field name="last_name" position="attributes">
+                    <attribute name="string">Abizena_1</attribute>
+                    <attribute name="placeholder">Abizena_1</attribute>
+                </field>
+                <field name="middle_name" position="attributes">
+                    <attribute name="string">Abizena_2</attribute>
+                    <attribute name="placeholder">Abizena_2</attribute>
+                </field>
+
                 <!-- Pestañak gehitu "Subjects" fitxaren ondoren -->
                 <xpath expr="//page[@name='subjects']" position="after">
 

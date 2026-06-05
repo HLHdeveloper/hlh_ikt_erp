@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Ocultar botón "Create Student User": los alumnos no acceden a Odoo -->
+        <!-- Renombrar campos de nombre: last_name → Abizena_1, middle_name → Abizena_2 -->
+        <record id="view_op_student_form_hernani" model="ir.ui.view">
+            <field name="name">op.student.form.hernani</field>
+            <field name="model">op.student</field>
+            <field name="inherit_id" ref="openeducat_core.view_op_student_form"/>
+            <field name="arch" type="xml">
+                <button name="create_student_user" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </button>
+                <field name="last_name" position="attributes">
+                    <attribute name="string">Abizena_1</attribute>
+                    <attribute name="placeholder">Abizena_1</attribute>
+                </field>
+                <field name="middle_name" position="attributes">
+                    <attribute name="string">Abizena_2</attribute>
+                    <attribute name="placeholder">Abizena_2</attribute>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</odoo>

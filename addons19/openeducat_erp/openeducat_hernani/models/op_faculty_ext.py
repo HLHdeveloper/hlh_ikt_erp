@@ -64,8 +64,22 @@ class OpFaculty(models.Model):
                OR k.code = 'DUAL_ARDURADUNAK'
         """)
         karguak = cr.fetchone()[0]
+        cr.execute("""
+            SELECT COUNT(DISTINCT fk.faculty_id)
+            FROM op_faculty_kargu_rel fk
+            JOIN op_kargu k ON k.id = fk.kargu_id
+            JOIN op_faculty f ON f.id = fk.faculty_id AND f.active = true
+            WHERE k.code NOT LIKE 'MB-%%'
+              AND k.code NOT LIKE 'TUTO_%%'
+              AND k.code != 'DUAL_ARDURADUNAK'
+        """)
+        gainontzeko = cr.fetchone()[0]
+        cr.execute("SELECT COUNT(*) FROM op_student WHERE active=true")
+        ikasleak = cr.fetchone()[0]
         return {'total': total, 'funtzionarioak': funtzionarioak,
-                'ordezkoak': ordezkoak, 'bajan': bajan, 'karguak': karguak}
+                'ordezkoak': ordezkoak, 'bajan': bajan,
+                'karguak': karguak, 'gainontzeko': gainontzeko,
+                'ikasleak': ikasleak}
 
     @api.model
     def get_dept_breakdown(self, kidergoa=None):
@@ -221,6 +235,36 @@ class OpFaculty(models.Model):
             ORDER BY rp.name
         """, (code_pattern, dept_id))
         return [{'id': r[0], 'name': r[1], 'kargu': r[2]} for r in cr.fetchall()]
+
+    @api.model
+    def get_gainontzeko_kargu_types(self):
+        cr = self.env.cr
+        cr.execute("""
+            SELECT k.id, k.code, k.name, COUNT(DISTINCT fk.faculty_id)
+            FROM op_kargu k
+            JOIN op_faculty_kargu_rel fk ON fk.kargu_id = k.id
+            JOIN op_faculty f ON f.id = fk.faculty_id AND f.active = true
+            WHERE k.code NOT LIKE 'MB-%%'
+              AND k.code NOT LIKE 'TUTO_%%'
+              AND k.code != 'DUAL_ARDURADUNAK'
+            GROUP BY k.id, k.code, k.name
+            ORDER BY COUNT(DISTINCT fk.faculty_id) DESC, k.code
+        """)
+        return [{'id': r[0], 'code': r[1], 'name': r[2], 'count': r[3]}
+                for r in cr.fetchall()]
+
+    @api.model
+    def get_faculty_for_gainontzeko_kargu(self, kargu_id):
+        cr = self.env.cr
+        cr.execute("""
+            SELECT f.id, rp.name
+            FROM op_faculty f
+            JOIN res_partner rp ON rp.id = f.partner_id
+            JOIN op_faculty_kargu_rel fk ON fk.faculty_id = f.id
+            WHERE fk.kargu_id = %s AND f.active = true
+            ORDER BY rp.name
+        """, (kargu_id,))
+        return [{'id': r[0], 'name': r[1]} for r in cr.fetchall()]
 
     @api.model
     def get_faculty_by_dept(self, dept_id, kidergoa=None):

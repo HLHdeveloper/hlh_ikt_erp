@@ -1,12 +1,21 @@
+/* ── Paleta hernanilanh.eus: pistacho / negro / blanco ───────── */
+:root {
+    --hlh-pistacho:       #82B543;
+    --hlh-pistacho-dark:  #6A9636;
+    --hlh-pistacho-light: #EFF6E6;
+    --hlh-negro:          #1A1A1A;
+    --hlh-blanco:         #FFFFFF;
+}
+
 /* ── SIS Dashboard ──────────────────────────────────────────── */
 .o_sis_dashboard {
-    background: #f5f6f9;
+    background: var(--hlh-pistacho-light);
     min-height: 100%;
 }
 
 .sdb-card {
-    background: #fff;
-    border: 2px solid #dee2e6;
+    background: var(--hlh-blanco);
+    border: 2px solid #c8d8b0;
     border-radius: 10px;
     padding: 1.5rem 2rem;
     min-width: 155px;
@@ -16,13 +25,13 @@
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
 }
 .sdb-card:hover {
-    border-color: #875a7b;
+    border-color: var(--hlh-pistacho);
     box-shadow: 0 3px 10px rgba(0,0,0,.10);
 }
 .sdb-card--active {
-    border-color: #875a7b;
-    background: #875a7b;
-    color: #fff;
+    border-color: var(--hlh-pistacho);
+    background: var(--hlh-pistacho);
+    color: var(--hlh-blanco);
 }
 .sdb-card--warning {
     border-color: #f0ad4e;
@@ -36,6 +45,10 @@
     font-weight: 700;
     line-height: 1;
     margin-bottom: .4rem;
+    color: var(--hlh-negro);
+}
+.sdb-card--active .sdb-number {
+    color: var(--hlh-blanco);
 }
 .sdb-label {
     font-size: .85rem;
@@ -44,6 +57,7 @@
 .sdb-drilldown {
     max-width: 560px;
     animation: sdbFadeIn .15s ease;
+    border: 1px solid #c8d8b0 !important;
 }
 @keyframes sdbFadeIn {
     from { opacity: 0; transform: translateY(-6px); }
@@ -52,6 +66,10 @@
 .sdb-dept-row,
 .sdb-faculty-row {
     cursor: pointer;
+}
+.sdb-dept-row:hover,
+.sdb-faculty-row:hover {
+    background: var(--hlh-pistacho-light) !important;
 }
 
 /* Listas embebidas del departamento: columnas ajustadas al contenido */
