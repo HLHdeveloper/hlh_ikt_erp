@@ -248,6 +248,66 @@ Botón en la **vista lista** (columna), en la **cabecera del formulario** (`<hea
   - `middle_name` → etiqueta **Abizena_2** (antes "Bigarren Izena" / "Middle Name")
   - Cambio solo de etiqueta en la vista; el nombre de columna en BD no varía.
 
+## Alineación de columnas en vistas lista (tree)
+
+En Odoo 17, los campos `Float`, `Integer` y `Monetary` se alinean a la derecha por defecto. Para forzar alineación a la izquierda:
+
+### Celdas de datos
+Añadir `class="text-start"` al `<field>` en el XML del `<tree>`. El list renderer añade esa clase al `<td>`, y Bootstrap aplica `text-align: left !important` directamente:
+```xml
+<field name="orduak" string="Orduak" class="text-start"/>
+```
+
+### Cabeceras de columna
+Los headers numéricos usan **dos mecanismos** de alineación a la derecha:
+1. `flex-row-reverse` en el `<div>` interior del `<th>` (posiciona el span a la derecha)
+2. `text-align: right` en el `<span class="o_list_number_th">` (alinea el texto dentro del span)
+
+Para corregir ambos mediante CSS, el selector debe usar la clase del `<tree>` que Odoo aplica al div del **controller** (no del renderer):
+```css
+.mi_clase.o_list_view .o_list_table thead th > div.flex-row-reverse {
+    flex-direction: row !important;
+}
+.mi_clase.o_list_view .o_list_table thead .o_list_number_th {
+    text-align: left !important;
+}
+```
+
+### Cómo funciona el `class` en `<tree>`
+`class="mi_clase"` en el elemento `<tree>` se aplica al div raíz del **ListController** (junto a `o_list_view` y `o_view_controller`), NO al div `.o_list_renderer`. Los selectores CSS deben partir de `.mi_clase` como ancestro.
+
+### Limpiar caché de assets tras cambios CSS
+```bash
+docker exec postgres19 psql -U odoo -d kudeaketa -c "DELETE FROM ir_attachment WHERE name LIKE '%web.assets%';"
+docker restart odoo19
+# Después, hard-refresh en el navegador: Ctrl+Shift+R
+```
+
+## Perfilazioak (OWL — `perfilazioak_action`)
+
+Acción cliente OWL (menú `Perfilazioak`, `ir.actions.client` tag `perfilazioak_action`). Permite perfilar (asignar módulos y cargos a profesores) por mintegi → zikloa → taldea. Componente en `static/src/components/perfilazioak.js`, plantilla en `static/src/xml/perfilazioak.xml`. Métodos RPC en `op.faculty` (`models/op_faculty_ext.py`).
+
+### Paneles
+- **Izquierda — Irakasleak**: lista de profesores del mintegi (funtzionarioak + impersonalak). Cada profesor muestra dos cuadros junto al nombre:
+  - **Gela** (badge azul `bg-info`, `pfz-faculty-gela`) = `SUM(gela_orduak)` de sus módulos.
+  - **RPT** (badge gris/amarillo, `pfz-faculty-hours`) = `SUM(rpt_total)` módulos + horas de karguak. Amarillo si `> 17` (overload).
+  - Leyenda en la cabecera (`.pfz-legend`, `inline-flex` `nowrap`) distingue ambos cuadros.
+  - Panel `.pfz-left` ensanchado a 420px (min 380px) para que quepan los dos apellidos + cuadros.
+  - Debajo: sección **Karguak** del profesor seleccionado.
+- **Derecha — Moduluak** (de la taldea seleccionada) + **Perfilazio Laburpena** (resumen del profesor).
+
+### Tablas
+- **Moduluak**: Kodea · PT/PES · Orduak · Kurtsoa · Aste Ban. · **Gela** · RPT · Zorretan · Irakaslea. Clic en fila asigna/desasigna el módulo al profesor seleccionado.
+- **Perfilazio Laburpena**: columnas Taldea · Kurtsoa · Kodea · PT/PES · Orduak · **Gela** · RPT · Aste Ban. · Zorretan. Filas de módulos (rm) + filas de karguak (k, con "—" en columnas de módulo). Última fila **GUZTIRA** (etiqueta bajo PT/PES) con **totales** de Gela (`sumGela`), RPT (`sumRpt` = módulos + karguak) y Zorretan (`sumZorretan`).
+
+### Reparto de horas de karguak (cap por `op.kargu.rpt_total`)
+Cada kargu tiene un total de horas RPT (`op.kargu.rpt_total`). Las horas se reparten entre profesores y **la suma no puede superar el total del kargu**.
+- `get_all_karguak(faculty_id)` → `remaining` = total − horas asignadas a **otros** profesores.
+- `get_perfilazio_karguak(faculty_id)` → `max_orduak` por línea = total − asignadas a otros (máximo que ese profesor puede tener).
+- `upsert_perfilazio_kargu` → **guard de servidor**: lanza `UserError` si `orduak > rpt_total − asignadas_otros`.
+- UI: al añadir kargu, el desplegable muestra `(libre/total h libre)` y "Libre: Xh"; el campo de horas es un **selector limitado** a las horas libres (enteros 1…remaining). Si no quedan, muestra "Ez dago ordu librerik". Las líneas ya asignadas usan selector 1…`max_orduak` con su valor actual preseleccionado.
+- **Nota**: un kargu con `rpt_total = 0` no permite asignar horas (remaining 0). Hay que definir su total RPT en `op.kargu` para poder repartirlo.
+
 ## Notas importantes
 
 - La BD MySQL es **SOLO LECTURA**. Nunca modificar datos en ella.
@@ -259,3 +319,4 @@ Botón en la **vista lista** (columna), en la **cabecera del formulario** (`<hea
 - El campo `active` (Aktiboa) está **oculto** en todas las listas embebidas del módulo (faculty_ids, course_ids, etc.). El archivado sigue funcionando internamente.
 - `op_department_op_faculty_rel` se gestiona con `patch_mintegi_irakasle.py` (fuente: `MINTEGI_IRAKASLE`). Los cambios manuales desde la UI del departamento se perderán al re-ejecutar el script.
 - CSS personalizado en `static/src/css/hernani.css`: dashboard, columnas ajustadas al contenido (`table-layout: auto`), cabecera "Ezabatu Mintegitik" en lista de facultad.
+- El campo `gela_orduak` (`fields.Integer`) se muestra como **"Gela"** en la vista lista y como **"Gela Orduak"** en el formulario. Es intencionado: en el listado de moduluak el espacio es limitado y el usuario pidió la etiqueta corta.

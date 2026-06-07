@@ -1,4 +1,5 @@
 from . import op_kargu
+from . import op_perfilazio_kargu
 from . import op_greba
 from . import op_ordezkapen
 from . import op_faculty_ext
@@ -6,4 +7,5 @@ from . import op_student_ext
 from . import op_batch_ext
 from . import op_department_ext
 from . import op_report
+from . import op_subject_banaketa
 from . import op_subject_ext

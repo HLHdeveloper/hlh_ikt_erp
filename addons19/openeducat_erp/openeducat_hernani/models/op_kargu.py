@@ -13,6 +13,7 @@ class OpKargu(models.Model):
     )
     name = fields.Char(string='Nombre', required=True)
     gsuite_email = fields.Char(string='Email GSuite del cargo')
+    rpt_total = fields.Float(string='RPT Total (h/aste)', default=0.0)
     faculty_ids = fields.Many2many(
         'op.faculty',
         'op_faculty_kargu_rel',

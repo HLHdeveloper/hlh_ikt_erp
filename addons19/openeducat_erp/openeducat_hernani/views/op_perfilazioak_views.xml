@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <record id="action_perfilazioak" model="ir.actions.client">
+            <field name="name">Perfilazioak</field>
+            <field name="tag">perfilazioak_action</field>
+        </record>
+
+    </data>
+</odoo>

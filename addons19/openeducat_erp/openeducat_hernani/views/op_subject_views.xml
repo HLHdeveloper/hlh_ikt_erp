@@ -10,6 +10,12 @@
                 <field name="code" position="after">
                     <field name="kode_jima"/>
                 </field>
+                <field name="type" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </field>
+                <field name="grade_weightage" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </field>
                 <xpath expr="//group[1]" position="after">
                     <group string="Informazio gehigarria">
                         <group>
@@ -21,9 +27,11 @@
                         <group>
                             <field name="pt_pes" string="PT_PES"/>
                             <field name="orduak"/>
-                            <field name="aste_banaketa"/>
+                            <field name="banaketa_id" string="Aste Banaketa"
+                                   options="{'no_create': True, 'no_open': True}"/>
                             <field name="rpt_total" string="RPT Total"/>
                             <field name="orduak_zorretan"/>
+                            <field name="zikloko_orduak_enpresan" string="Zikloko Orduak Enpresan"/>
                         </group>
                     </group>
                 </xpath>
@@ -37,20 +45,18 @@
             <field name="inherit_id" ref="openeducat_core.view_op_subject_tree"/>
             <field name="arch" type="xml">
                 <xpath expr="//tree" position="replace">
-                    <tree string="Moduluak">
+                    <tree string="Moduluak" class="moduluak_list">
                         <field name="name" column_invisible="1"/>
                         <field name="batch_id" column_invisible="1"/>
                         <field name="talde_kodea" string="Talde Kodea"/>
                         <field name="code" string="Modulu Kodea"/>
-                        <field name="kode_jima" string="Kode Jima"/>
                         <field name="pt_pes" string="PT_PES"/>
-                        <field name="hizkuntza" string="Hizkuntza"/>
-                        <field name="orduak" string="Orduak"/>
+                        <field name="orduak" string="Orduak" class="text-start"/>
                         <field name="kurtsoa" string="Kurtsoa"/>
-                        <field name="gela_orduak" string="Gela"/>
+                        <field name="gela_orduak" string="Gela" class="text-start"/>
                         <field name="aste_banaketa" string="Aste Banaketa"/>
-                        <field name="rpt_total" string="RPT Total"/>
-                        <field name="orduak_zorretan" string="Orduak Zorretan"/>
+                        <field name="rpt_total" string="RPT Total" class="text-start"/>
+                        <field name="orduak_zorretan" string="Orduak Zorretan" class="text-start"/>
                     </tree>
                 </xpath>
             </field>

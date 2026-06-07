@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Genera todas las particiones (máx 5 días) para totales 1..15.
+             Idempotente: solo crea las que falten. Se ejecuta en cada update. -->
+        <function model="op.subject.banaketa" name="_populate_options"/>
+    </data>
+</odoo>

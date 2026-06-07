@@ -31,7 +31,15 @@
                   action="openeducat_core.act_open_op_subject_view"
                   groups="openeducat_core.group_op_back_office_admin,openeducat_core.group_op_faculty"/>
 
-        <!-- 5 · Ikasleak (seq 50) -->
+        <!-- 5 · Perfilazioak (seq 45) -->
+        <menuitem id="menu_perfilazioak_sis"
+                  name="Perfilazioak"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="45"
+                  action="openeducat_hernani.action_perfilazioak"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+        <!-- 6 · Ikasleak (seq 50) -->
         <record id="openeducat_core.menu_op_school_main" model="ir.ui.menu">
             <field name="sequence">50</field>
         </record>

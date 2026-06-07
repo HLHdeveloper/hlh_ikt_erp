@@ -91,6 +91,153 @@
     content: "Ezabatu Mintegitik";
 }
 
+/* Moduluak: cabeceras numéricas a la izquierda.
+   - flex-row-reverse en el div interior mueve el texto a la derecha → revertir
+   - o_list_number_th en el span fija text-align:right → sobreescribir
+   Las celdas de datos usan class="text-start" directamente en el XML. */
+.moduluak_list.o_list_view .o_list_table thead th > div.flex-row-reverse {
+    flex-direction: row !important;
+}
+.moduluak_list.o_list_view .o_list_table thead .o_list_number_th {
+    text-align: left !important;
+}
+
+/* ── Perfilazioak ───────────────────────────────────────────── */
+.o_perfilazioak {
+    background: var(--hlh-pistacho-light);
+    min-height: 100%;
+}
+.pfz-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 180px;
+}
+.pfz-left {
+    width: 420px;
+    min-width: 380px;
+    flex-shrink: 0;
+    border: 1px solid #c8d8b0 !important;
+}
+.pfz-left .card-header {
+    background: var(--hlh-pistacho-light);
+    border-bottom: 1px solid #c8d8b0;
+}
+.pfz-faculty-list {
+    max-height: 380px;
+    overflow-y: auto;
+}
+.pfz-faculty-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .4rem .75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background .1s;
+    user-select: none;
+}
+.pfz-faculty-row:hover {
+    background: var(--hlh-pistacho-light);
+}
+.pfz-faculty-row--active {
+    background: var(--hlh-pistacho) !important;
+    color: var(--hlh-blanco);
+}
+.pfz-faculty-row--active .pfz-faculty-name,
+.pfz-faculty-row--active .pfz-overload {
+    color: var(--hlh-blanco) !important;
+}
+.pfz-faculty-row--active .pfz-faculty-hours {
+    background: rgba(255,255,255,.25) !important;
+    color: var(--hlh-blanco) !important;
+}
+.pfz-faculty-name {
+    font-size: .875rem;
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pfz-overload {
+    color: #e67e00 !important;
+    font-weight: 600;
+}
+.pfz-faculty-hours {
+    font-size: .75rem;
+    margin-left: .5rem;
+    flex-shrink: 0;
+}
+.pfz-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.pfz-legend .badge {
+    margin-left: 0 !important;
+}
+.pfz-kargu-section {
+    background: #fafafa;
+}
+.pfz-kargu-row {
+    font-size: .8125rem;
+}
+.pfz-kargu-name {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 110px;
+}
+.pfz-kargu-input {
+    width: 58px !important;
+    text-align: right;
+    padding: .15rem .35rem !important;
+}
+.pfz-kargu-del {
+    line-height: 1;
+}
+.pfz-moduluak {
+    border: 1px solid #c8d8b0 !important;
+}
+.pfz-moduluak .card-header {
+    background: var(--hlh-pistacho-light);
+    border-bottom: 1px solid #c8d8b0;
+}
+.pfz-table td, .pfz-table th {
+    font-size: .8125rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.pfz-modulu-row {
+    cursor: pointer;
+    transition: background .1s;
+}
+.pfz-modulu--free:hover {
+    background: var(--hlh-pistacho-light) !important;
+}
+.pfz-modulu--assigned {
+    color: #aaa;
+    background: #f5f5f5;
+}
+.pfz-modulu--mine {
+    background: #e8f5e0 !important;
+    color: inherit !important;
+}
+.pfz-modulu--mine:hover {
+    background: #d8edcb !important;
+}
+.pfz-assigned-badge {
+    font-size: .7rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+}
+
 /* Sustituciones: aplicar el mismo ancho completo que Odoo da al :first-child del tab-pane.
    Sin esto, solo la tabla que sea :first-child hereda --ListRenderer-margin-x.
    Como en este tab el primer hijo es un <separator>, ambas tablas quedan estrechas. */
