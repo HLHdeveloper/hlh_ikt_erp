@@ -8,4 +8,5 @@ from . import op_batch_ext
 from . import op_department_ext
 from . import op_report
 from . import op_subject_banaketa
+from . import op_apoyo_taldea
 from . import op_subject_ext

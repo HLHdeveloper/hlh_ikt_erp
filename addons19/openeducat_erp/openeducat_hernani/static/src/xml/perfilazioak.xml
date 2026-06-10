@@ -24,14 +24,22 @@
                     <t t-if="state.zikloak.length">
                         <div class="pfz-selector">
                             <label class="form-label mb-0 small fw-semibold">Zikloa</label>
-                            <select class="form-select form-select-sm" t-on-change="onZikloaChange">
-                                <option value="">—</option>
-                                <t t-foreach="state.zikloak" t-as="z" t-key="z.id">
-                                    <option t-att-value="z.id">
-                                        <t t-esc="z.name"/>
-                                    </option>
+                            <div class="d-flex align-items-center gap-1">
+                                <select class="form-select form-select-sm" t-on-change="onZikloaChange">
+                                    <option value="">—</option>
+                                    <t t-foreach="state.zikloak" t-as="z" t-key="z.id">
+                                        <option t-att-value="z.id">
+                                            <t t-esc="z.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                                <t t-if="state.selectedZikloa and state.selectedZikloa.has_he">
+                                    <span class="badge bg-success" title="Eleanitza moduluak baditu">HE</span>
                                 </t>
-                            </select>
+                                <t t-if="state.selectedZikloa and state.selectedZikloa.has_desdo">
+                                    <span class="badge pfz-badge-morado" title="Desdoble moduluak baditu">DESDO</span>
+                                </t>
+                            </div>
                         </div>
                     </t>
 
@@ -49,13 +57,122 @@
                         </div>
                     </t>
 
+                    <t t-if="state.selectedZikloa">
+                        <div class="pfz-selector">
+                            <label class="form-label mb-0 small fw-semibold">Eleanitza</label>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm pfz-toggle {{ state.eleanitza === 'BAI' ? 'btn-success' : 'btn-outline-secondary' }}"
+                                    t-on-click="toggleEleanitza">
+                                <i t-attf-class="fa {{ state.eleanitza === 'BAI' ? 'fa-check-square-o' : 'fa-square-o' }} me-1"/>
+                                <t t-esc="state.eleanitza === 'BAI' ? 'BAI' : 'EZ'"/>
+                            </button>
+                        </div>
+                        <div class="pfz-selector">
+                            <label class="form-label mb-0 small fw-semibold">Desdoblea</label>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm pfz-toggle {{ state.desdoblea === 'BAI' ? 'pfz-btn-desdo' : 'btn-outline-secondary' }}"
+                                    t-on-click="toggleDesdoblea">
+                                <i t-attf-class="fa {{ state.desdoblea === 'BAI' ? 'fa-check-square-o' : 'fa-square-o' }} me-1"/>
+                                <t t-esc="state.desdoblea === 'BAI' ? 'BAI' : 'EZ'"/>
+                            </button>
+                        </div>
+                    </t>
+
+                    <t t-if="this.isApoyoZikloa() and state.selectedBatch">
+                        <div class="pfz-selector d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-primary"
+                                    t-att-disabled="state.apoyoKodea ? 'disabled' : ''"
+                                    t-on-click="() => this.openApoyo()">
+                                <i class="fa fa-plus me-1"/>Apoyo Educativo
+                            </button>
+                        </div>
+                    </t>
+
                     <t t-if="state.loading">
                         <i class="fa fa-spinner fa-spin text-muted ms-2"/>
                     </t>
+
+                    <t t-if="state.selectedMintegi">
+                        <t t-if="!state.showLaburpena">
+                            <button class="btn btn-sm btn-primary ms-auto"
+                                    t-on-click="() => this.openLaburpena()">
+                                <i class="fa fa-table me-1"/>LABURPENA IKUSI
+                            </button>
+                        </t>
+                        <t t-else="">
+                            <button class="btn btn-sm btn-outline-secondary ms-auto"
+                                    t-on-click="() => this.closeLaburpena()">
+                                <i class="fa fa-arrow-left me-1"/>Atzera
+                            </button>
+                        </t>
+                    </t>
                 </div>
 
+                <!-- Laburpena: resumen de todos los profesores del mintegi -->
+                <t t-if="state.selectedMintegi and state.showLaburpena">
+                    <div class="pfz-laburpena">
+                        <h6 class="text-uppercase fw-semibold text-muted mb-3">
+                            <t t-esc="state.selectedMintegi.name"/> — Perfilazio laburpena
+                            <span class="text-muted small ms-1">(<t t-esc="state.laburpenaData.length"/> irakasle)</span>
+                        </h6>
+                        <t t-if="!state.laburpenaData.length">
+                            <div class="text-muted text-center py-5">Irakaslerik ez mintegi honetan.</div>
+                        </t>
+                        <div class="pfz-laburpena-grid"
+                             t-attf-style="grid-template-columns: repeat({{ this.laburpenaCols() }}, minmax(0, 1fr));">
+                            <t t-foreach="state.laburpenaData" t-as="lf" t-key="lf.id">
+                                <div t-attf-class="pfz-laburpena-cell card {{ lf.kidergoa === 'impersonala' ? 'pfz-laburpena-cell--impersonal' : '' }}">
+                                    <div class="pfz-laburpena-head">
+                                        <span t-attf-class="pfz-laburpena-name fw-bold {{ lf.overload ? 'text-warning' : '' }}">
+                                            <t t-esc="lf.name"/>
+                                        </span>
+                                        <div class="pfz-laburpena-roles">
+                                            <t t-foreach="lf.roles" t-as="role" t-key="role_index">
+                                                <span class="badge bg-info text-dark"><t t-esc="role"/></span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                    <table class="table table-sm pfz-table pfz-laburpena-table mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Kodea</th>
+                                                <th class="text-end">Gela</th>
+                                                <th class="text-end">RPT</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="lf.rows" t-as="row" t-key="row_index">
+                                                <tr t-attf-class="{{ row.is_kargu ? 'pfz-laburpena-kargu' : '' }}">
+                                                    <td class="fw-semibold"><t t-esc="row.code"/></td>
+                                                    <td class="text-end">
+                                                        <t t-if="row.gela === null">—</t>
+                                                        <t t-else=""><t t-esc="row.gela"/></t>
+                                                    </td>
+                                                    <td class="text-end"><t t-esc="row.rpt"/></td>
+                                                </tr>
+                                            </t>
+                                            <t t-if="!lf.rows.length">
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted small py-2">
+                                                        Perfilaziorik ez.
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                            <tr class="table-light fw-bold">
+                                                <td class="small">GUZTIRA</td>
+                                                <td class="text-end"><t t-esc="lf.gela_total"/></td>
+                                                <td class="text-end"><t t-esc="lf.rpt_total"/></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+
                 <!-- Main panels -->
-                <t t-if="state.selectedMintegi">
+                <t t-if="state.selectedMintegi and !state.showLaburpena">
                     <div class="pfz-panels d-flex gap-3 align-items-start">
 
                         <!-- Left: Irakasleak + Karguak -->
@@ -215,12 +332,194 @@
 
                         <!-- Right: Moduluak + Resumen -->
                         <div class="pfz-right flex-grow-1 d-flex flex-column gap-3">
-                            <t t-if="!state.selectedBatch and !state.ingelesaMode">
+
+                            <!-- Desdoble / Eleanitza: selección y duplicación de módulos del ciclo -->
+                            <t t-if="this.isKopiakActive()">
+                                <div class="pfz-moduluak card">
+                                    <div class="card-header py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="fw-semibold small text-uppercase">Moduluak kopiatu</span>
+                                        <t t-if="state.selectedZikloa">
+                                            <span class="badge bg-secondary"><t t-esc="state.selectedZikloa.name"/></span>
+                                        </t>
+                                        <t t-if="state.desdoblea === 'BAI'">
+                                            <span class="badge pfz-badge-morado">DESDOBLEA</span>
+                                        </t>
+                                        <t t-if="state.eleanitza === 'BAI'">
+                                            <span class="badge bg-success">ELEANITZA</span>
+                                        </t>
+                                        <span class="ms-auto small text-muted">
+                                            Klik = sortu/ezabatu · Hautatuta: <t t-esc="this.selectedKopiaCount()"/>
+                                        </span>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm pfz-table mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Kodea</th>
+                                                    <th>PT/PES</th>
+                                                    <th>Orduak</th>
+                                                    <th>Kurtsoa</th>
+                                                    <th>Aste Ban.</th>
+                                                    <th>Gela</th>
+                                                    <th>RPT</th>
+                                                    <th>Zorretan</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="state.zikloModuluak" t-as="zm" t-key="zm.id">
+                                                    <tr t-attf-class="pfz-modulu-row {{ this.kopiaRowClass(zm) }}"
+                                                        t-on-click="() => this.toggleKopia(zm)">
+                                                        <td class="fw-semibold"><t t-esc="zm.code"/></td>
+                                                        <td><t t-esc="zm.pt_pes"/></td>
+                                                        <td><t t-esc="zm.orduak"/></td>
+                                                        <td><t t-esc="zm.kurtsoa"/></td>
+                                                        <td><t t-esc="zm.aste_banaketa"/></td>
+                                                        <td><t t-esc="zm.gela_orduak"/></td>
+                                                        <td class="fw-semibold"><t t-esc="zm.rpt_total"/></td>
+                                                        <td><t t-esc="zm.orduak_zorretan"/></td>
+                                                    </tr>
+                                                </t>
+                                                <t t-if="!state.zikloModuluak.length">
+                                                    <tr>
+                                                        <td colspan="8" class="text-center text-muted py-3 small">
+                                                            Modulurik ez ziklo honetan.
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- Apoyo Educativo: crear módulos en un multzo con tope de RPT -->
+                            <t t-if="state.apoyoKodea">
+                                <div class="pfz-moduluak card">
+                                    <div class="card-header py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="fw-semibold small text-uppercase">
+                                            <t t-esc="this.apoyoLabel()"/>
+                                        </span>
+                                        <t t-if="state.selectedBatch">
+                                            <span class="badge bg-secondary"><t t-esc="state.selectedBatch.name"/></span>
+                                        </t>
+                                        <div class="ms-auto d-flex align-items-center gap-2">
+                                            <label class="small fw-semibold mb-0">Horas totales:</label>
+                                            <input type="number" step="0.5" min="0"
+                                                   class="form-control form-control-sm pfz-apoyo-guztira"
+                                                   t-att-value="state.apoyoData.guztira_orduak"
+                                                   t-on-change="onApoyoGuztiraChange"/>
+                                            <span t-attf-class="badge {{ state.apoyoData.sum_rpt > state.apoyoData.guztira_orduak ? 'bg-danger' : 'bg-info text-dark' }}"
+                                                  title="RPT batura / Horas totales">
+                                                RPT: <t t-esc="state.apoyoData.sum_rpt"/> / <t t-esc="state.apoyoData.guztira_orduak"/>
+                                            </span>
+                                            <t t-if="this.apoyoFull()">
+                                                <span class="badge bg-danger" title="Multzoa beteta">BETETA</span>
+                                            </t>
+                                            <button class="btn btn-sm btn-link text-secondary p-0 ms-1"
+                                                    title="Bildu"
+                                                    t-on-click="() => this.closeApoyo()">
+                                                <i class="fa fa-chevron-up"/>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm pfz-table mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Kodea</th>
+                                                    <th>PT/PES</th>
+                                                    <th>Orduak</th>
+                                                    <th>Kurtsoa</th>
+                                                    <th>Aste Ban.</th>
+                                                    <th>Gela</th>
+                                                    <th>RPT</th>
+                                                    <th>Zorretan</th>
+                                                    <th style="width:2rem"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Módulos existentes del multzo -->
+                                                <t t-foreach="state.apoyoData.modules" t-as="am" t-key="am.id">
+                                                    <tr class="pfz-modulu-row pfz-modulu--assigned">
+                                                        <td class="fw-semibold"><t t-esc="am.code"/></td>
+                                                        <td><t t-esc="am.pt_pes"/></td>
+                                                        <td><t t-esc="am.orduak"/></td>
+                                                        <td><t t-esc="am.kurtsoa"/></td>
+                                                        <td><t t-esc="am.aste_banaketa"/></td>
+                                                        <td><t t-esc="am.gela_orduak"/></td>
+                                                        <td class="fw-semibold"><t t-esc="am.rpt_total"/></td>
+                                                        <td><t t-esc="am.orduak_zorretan"/></td>
+                                                        <td class="text-center">
+                                                            <button class="btn btn-sm btn-link text-danger p-0 pfz-kargu-del"
+                                                                    t-on-click="() => this.deleteApoyoModulu(am)">
+                                                                <i class="fa fa-times"/>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                                <!-- Fila editable para crear un nuevo módulo (oculta si el multzo está lleno) -->
+                                                <tr class="pfz-apoyo-new" t-if="!this.apoyoFull()">
+                                                    <td><input type="text" class="form-control form-control-sm"
+                                                               placeholder="Kodea"
+                                                               t-att-value="state.apoyoNew.code"
+                                                               t-on-input="(ev) => this.onApoyoNewInput('code', ev)"/></td>
+                                                    <td>
+                                                        <select class="form-select form-select-sm"
+                                                                t-on-change="(ev) => this.onApoyoNewInput('pt_pes', ev)">
+                                                            <option value="">—</option>
+                                                            <option value="PT" t-att-selected="state.apoyoNew.pt_pes === 'PT' ? 'selected' : ''">PT</option>
+                                                            <option value="PES" t-att-selected="state.apoyoNew.pt_pes === 'PES' ? 'selected' : ''">PES</option>
+                                                            <option value="PT_PES" t-att-selected="state.apoyoNew.pt_pes === 'PT_PES' ? 'selected' : ''">PT_PES</option>
+                                                        </select>
+                                                    </td>
+                                                    <td><input type="number" step="0.5" class="form-control form-control-sm pfz-apoyo-num"
+                                                               t-att-value="state.apoyoNew.orduak"
+                                                               t-on-input="(ev) => this.onApoyoNewInput('orduak', ev)"/></td>
+                                                    <td><input type="text" class="form-control form-control-sm pfz-apoyo-num"
+                                                               t-att-value="state.apoyoNew.kurtsoa"
+                                                               t-on-input="(ev) => this.onApoyoNewInput('kurtsoa', ev)"/></td>
+                                                    <td>
+                                                        <select class="form-select form-select-sm"
+                                                                t-on-change="(ev) => this.onApoyoNewInput('banaketa_id', ev)">
+                                                            <option value="">—</option>
+                                                            <t t-foreach="state.banaketaAukerak" t-as="ba" t-key="ba.id">
+                                                                <option t-att-value="ba.id"
+                                                                        t-att-selected="this.banaketaSel(ba.id) ? 'selected' : ''">
+                                                                    <t t-esc="ba.name"/>
+                                                                </option>
+                                                            </t>
+                                                        </select>
+                                                    </td>
+                                                    <td><input type="number" step="0.5" class="form-control form-control-sm pfz-apoyo-num"
+                                                               t-att-value="state.apoyoNew.gela_orduak"
+                                                               t-on-input="(ev) => this.onApoyoNewInput('gela_orduak', ev)"/></td>
+                                                    <td><input type="number" step="0.5" class="form-control form-control-sm pfz-apoyo-num"
+                                                               t-att-value="state.apoyoNew.rpt_total"
+                                                               t-on-input="(ev) => this.onApoyoNewInput('rpt_total', ev)"/></td>
+                                                    <td><input type="number" step="0.5" class="form-control form-control-sm pfz-apoyo-num"
+                                                               t-att-value="state.apoyoNew.orduak_zorretan"
+                                                               t-on-input="(ev) => this.onApoyoNewInput('orduak_zorretan', ev)"/></td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-sm btn-success p-1"
+                                                                title="Modulua sortu"
+                                                                t-att-disabled="this.apoyoFull() ? 'disabled' : ''"
+                                                                t-on-click="() => this.createApoyoModulu()">
+                                                            <i class="fa fa-save"/>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <t t-if="!state.selectedBatch and !state.ingelesaMode and !this.isKopiakActive()">
                                 <div class="text-muted text-center py-5">
                                     Aukeratu zikloa eta taldea moduluak ikusteko.
                                 </div>
                             </t>
-                            <t t-else="">
+                            <t t-if="state.selectedBatch or state.ingelesaMode">
                                 <div class="pfz-moduluak card">
                                     <div class="card-header py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
                                         <span class="fw-semibold small text-uppercase">Moduluak</span>
@@ -263,6 +562,7 @@
                                             <tbody>
                                                 <t t-foreach="state.moduluak" t-as="m" t-key="m.id">
                                                     <tr t-attf-class="pfz-modulu-row
+                                                        {{ m.special_dept ? 'pfz-modulu--special' : '' }}
                                                         {{ m.faculty_id ? 'pfz-modulu--assigned' : 'pfz-modulu--free' }}
                                                         {{ state.selectedFaculty and m.faculty_id === state.selectedFaculty.id ? 'pfz-modulu--mine' : '' }}"
                                                         t-on-click="() => this.onModuluClick(m)">
@@ -275,7 +575,46 @@
                                                         <td class="fw-semibold"><t t-esc="m.rpt_total"/></td>
                                                         <td><t t-esc="m.orduak_zorretan"/></td>
                                                         <td>
-                                                            <t t-if="m.faculty_name">
+                                                            <t t-if="m.special_dept">
+                                                                <select class="form-select form-select-sm pfz-special-select"
+                                                                        t-att-title="'Departamentua: ' + m.special_dept"
+                                                                        t-on-click.stop=""
+                                                                        t-on-change="(ev) => this.onSpecialIrakasleChange(ev, m)">
+                                                                    <option value="">— <t t-esc="m.special_dept"/> —</option>
+                                                                    <t t-foreach="this.specialOptions(m)" t-as="si" t-key="si.id">
+                                                                        <option t-att-value="si.id"
+                                                                                t-att-selected="m.faculty_id === si.id ? 'selected' : ''">
+                                                                            <t t-esc="si.name"/>
+                                                                        </option>
+                                                                    </t>
+                                                                </select>
+                                                            </t>
+                                                            <t t-elif="m.tuto">
+                                                                <div class="pfz-tuto-cell">
+                                                                    <t t-if="m.faculty_name">
+                                                                        <span class="badge bg-secondary pfz-assigned-badge d-block mb-1">
+                                                                            <t t-esc="m.faculty_name"/>
+                                                                        </span>
+                                                                    </t>
+                                                                    <t t-foreach="this.TUTO_DEPTS" t-as="dc" t-key="dc">
+                                                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                                                            <span class="small text-muted pfz-tuto-lbl"><t t-esc="this.tutoLabel(dc)"/></span>
+                                                                            <select class="form-select form-select-sm pfz-special-select"
+                                                                                    t-on-click.stop=""
+                                                                                    t-on-change="(ev) => this.onTutoIrakasleChange(ev, m)">
+                                                                                <option value="">—</option>
+                                                                                <t t-foreach="this.tutoOptions(dc)" t-as="si" t-key="si.id">
+                                                                                    <option t-att-value="si.id"
+                                                                                            t-att-selected="m.faculty_id === si.id ? 'selected' : ''">
+                                                                                        <t t-esc="si.name"/>
+                                                                                    </option>
+                                                                                </t>
+                                                                            </select>
+                                                                        </div>
+                                                                    </t>
+                                                                </div>
+                                                            </t>
+                                                            <t t-elif="m.faculty_name">
                                                                 <span class="badge bg-secondary pfz-assigned-badge">
                                                                     <t t-esc="m.faculty_name"/>
                                                                 </span>

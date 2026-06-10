@@ -7,7 +7,7 @@
             <field name="name">op.ordezkapen.tree</field>
             <field name="model">op.ordezkapen</field>
             <field name="arch" type="xml">
-                <tree string="Ordezkapenak">
+                <tree string="Ordezkapenak" class="hlh-styled">
                     <field name="titular_id" string="Titularra"/>
                     <field name="ordezko_id" string="Ordezkoa"/>
                     <field name="start_date" string="Hasiera"/>
@@ -26,7 +26,7 @@
             <field name="name">op.ordezkapen.form</field>
             <field name="model">op.ordezkapen</field>
             <field name="arch" type="xml">
-                <form string="Ordezkapen bat">
+                <form string="Ordezkapen bat" class="hlh-styled">
                     <header>
                         <button name="action_bukatu" type="object"
                                 string="Bukatu ordezkapena"

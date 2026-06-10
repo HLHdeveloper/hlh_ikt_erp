@@ -2,9 +2,13 @@
 :root {
     --hlh-pistacho:       #82B543;
     --hlh-pistacho-dark:  #6A9636;
+    --hlh-pistacho-mid:   #a9c184;
     --hlh-pistacho-light: #EFF6E6;
     --hlh-negro:          #1A1A1A;
     --hlh-blanco:         #FFFFFF;
+    --hlh-green-text:     #2f5d1f;
+    --hlh-head-grad:      linear-gradient(180deg, #dfeacb, var(--hlh-pistacho-light));
+    --hlh-card-shadow:    0 2px 8px rgba(0, 0, 0, .10);
 }
 
 /* ── SIS Dashboard ──────────────────────────────────────────── */
@@ -15,18 +19,20 @@
 
 .sdb-card {
     background: var(--hlh-blanco);
-    border: 2px solid #c8d8b0;
+    border: 2px solid var(--hlh-pistacho-mid);
     border-radius: 10px;
     padding: 1.5rem 2rem;
     min-width: 155px;
     text-align: center;
     cursor: pointer;
     user-select: none;
-    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
+    box-shadow: var(--hlh-card-shadow);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s, transform 0.12s;
 }
 .sdb-card:hover {
     border-color: var(--hlh-pistacho);
-    box-shadow: 0 3px 10px rgba(0,0,0,.10);
+    box-shadow: 0 5px 14px rgba(0,0,0,.16);
+    transform: translateY(-2px);
 }
 .sdb-card--active {
     border-color: var(--hlh-pistacho);
@@ -57,7 +63,30 @@
 .sdb-drilldown {
     max-width: 560px;
     animation: sdbFadeIn .15s ease;
-    border: 1px solid #c8d8b0 !important;
+    border: 2px solid var(--hlh-pistacho-mid) !important;
+    border-radius: .5rem;
+    box-shadow: var(--hlh-card-shadow);
+    overflow: hidden;
+}
+.sdb-drilldown .card-title {
+    color: var(--hlh-green-text);
+    font-weight: 700;
+    border-bottom: 2px solid var(--hlh-pistacho-mid);
+    padding-bottom: .4rem;
+}
+/* Cabeceras de tabla verdes en las superficies OWL */
+.o_sis_dashboard .table thead.table-light th,
+.o_perfilazioak .table thead.table-light th {
+    background: var(--hlh-head-grad);
+    color: var(--hlh-green-text);
+    border-bottom: 2px solid var(--hlh-pistacho-mid);
+    font-weight: 600;
+}
+/* Primera columna (nombres) de los drill-down en verde y negrita */
+.sdb-dept-row td:first-child,
+.sdb-faculty-row td:first-child {
+    font-weight: 600;
+    color: var(--hlh-green-text);
 }
 @keyframes sdbFadeIn {
     from { opacity: 0; transform: translateY(-6px); }
@@ -117,11 +146,14 @@
     width: 420px;
     min-width: 380px;
     flex-shrink: 0;
-    border: 1px solid #c8d8b0 !important;
+    border: 2px solid var(--hlh-pistacho-mid) !important;
+    border-radius: .5rem;
+    box-shadow: var(--hlh-card-shadow);
+    overflow: hidden;
 }
 .pfz-left .card-header {
-    background: var(--hlh-pistacho-light);
-    border-bottom: 1px solid #c8d8b0;
+    background: var(--hlh-head-grad);
+    border-bottom: 2px solid var(--hlh-pistacho-mid);
 }
 .pfz-faculty-list {
     max-height: 380px;
@@ -154,6 +186,8 @@
 }
 .pfz-faculty-name {
     font-size: .875rem;
+    font-weight: 600;
+    color: var(--hlh-green-text);
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -200,11 +234,14 @@
     line-height: 1;
 }
 .pfz-moduluak {
-    border: 1px solid #c8d8b0 !important;
+    border: 2px solid var(--hlh-pistacho-mid) !important;
+    border-radius: .5rem;
+    box-shadow: var(--hlh-card-shadow);
+    overflow: hidden;
 }
 .pfz-moduluak .card-header {
-    background: var(--hlh-pistacho-light);
-    border-bottom: 1px solid #c8d8b0;
+    background: var(--hlh-head-grad);
+    border-bottom: 2px solid var(--hlh-pistacho-mid);
 }
 .pfz-table td, .pfz-table th {
     font-size: .8125rem;
@@ -236,6 +273,147 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
+}
+
+/* Módulos especiales (no técnicos): los imparte otro departamento.
+   Cursor normal (no se asignan por clic de fila) y borde lateral distintivo. */
+.pfz-modulu--special {
+    cursor: default;
+    border-left: 3px solid var(--hlh-pistacho, #7cb342);
+    background: #fbfbf5;
+}
+.pfz-modulu--special:hover {
+    background: #fbfbf5;
+}
+.pfz-special-select {
+    min-width: 160px;
+    font-size: .75rem;
+    padding: .1rem 1.4rem .1rem .4rem;
+    cursor: pointer;
+}
+
+/* Módulos TUTO: 3 desplegables apilados con etiqueta corta de departamento */
+.pfz-tuto-cell .pfz-special-select {
+    min-width: 140px;
+}
+.pfz-tuto-lbl {
+    width: 2.2rem;
+    font-weight: 600;
+    flex: 0 0 auto;
+}
+
+/* Insignia morada para módulos/operaciones de desdoble (DESDO) */
+.pfz-badge-morado {
+    background-color: #6f42c1 !important;
+    color: #fff !important;
+}
+
+/* Botón toggle Desdoblea activo (morado) en la cabecera de Perfilazioak */
+.pfz-btn-desdo {
+    background-color: #6f42c1 !important;
+    border-color: #6f42c1 !important;
+    color: #fff !important;
+}
+.pfz-toggle {
+    min-width: 64px;
+}
+
+/* Selección en la tabla MODULUAK KOPIATU: verde (HE) / morado (DESDO) */
+.pfz-kopia--he {
+    background: #e8f5e0 !important;
+}
+.pfz-kopia--he:hover {
+    background: #d8edcb !important;
+}
+.pfz-kopia--desdo {
+    background: #ede7f6 !important;
+}
+.pfz-kopia--desdo:hover {
+    background: #e1d5f0 !important;
+}
+
+/* Apoyo Educativo: inputs compactos en la fila de creación */
+.pfz-apoyo-guztira {
+    width: 5rem;
+}
+.pfz-apoyo-num {
+    min-width: 3.5rem;
+}
+.pfz-apoyo-new td {
+    padding: .15rem .25rem;
+}
+.pfz-apoyo-new input, .pfz-apoyo-new select {
+    font-size: .8rem;
+}
+
+/* Laburpena: rejilla con el resumen de todos los profesores del mintegi */
+.pfz-laburpena-grid {
+    display: grid;
+    gap: .75rem;
+    align-items: start;
+}
+.pfz-laburpena-cell {
+    border: 2px solid #a9c184 !important;
+    border-radius: .4rem;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
+    transition: box-shadow .12s, transform .12s;
+}
+.pfz-laburpena-cell:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+    transform: translateY(-1px);
+}
+.pfz-laburpena-cell--impersonal {
+    border-style: dashed !important;
+    opacity: .92;
+}
+.pfz-laburpena-head {
+    padding: .4rem .55rem;
+    background: linear-gradient(180deg, #dfeacb, var(--hlh-pistacho-light));
+    border-bottom: 2px solid #a9c184;
+    font-size: .8125rem;
+    line-height: 1.25;
+}
+.pfz-laburpena-name {
+    color: #2f5d1f;
+    font-size: .9rem;
+}
+.pfz-laburpena-roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2rem;
+    margin-top: .2rem;
+}
+.pfz-laburpena-roles .badge {
+    font-size: .65rem;
+}
+.pfz-laburpena-table td, .pfz-laburpena-table th {
+    font-size: .75rem;
+}
+.pfz-laburpena-kargu td {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* ── Vistas lista/formulario propias del módulo (scope: .hlh-styled) ─
+   Solo afecta a las vistas que llevan class="hlh-styled"; no se filtra
+   al resto de aplicaciones de Odoo. */
+.hlh-styled.o_list_view .o_list_table thead th {
+    background: var(--hlh-head-grad) !important;
+    color: var(--hlh-green-text) !important;
+    border-bottom: 2px solid var(--hlh-pistacho-mid) !important;
+}
+.hlh-styled.o_list_view .o_data_row:hover > .o_data_cell {
+    background: var(--hlh-pistacho-light) !important;
+}
+.hlh-styled.o_list_view .o_data_row td.o_data_cell:first-child {
+    font-weight: 600;
+    color: var(--hlh-green-text);
+}
+.hlh-styled.o_form_view .o_form_sheet {
+    border-top: 4px solid var(--hlh-pistacho);
+    border-radius: .4rem;
+    box-shadow: var(--hlh-card-shadow);
 }
 
 /* Sustituciones: aplicar el mismo ancho completo que Odoo da al :first-child del tab-pane.

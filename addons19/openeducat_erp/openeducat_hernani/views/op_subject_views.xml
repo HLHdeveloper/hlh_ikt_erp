@@ -7,6 +7,9 @@
             <field name="model">op.subject</field>
             <field name="inherit_id" ref="openeducat_core.view_op_subject_form"/>
             <field name="arch" type="xml">
+                <form position="attributes">
+                    <attribute name="js_class">subject_save_back_form</attribute>
+                </form>
                 <field name="code" position="after">
                     <field name="kode_jima"/>
                 </field>
@@ -45,7 +48,7 @@
             <field name="inherit_id" ref="openeducat_core.view_op_subject_tree"/>
             <field name="arch" type="xml">
                 <xpath expr="//tree" position="replace">
-                    <tree string="Moduluak" class="moduluak_list">
+                    <tree string="Moduluak" class="moduluak_list hlh-styled">
                         <field name="name" column_invisible="1"/>
                         <field name="batch_id" column_invisible="1"/>
                         <field name="talde_kodea" string="Talde Kodea"/>

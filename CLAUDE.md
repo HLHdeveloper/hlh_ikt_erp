@@ -63,6 +63,7 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 | `op.report.dept.greba` | — (SQL view) | Informe: grebak mintegika |
 | `op.report.dept.ordezkapen` | — (SQL view) | Informe: ordezkapenak mintegika |
 | `op.report.faculty.greba` | — (SQL view) | Informe: irakasleak greba kopuruaren arabera |
+| `op.apoyo.taldea` | — | Grupo de Apoyo Educativo (I/II/III) por taldea, con tope de horas (`guztira_orduak`) y `subject_ids` |
 
 ### Extensiones de modelos OpenEducat
 | Modelo extendido | Campos añadidos |
@@ -70,6 +71,9 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 | `op.faculty` | `kargu_ids`, `greba_ids`, `batch_ids`, `titular_ordezkapen_ids`, `ordezko_ordezkapen_ids` |
 | `op.batch` | `faculty_ids`, `student_course_ids` |
 | `op.department` | `course_ids`, `faculty_ids` |
+| `op.subject` | `kode_jima`, `batch_id`, `apoyo_taldea_id`, `faculty_id`, `pt_pes`, `hizkuntza`, `pl` (PL1/PL2/PL1_PL2), `orduak`, `kurtsoa`, `gela_orduak`, `banaketa_id`, `aste_banaketa`, `rpt_total`, `orduak_zorretan` |
+
+**Campo `pl`** (`op.subject`): Selection `PL1` / `PL2` / `PL1_PL2` (etiqueta "PL1/PL2" = cualquier perfil lingüístico válido).
 
 ### Menú SIS (orden actual)
 ```
@@ -307,6 +311,29 @@ Cada kargu tiene un total de horas RPT (`op.kargu.rpt_total`). Las horas se repa
 - `upsert_perfilazio_kargu` → **guard de servidor**: lanza `UserError` si `orduak > rpt_total − asignadas_otros`.
 - UI: al añadir kargu, el desplegable muestra `(libre/total h libre)` y "Libre: Xh"; el campo de horas es un **selector limitado** a las horas libres (enteros 1…remaining). Si no quedan, muestra "Ez dago ordu librerik". Las líneas ya asignadas usan selector 1…`max_orduak` con su valor actual preseleccionado.
 - **Nota**: un kargu con `rpt_total = 0` no permite asignar horas (remaining 0). Hay que definir su total RPT en `op.kargu` para poder repartirlo.
+
+### Eleanitza / Desdoblea (botones toggle)
+En la cabecera, al seleccionar un ziklo aparecen dos **botones toggle** (antes desplegables BAI/EZ):
+- **Eleanitza** (verde `btn-success` cuando activo) → copias con prefijo `HE_`.
+- **Desdoblea** (morado `.pfz-btn-desdo`, `#6f42c1`, cuando activo) → copias con prefijo `DESDO_`.
+- Son **mutuamente excluyentes**: activar uno desactiva el otro. Handlers JS `toggleEleanitza()` / `toggleDesdoblea()`.
+- Al activar, se abre la tabla **MODULUAK KOPIATU**: clic en módulo crea/elimina su copia `HE_`/`DESDO_` (`toggle_perfilazio_kopia`). La selección (verde/morado) refleja qué copias ya existen.
+
+### Apoyo Educativo (OLHMEK/OLHELE)
+Botón "+ Apoyo Educativo" (kodea I/II/III según dígito inicial de la taldea). Tabla con tope editable `guztira_orduak`; la suma de RPT de los módulos del grupo no puede superarlo (al llegar al tope: **BETETA**, se oculta la fila de creación). Modelo `op.apoyo.taldea` (uno por `batch_id`+`kodea`), módulos vía `op.subject.apoyo_taldea_id`.
+
+## Importación masiva de módulos (`import_moduluak.py`)
+
+Script reutilizable (odoo shell) para crear/actualizar `op.subject` desde tablas de zikloak pegadas por el usuario. Se ejecuta:
+```bash
+docker exec -i odoo19 odoo shell -d kudeaketa --no-http < import_moduluak.py
+```
+- Empareja por `code` (o por `kode_jima`/alias en casos de renombrado); update si existe, create si no.
+- Normaliza códigos: espacios→`_`, colapsa `__`→`_` (regla: **sin espacios en `code`**).
+- `PT/PS` → `pt_pes` (`PT`/`PES`/`PT_PES`); `PL1/PL2` → `pl`. Columnas vacías de `pt_pes`/`pl` **no** sobrescriben el valor existente.
+- `aste banaketa` se busca en `op.subject.banaketa` por nombre; `Orduak Horas`→`orduak`, `Gela/Aula`→`gela_orduak`, `LPZ/RPT`→`rpt_total`, `Orduak Zorrean`→`orduak_zorretan`.
+- Convención: módulos optativos "Hautazko modulua" → code `<taldea>_HAUTAZKOA` con `kode_jima` vacío.
+- Copias eleanitza/desdoble: filas `HE_<code>` / `DESDO_<code>` se asignan a la taldea del **módulo de origen**.
 
 ## Notas importantes
 

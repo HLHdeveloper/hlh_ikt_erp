@@ -55,13 +55,6 @@
             <field name="action" ref="openeducat_hernani.action_sis_dashboard"/>
         </record>
 
-        <!-- Eliminar los submenús del Reporting anterior -->
-        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_batch_student"/>
-        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_dept_faculty"/>
-        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_dept_greba"/>
-        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_dept_ordezkapen"/>
-        <delete model="ir.ui.menu" id="openeducat_hernani.menu_report_faculty_greba"/>
-
         <!-- Mover Fees Analysis a Konfigurazioa para que Reporting no tenga hijos -->
         <record id="openeducat_fees.menu_op_fees_analysis_report_main" model="ir.ui.menu">
             <field name="parent_id" ref="openeducat_core.menu_op_school_config"/>

@@ -7,7 +7,7 @@
             <field name="name">op.greba.tree</field>
             <field name="model">op.greba</field>
             <field name="arch" type="xml">
-                <tree string="Grebak">
+                <tree string="Grebak" class="hlh-styled">
                     <field name="code"/>
                     <field name="date"/>
                     <field name="reason"/>
@@ -21,7 +21,7 @@
             <field name="name">op.greba.form</field>
             <field name="model">op.greba</field>
             <field name="arch" type="xml">
-                <form string="Greba">
+                <form string="Greba" class="hlh-styled">
                     <sheet>
                         <group>
                             <group>

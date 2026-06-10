@@ -7,7 +7,7 @@
             <field name="name">op.kargu.tree</field>
             <field name="model">op.kargu</field>
             <field name="arch" type="xml">
-                <tree string="Karguak">
+                <tree string="Karguak" class="hlh-styled">
                     <field name="code"/>
                     <field name="name"/>
                     <field name="gsuite_email"/>
@@ -21,7 +21,7 @@
             <field name="name">op.kargu.form</field>
             <field name="model">op.kargu</field>
             <field name="arch" type="xml">
-                <form string="Kargua">
+                <form string="Kargua" class="hlh-styled">
                     <sheet>
                         <group>
                             <group>

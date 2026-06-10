@@ -7,6 +7,8 @@ class OpSubjectExt(models.Model):
 
     kode_jima = fields.Char('Kode Jima', size=256)
     batch_id = fields.Many2one('op.batch', 'Taldea')
+    apoyo_taldea_id = fields.Many2one(
+        'op.apoyo.taldea', 'Apoyo multzoa', ondelete='set null', index=True)
     faculty_id = fields.Many2one('op.faculty', 'Irakaslea', ondelete='set null', index=True)
     talde_kodea = fields.Char(related='batch_id.code', string='Talde Kodea', store=False)
     pt_pes = fields.Selection([
@@ -19,6 +21,11 @@ class OpSubjectExt(models.Model):
         ('gazteleraz', 'Gazteleraz'),
         ('eleanitza', 'Eleanitza'),
     ], string='Hizkuntza')
+    pl = fields.Selection([
+        ('PL1', 'PL1'),
+        ('PL2', 'PL2'),
+        ('PL1_PL2', 'PL1/PL2'),
+    ], string='PL')
     orduak = fields.Float('Orduak')
     kurtsoa = fields.Char('Kurtsoa', size=10)
     gela_orduak = fields.Float('Gela Orduak')
