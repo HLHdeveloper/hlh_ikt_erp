@@ -12,25 +12,22 @@ PLMAP = {'PL1': 'PL1', 'PL2': 'PL2', 'PL1/PL2': 'PL1_PL2', 'PL1_PL2': 'PL1_PL2'}
 # Kode berria -> BDko kode zaharra (berrizendatzeko)
 ALIAS = {}
 
-# (batch_code, code, pt_ps, pl, orduak, kurtsoa, gela, banaketa, rpt, zorretan)
-# pt_ps hutsik -> ez ukitu lehengo balioa
+# Zutabeak (taularen ordena):
+# (batch_code, code, kode_jima, pt_ps, pl, orduak, kurtsoa, gela, banaketa,
+#  rpt, rpt_reala, rpt_zorretan, emandako_orduak, orduak_zorretan)
+#  - pt_ps / pl hutsik  -> ez ukitu lehengo balioa
+#  - rpt_reala / rpt_zorretan / emandako_orduak / orduak_zorretan hutsik
+#    -> ez ukitu lehengo balioa (ziklo batzuetan ez daude zutabe horiek)
+# AST3 desdoble kopiak (berriak). rpt_reala = LPZ/RPT (paste-ak ez dakar REALAK).
 ROWS = [
-    ('1OLHMEK3', '1OLHMEK3_OBF',    'PT',  '', '165,00', '1º', '5', '3/2', '5,0', ''),
-    ('1OLHMEK3', '1OLHMEK3_SCM',    'PT',  '', '132,00', '1º', '4', '3/1', '4,0', ''),
-    ('1OLHMEK3', '1OLHMEK3_IPE',    'PES', '', '66,00',  '1º', '2', '1/1', '2,0', ''),
-    ('1OLHMEK3', '1OLHMEK3_ZIA 1',  'PT',  '', '132,00', '1º', '4', '2/2', '4,0', ''),
-    ('1OLHMEK3', '1OLHMEK3_KOG 1',  'PT',  '', '132,00', '1º', '3', '2/1', '4,0', ''),
-    ('1OLHMEK3', '1OLHMEK3_TUTO 1', 'PT',  '', '33,00',  '1º', '1', '1',   '1,0', ''),
-    ('2OLHMEK3', '2OLHMEK3_CAPV',   'PT',  '', '132,00', '2º', '4', '3/1', '4,0', ''),
-    ('2OLHMEK3', '2OLHMEK3_OBCL',   'PT',  '', '198,00', '2º', '6', '3/3', '6,0', ''),
-    ('2OLHMEK3', '2OLHMEK3_KOG_2',  'PT',  '', '168,00', '2º', '5', '',    '5,1', ''),
-    ('2OLHMEK3', '2OLHMEK3 ZIA 2',  'PT',  '', '126,00', '2º', '4', '2/2', '3,8', ''),
-    ('2OLHMEK3', '2OLHMEK3_TUTO 2', 'PT',  '', '33,00',  '2º', '1', '1',   '1,0', ''),
-    ('3OLHMEK3', '3OLHMEK3_EEE',    'PT',  '', '192,00', '3º', '9', '',    '5,8', ''),
-    ('3OLHMEK3', '3OLHMEK3_OBMH',   'PT',  '', '168,00', '3º', '8', '',    '5,1', ''),
-    ('3OLHMEK3', '3OLHMEK3_FOL',    'PT',  '', '53,00',  '3º', '2', '',    '1,6', ''),
-    ('3OLHMEK3', '3OLHMEK3_TUTO 3', '',    '', '25,00',  '3º', '1', '',    '0,2', ''),
+    ('1AST3', 'DESDO_1AST3_LELA', '', '', 'PL2', '66,00',  '1º', '2', '', '2,0', '2,0', '', '', ''),
+    ('1AST3', 'DESDO_1AST3_GPHM', '', '', 'PL2', '132,00', '1º', '4', '', '4,0', '4,0', '', '', ''),
+    ('1AST3', 'DESDO_1AST3_ADLJ', '', '', 'PL2', '132,00', '1º', '4', '', '4,0', '4,0', '', '', ''),
+    ('1AST3', 'DESDO_1AST3_GIGA', '', '', 'PL2', '132,00', '1º', '4', '', '4,0', '4,0', '', '', ''),
+    ('1AST3', 'DESDO_1AST3_ASKT', '', '', 'PL2', '132,00', '1º', '4', '', '4,0', '4,0', '', '', ''),
 ]
+
+DELETE_CODES = []
 
 Subject = env['op.subject']
 Batch = env['op.batch']
@@ -40,7 +37,8 @@ batch_cache = {}
 banak_cache = {}
 created, updated, errors = [], [], []
 
-for bcode, code, ptps, pl, orduak, kurtsoa, gela, banak_name, rpt, zorretan in ROWS:
+for (bcode, code, kode_jima, ptps, pl, orduak, kurtsoa, gela, banak_name,
+     rpt, rpt_reala, rpt_zorretan, emandako, zorretan) in ROWS:
     bcode = bcode.replace(' ', '')  # taldea kodean ez espaziorik
     code = code.replace(' ', '_')   # inolaz ere espazio gabe kodean
     while '__' in code:             # gidoi bikoitzak ez ('1ELE1 _IED' -> '1ELE1_IED')
@@ -64,14 +62,25 @@ for bcode, code, ptps, pl, orduak, kurtsoa, gela, banak_name, rpt, zorretan in R
         'orduak': num(orduak),
         'kurtsoa': kurtsoa,
         'gela_orduak': num(gela),
-        'banaketa_id': banak.id if banak else False,
         'rpt_total': num(rpt),
-        'orduak_zorretan': num(zorretan),
     }
+    if banak_name and banak:  # aste banaketa hutsik -> ez ukitu lehengo balioa
+        vals['banaketa_id'] = banak.id
     if ptps:  # pt_ps hutsik bada, ez ukitu lehengo balioa
         vals['pt_pes'] = PT.get(ptps, ptps)
     if pl:    # pl hutsik bada, ez ukitu lehengo balioa
         vals['pl'] = PLMAP.get(pl, pl)
+    if kode_jima:  # kode_jima hutsik bada, ez ukitu lehengo balioa
+        vals['kode_jima'] = kode_jima
+    # Zutabe hauek ziklo batzuetan ez daude: hutsik bada, ez ukitu lehengo balioa
+    if rpt_reala:
+        vals['rpt_reala'] = num(rpt_reala)
+    if rpt_zorretan:
+        vals['rpt_zorretan'] = num(rpt_zorretan)
+    if emandako:
+        vals['emandako_orduak'] = num(emandako)
+    if zorretan:
+        vals['orduak_zorretan'] = num(zorretan)
     subj = Subject.search([('code', '=', code)], limit=1)
     if not subj and code in ALIAS:
         subj = Subject.search([('code', '=', ALIAS[code])], limit=1)
@@ -86,8 +95,16 @@ for bcode, code, ptps, pl, orduak, kurtsoa, gela, banak_name, rpt, zorretan in R
         Subject.create(vals)
         created.append(code)
 
+deleted = []
+for dcode in DELETE_CODES:
+    old = Subject.search([('code', '=', dcode)], limit=1)
+    if old:
+        old.unlink()
+        deleted.append(dcode)
+
 env.cr.commit()
 print("=== IMPORT EMAITZA ===")
 print("Eguneratuak (%d): %s" % (len(updated), ', '.join(updated)))
 print("Sortuak (%d): %s" % (len(created), ', '.join(created)))
+print("Ezabatuak (%d): %s" % (len(deleted), ', '.join(deleted)))
 print("Erroreak (%d): %s" % (len(errors), ' | '.join(errors)))

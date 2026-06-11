@@ -554,8 +554,9 @@
                                                     <th>Kurtsoa</th>
                                                     <th>Aste Ban.</th>
                                                     <th>Gela</th>
-                                                    <th>RPT</th>
-                                                    <th>Zorretan</th>
+                                                    <th>RPT Guzt</th>
+                                                    <th>RPT Reala</th>
+                                                    <th>RPT Zorretan</th>
                                                     <th>Irakaslea</th>
                                                 </tr>
                                             </thead>
@@ -572,8 +573,9 @@
                                                         <td><t t-esc="m.kurtsoa"/></td>
                                                         <td><t t-esc="m.aste_banaketa"/></td>
                                                         <td><t t-esc="m.gela_orduak"/></td>
-                                                        <td class="fw-semibold"><t t-esc="m.rpt_total"/></td>
-                                                        <td><t t-esc="m.orduak_zorretan"/></td>
+                                                        <td><t t-esc="m.rpt_total"/></td>
+                                                        <td class="fw-semibold"><t t-esc="m.rpt_reala"/></td>
+                                                        <td><t t-esc="m.rpt_zorretan"/></td>
                                                         <td>
                                                             <t t-if="m.special_dept">
                                                                 <select class="form-select form-select-sm pfz-special-select"
@@ -627,7 +629,7 @@
                                                 </t>
                                                 <t t-if="!state.moduluak.length">
                                                     <tr>
-                                                        <td colspan="9" class="text-center text-muted py-3 small">
+                                                        <td colspan="10" class="text-center text-muted py-3 small">
                                                             Modulurik ez talde honetan.
                                                         </td>
                                                     </tr>
@@ -660,7 +662,6 @@
                                                 <th>Gela</th>
                                                 <th>RPT</th>
                                                 <th>Aste Ban.</th>
-                                                <th>Zorretan</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -674,7 +675,6 @@
                                                     <td><t t-esc="rm.gela_orduak"/></td>
                                                     <td class="fw-semibold"><t t-esc="rm.rpt_total"/></td>
                                                     <td><t t-esc="rm.aste_banaketa"/></td>
-                                                    <td><t t-esc="rm.orduak_zorretan"/></td>
                                                 </tr>
                                             </t>
                                             <t t-foreach="state.karguak" t-as="k" t-key="'k' + k.id">
@@ -687,12 +687,11 @@
                                                     <td>—</td>
                                                     <td class="fw-semibold"><t t-esc="k.orduak"/></td>
                                                     <td>—</td>
-                                                    <td>—</td>
                                                 </tr>
                                             </t>
                                             <t t-if="!state.resumenModuluak.length and !state.karguak.length">
                                                 <tr>
-                                                    <td colspan="9" class="text-center text-muted py-3 small">
+                                                    <td colspan="8" class="text-center text-muted py-3 small">
                                                         Ez dago perfilaziorik.
                                                     </td>
                                                 </tr>
@@ -704,7 +703,6 @@
                                                 <td><t t-esc="this.sumGela()"/></td>
                                                 <td><t t-esc="this.sumRpt()"/></td>
                                                 <td>—</td>
-                                                <td><t t-esc="this.sumZorretan()"/></td>
                                             </tr>
                                         </tbody>
                                     </table>

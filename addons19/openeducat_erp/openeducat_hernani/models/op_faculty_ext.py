@@ -344,10 +344,10 @@ class OpFaculty(models.Model):
         return [{'id': r[0], 'name': r[1]} for r in cr.fetchall()]
 
     @api.model
-    def get_perfilazio_ziklo_moduluak(self, course_id):
-        """Todos los módulos de un ciclo (vía sus taldeak), excluyendo los ya
-        generados como desdoble (DESDO_) o eleanitza (HE_). Cada módulo indica
-        con has_he / has_desdo si su copia ya existe (selección del panel)."""
+    def get_perfilazio_ziklo_moduluak(self, batch_id):
+        """Módulos de la TALDEA seleccionada (solo sus '<taldea>_XXX'),
+        excluyendo los ya generados como desdoble (DESDO_) o eleanitza (HE_).
+        Cada módulo indica con has_he / has_desdo si su copia ya existe."""
         cr = self.env.cr
         cr.execute(r"""
             SELECT
@@ -359,12 +359,11 @@ class OpFaculty(models.Model):
                 EXISTS(SELECT 1 FROM op_subject d
                        WHERE d.code = 'DESDO_' || s.code) AS has_desdo
             FROM op_subject s
-            JOIN op_batch b ON b.id = s.batch_id
-            WHERE b.course_id = %s
+            WHERE s.batch_id = %s
               AND s.active = true
               AND s.code !~* '^(DESDO_|HE_)'
             ORDER BY s.code
-        """, (course_id,))
+        """, (batch_id,))
         return [
             {
                 'id': r[0], 'code': r[1] or '', 'name': r[2] or '',
@@ -536,7 +535,7 @@ class OpFaculty(models.Model):
                 f.id,
                 rp.name,
                 COALESCE(
-                    (SELECT SUM(s.rpt_total) FROM op_subject s WHERE s.faculty_id = f.id), 0
+                    (SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = f.id), 0
                 ) + COALESCE(
                     (SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = f.id), 0
                 ) AS orduak,
@@ -612,7 +611,7 @@ class OpFaculty(models.Model):
     def get_perfilazio_resumen(self, faculty_id):
         cr = self.env.cr
         cr.execute("""
-            SELECT s.code, s.name, s.rpt_total, b.name AS batch_name,
+            SELECT s.code, s.name, s.rpt_reala, b.name AS batch_name,
                    s.kurtsoa, s.pt_pes, s.orduak, s.gela_orduak,
                    s.aste_banaketa, s.orduak_zorretan
             FROM op_subject s
@@ -623,6 +622,7 @@ class OpFaculty(models.Model):
         return [
             {
                 'code': r[0] or '', 'name': r[1] or '',
+                # 'rpt_total' gakoak rpt_reala balioa darama (Laburpenak RPT reala erakusten du)
                 'rpt_total': float(r[2] or 0), 'batch': r[3] or '',
                 'kurtsoa': r[4] or '', 'pt_pes': r[5] or '',
                 'orduak': float(r[6] or 0), 'gela_orduak': float(r[7] or 0),
@@ -671,9 +671,9 @@ class OpFaculty(models.Model):
                     suffix = code[5:].strip()
                     roles.append('Taldeko tutorea' + (f' ({suffix})' if suffix else ''))
 
-            # Filas: módulos (Kodea, Gela, RPT)
+            # Filas: módulos (Kodea, Gela, RPT = rpt_reala)
             cr.execute("""
-                SELECT s.code, s.gela_orduak, s.rpt_total
+                SELECT s.code, s.gela_orduak, s.rpt_reala
                 FROM op_subject s
                 WHERE s.faculty_id = %s
                 ORDER BY s.code
@@ -728,7 +728,8 @@ class OpFaculty(models.Model):
                 s.pt_pes, s.orduak, s.kurtsoa, s.aste_banaketa,
                 s.gela_orduak, s.rpt_total, s.orduak_zorretan,
                 s.faculty_id,
-                rp.name AS faculty_name
+                rp.name AS faculty_name,
+                s.rpt_reala, s.rpt_zorretan, s.emandako_orduak
             FROM op_subject s
             LEFT JOIN op_faculty f ON f.id = s.faculty_id
             LEFT JOIN res_partner rp ON rp.id = f.partner_id
@@ -743,6 +744,8 @@ class OpFaculty(models.Model):
                 'gela_orduak': float(r[7] or 0),
                 'rpt_total': float(r[8] or 0), 'orduak_zorretan': float(r[9] or 0),
                 'faculty_id': r[10], 'faculty_name': r[11],
+                'rpt_reala': float(r[12] or 0), 'rpt_zorretan': float(r[13] or 0),
+                'emandako_orduak': float(r[14] or 0),
                 'special_dept': _modulu_special_dept_code(r[1]),
                 'tuto': _modulu_is_tuto(r[1]),
             }
@@ -758,7 +761,8 @@ class OpFaculty(models.Model):
                 s.pt_pes, s.orduak, s.kurtsoa, s.aste_banaketa,
                 s.gela_orduak, s.rpt_total, s.orduak_zorretan,
                 s.faculty_id,
-                rp.name AS faculty_name
+                rp.name AS faculty_name,
+                s.rpt_reala, s.rpt_zorretan, s.emandako_orduak
             FROM op_subject s
             LEFT JOIN op_faculty f ON f.id = s.faculty_id
             LEFT JOIN res_partner rp ON rp.id = f.partner_id
@@ -773,6 +777,8 @@ class OpFaculty(models.Model):
                 'gela_orduak': float(r[7] or 0),
                 'rpt_total': float(r[8] or 0), 'orduak_zorretan': float(r[9] or 0),
                 'faculty_id': r[10], 'faculty_name': r[11],
+                'rpt_reala': float(r[12] or 0), 'rpt_zorretan': float(r[13] or 0),
+                'emandako_orduak': float(r[14] or 0),
                 'special_dept': _modulu_special_dept_code(r[1]),
                 'tuto': _modulu_is_tuto(r[1]),
             }
@@ -816,7 +822,7 @@ class OpFaculty(models.Model):
         for fid in affected_ids:
             cr.execute("""
                 SELECT
-                    COALESCE((SELECT SUM(s.rpt_total) FROM op_subject s WHERE s.faculty_id = %s), 0)
+                    COALESCE((SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = %s), 0)
                     + COALESCE((SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = %s), 0),
                     COALESCE((SELECT SUM(s.gela_orduak) FROM op_subject s WHERE s.faculty_id = %s), 0)
             """, (fid, fid, fid))
@@ -895,7 +901,7 @@ class OpFaculty(models.Model):
             })
         cr.execute("""
             SELECT
-                COALESCE((SELECT SUM(s.rpt_total) FROM op_subject s WHERE s.faculty_id = %s), 0)
+                COALESCE((SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = %s), 0)
                 + COALESCE((SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = %s), 0)
         """, (faculty_id, faculty_id))
         orduak_total = float(cr.fetchone()[0])
@@ -909,7 +915,7 @@ class OpFaculty(models.Model):
         cr = self.env.cr
         cr.execute("""
             SELECT
-                COALESCE((SELECT SUM(s.rpt_total) FROM op_subject s WHERE s.faculty_id = %s), 0)
+                COALESCE((SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = %s), 0)
                 + COALESCE((SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = %s), 0)
         """, (faculty_id, faculty_id))
         orduak_total = float(cr.fetchone()[0])

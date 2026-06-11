@@ -71,7 +71,7 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 | `op.faculty` | `kargu_ids`, `greba_ids`, `batch_ids`, `titular_ordezkapen_ids`, `ordezko_ordezkapen_ids` |
 | `op.batch` | `faculty_ids`, `student_course_ids` |
 | `op.department` | `course_ids`, `faculty_ids` |
-| `op.subject` | `kode_jima`, `batch_id`, `apoyo_taldea_id`, `faculty_id`, `pt_pes`, `hizkuntza`, `pl` (PL1/PL2/PL1_PL2), `orduak`, `kurtsoa`, `gela_orduak`, `banaketa_id`, `aste_banaketa`, `rpt_total`, `orduak_zorretan` |
+| `op.subject` | `kode_jima`, `batch_id`, `apoyo_taldea_id`, `faculty_id`, `pt_pes`, `hizkuntza`, `pl` (PL1/PL2/PL1_PL2), `orduak`, `kurtsoa`, `gela_orduak`, `banaketa_id`, `aste_banaketa`, `rpt_total`, `rpt_reala`, `rpt_zorretan`, `emandako_orduak`, `orduak_zorretan` |
 
 **Campo `pl`** (`op.subject`): Selection `PL1` / `PL2` / `PL1_PL2` (etiqueta "PL1/PL2" = cualquier perfil lingüístico válido).
 
@@ -301,8 +301,10 @@ Acción cliente OWL (menú `Perfilazioak`, `ir.actions.client` tag `perfilazioak
 - **Derecha — Moduluak** (de la taldea seleccionada) + **Perfilazio Laburpena** (resumen del profesor).
 
 ### Tablas
-- **Moduluak**: Kodea · PT/PES · Orduak · Kurtsoa · Aste Ban. · **Gela** · RPT · Zorretan · Irakaslea. Clic en fila asigna/desasigna el módulo al profesor seleccionado.
-- **Perfilazio Laburpena**: columnas Taldea · Kurtsoa · Kodea · PT/PES · Orduak · **Gela** · RPT · Aste Ban. · Zorretan. Filas de módulos (rm) + filas de karguak (k, con "—" en columnas de módulo). Última fila **GUZTIRA** (etiqueta bajo PT/PES) con **totales** de Gela (`sumGela`), RPT (`sumRpt` = módulos + karguak) y Zorretan (`sumZorretan`).
+- **Moduluak**: Kodea · PT/PES · Orduak · Kurtsoa · Aste Ban. · **Gela** · **RPT Guzt** (`rpt_total`) · **RPT Reala** (`rpt_reala`) · **RPT Zorretan** (`rpt_zorretan`) · Irakaslea. Clic en fila asigna/desasigna el módulo al profesor seleccionado. (Las tres columnas RPT muestran respectivamente `rpt_total`/`rpt_reala`/`rpt_zorretan`; ninguna usa `orduak_zorretan`.)
+
+**RPT = `rpt_reala` en toda la perfilación.** El RPT de los módulos usa `rpt_reala` en: la tabla Moduluak, la **Perfilazio Laburpena** (resumen por irakasle, incl. total GUZTIRA), la **Laburpena del mintegi** (`get_perfilazio_laburpena`) y los **totales/badge RPT del panel de irakasle** (`get_perfilazio_irakasleak` y los recálculos tras asignar módulo/kargu, overload `>17`). En el lado servidor las claves de dict siguen llamándose `rpt_total` pero transportan `rpt_reala`. **Excepciones que mantienen `rpt_total`**: Apoyo Educativo (tope del multzo) y la tabla MODULUAK KOPIATU. Las columnas **Zorretan** fuera de la tabla Moduluak siguen mostrando `orduak_zorretan`.
+- **Perfilazio Laburpena**: columnas Taldea · Kurtsoa · Kodea · PT/PES · Orduak · **Gela** · RPT · Aste Ban. (8 columnas; la columna **Zorretan se eliminó** del perfil del profesor — `orduak_zorretan` sigue existiendo como campo de módulo, solo no se muestra aquí). Filas de módulos (rm) + filas de karguak (k, con "—" en columnas de módulo). Última fila **GUZTIRA** (etiqueta bajo PT/PES) con **totales** de Gela (`sumGela`) y RPT (`sumRpt` = módulos `rpt_reala` + karguak). La columna RPT muestra `rpt_reala`.
 
 ### Reparto de horas de karguak (cap por `op.kargu.rpt_total`)
 Cada kargu tiene un total de horas RPT (`op.kargu.rpt_total`). Las horas se reparten entre profesores y **la suma no puede superar el total del kargu**.
@@ -318,6 +320,7 @@ En la cabecera, al seleccionar un ziklo aparecen dos **botones toggle** (antes d
 - **Desdoblea** (morado `.pfz-btn-desdo`, `#6f42c1`, cuando activo) → copias con prefijo `DESDO_`.
 - Son **mutuamente excluyentes**: activar uno desactiva el otro. Handlers JS `toggleEleanitza()` / `toggleDesdoblea()`.
 - Al activar, se abre la tabla **MODULUAK KOPIATU**: clic en módulo crea/elimina su copia `HE_`/`DESDO_` (`toggle_perfilazio_kopia`). La selección (verde/morado) refleja qué copias ya existen.
+- **Filtro por taldea**: `get_perfilazio_ziklo_moduluak(batch_id)` devuelve **solo los módulos de la taldea seleccionada** (códigos `<taldea>_XXX`, p.ej. `1IEA2A_*`), no de todo el ciclo. El JS pasa `selectedBatch.id`; al cambiar de taldea con un toggle activo, el panel se recarga (`onBatchChange`). Sin taldea seleccionada, el panel queda vacío.
 
 ### Apoyo Educativo (OLHMEK/OLHELE)
 Botón "+ Apoyo Educativo" (kodea I/II/III según dígito inicial de la taldea). Tabla con tope editable `guztira_orduak`; la suma de RPT de los módulos del grupo no puede superarlo (al llegar al tope: **BETETA**, se oculta la fila de creación). Modelo `op.apoyo.taldea` (uno por `batch_id`+`kodea`), módulos vía `op.subject.apoyo_taldea_id`.
@@ -331,9 +334,27 @@ docker exec -i odoo19 odoo shell -d kudeaketa --no-http < import_moduluak.py
 - Empareja por `code` (o por `kode_jima`/alias en casos de renombrado); update si existe, create si no.
 - Normaliza códigos: espacios→`_`, colapsa `__`→`_` (regla: **sin espacios en `code`**).
 - `PT/PS` → `pt_pes` (`PT`/`PES`/`PT_PES`); `PL1/PL2` → `pl`. Columnas vacías de `pt_pes`/`pl` **no** sobrescriben el valor existente.
-- `aste banaketa` se busca en `op.subject.banaketa` por nombre; `Orduak Horas`→`orduak`, `Gela/Aula`→`gela_orduak`, `LPZ/RPT`→`rpt_total`, `Orduak Zorrean`→`orduak_zorretan`.
+- `aste banaketa` se busca en `op.subject.banaketa` por nombre; `Orduak Horas`→`orduak`, `Gela/Aula`→`gela_orduak`, `LPZ/RPT Guz/Tot`→`rpt_total`, `RPT REALAK`→`rpt_reala`, `RPT ZORRETAN`→`rpt_zorretan`, `EMANDAKO ORDUAK`→`emandako_orduak`, `Orduak Zorrean`→`orduak_zorretan`.
+- Columnas que faltan en algunos ciclos (`RPT ZORRETAN`, `EMANDAKO ORDUAK`, `ORDUAK ZORREAN`, `kode_jima`, `pt_pes`, `pl`): si vienen vacías **no** sobrescriben el valor existente.
+- Tuple de `ROWS`: `(batch_code, code, kode_jima, pt_ps, pl, orduak, kurtsoa, gela, banaketa, rpt, rpt_reala, rpt_zorretan, emandako_orduak, orduak_zorretan)`.
 - Convención: módulos optativos "Hautazko modulua" → code `<taldea>_HAUTAZKOA` con `kode_jima` vacío.
 - Copias eleanitza/desdoble: filas `HE_<code>` / `DESDO_<code>` se asignan a la taldea del **módulo de origen**.
+- `DELETE_CODES = [...]`: códigos a eliminar tras importar (p.ej. el placeholder `<taldea>_HAUTAZKOA` al crear `_HAUT_1`/`_HAUT_2`).
+- `aste banaketa` vacío **no** borra `banaketa_id` existente (guard añadido).
+
+### Scripts de actualización puntual (solo columnas nuevas)
+Cuando el paste solo aporta datos para campos **nuevos** del proyecto, NO usar el `import_moduluak.py` general (reescribe code/name/orduak/etc.). Usar scripts enfocados que **solo** escriben las columnas indicadas y emparejan por `code` (no crean ni renombran):
+- **`update_rpt_reala.py`** — `ROWS = [(code, rpt_reala), ...]`. Solo `rpt_reala`.
+- **`update_new_cols.py`** — `ROWS = [(code, rpt_reala, rpt_zorretan, emandako_orduak, orduak_zorretan), ...]`. Cada campo vacío no se escribe.
+```bash
+docker exec -i odoo19 odoo shell -d kudeaketa --no-http < update_new_cols.py
+```
+
+### Reglas al importar tablas de zikloak (acordadas con el usuario)
+- **Solo escribir las columnas NUEVAS del paste** (`rpt_reala`, `rpt_zorretan`, `emandako_orduak`; y `orduak_zorretan` si trae valor). **No** tocar `code`, `name`, `kode_jima` ni campos previos (`orduak`, `gela_orduak`, `rpt_total`, `pl`, `pt_pes`, `kurtsoa`).
+- **Emparejar por `code`** verificando contra BD antes de escribir. El prefijo/código del paste a veces es erróneo: el **taldea correcto se deduce del Kurtsoa** (1º→`1XXX`, 2º→`2XXX`) y el código real puede llevar romano (`EIP_I`/`EIP_II`) o sufijos (`ING_P_2`); mapear al código existente, **sin renombrar**. Si un código no existe → reportar, **no crear** (salvo que el usuario lo pida).
+- **Optativas HAUT**: filas `kode_jima='HAUT'` (o modulo "Módulo optativo") → crear `<taldea>_HAUT_1`/`_HAUT_2` y eliminar el placeholder `<taldea>_HAUTAZKOA` (patrón "Reemplazar", confirmado por el usuario). Verificar antes que el placeholder esté huérfano (sin faculty/matrículas/relaciones).
+- **Copias `HE_`/`DESDO_` inexistentes**: si el paste las referencia y no están, preguntar; al crearlas con datos del paste sin `RPT REALAK`, usar `rpt_reala = LPZ/RPT`.
 
 ## Notas importantes
 

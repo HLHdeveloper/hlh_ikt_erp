@@ -37,6 +37,9 @@ class OpSubjectExt(models.Model):
     aste_banaketa = fields.Char(
         'Aste Banaketa', compute='_compute_aste_banaketa', store=True)
     rpt_total = fields.Float('RPT Total')
+    rpt_reala = fields.Float('RPT Reala')
+    rpt_zorretan = fields.Float('RPT Zorretan')
+    emandako_orduak = fields.Float('Emandako Orduak')
     orduak_zorretan = fields.Float('Orduak Zorretan')
     zikloko_orduak_enpresan = fields.Float('Zikloko Orduak Enpresan')
 

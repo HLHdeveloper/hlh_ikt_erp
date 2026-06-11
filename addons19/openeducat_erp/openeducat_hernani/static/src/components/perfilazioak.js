@@ -196,10 +196,11 @@ class Perfilazioak extends Component {
     }
 
     async _ensureZikloModuluak() {
-        if (!this.state.selectedZikloa) return;
+        // Solo los módulos de la taldea seleccionada (códigos <taldea>_XXX)
+        if (!this.state.selectedBatch) { this.state.zikloModuluak = []; return; }
         this.state.loading = true;
         this.state.zikloModuluak = await this.orm.call(
-            "op.faculty", "get_perfilazio_ziklo_moduluak", [this.state.selectedZikloa.id]);
+            "op.faculty", "get_perfilazio_ziklo_moduluak", [this.state.selectedBatch.id]);
         this.state.loading = false;
     }
 
@@ -401,12 +402,14 @@ class Perfilazioak extends Component {
         const id = parseInt(ev.target.value) || null;
         this.state.selectedBatch = this.state.batches.find(b => b.id === id) || null;
         this.state.moduluak = [];
+        this.state.zikloModuluak = [];  // kopiatu panela taldez aldatzean birkargatu
         this._resetApoyo();
 
         if (!id) return;
         this.state.loading = true;
         this.state.moduluak = await this.orm.call("op.faculty", "get_perfilazio_moduluak", [id]);
         await this._loadSpecialIrakasleak();
+        if (this.isKopiakActive()) await this._refreshKopiaPanel();
         this.state.loading = false;
     }
 
@@ -667,10 +670,6 @@ class Perfilazioak extends Component {
 
     sumGela() {
         return this._sumField(this.state.resumenModuluak, 'gela_orduak');
-    }
-
-    sumZorretan() {
-        return this._sumField(this.state.resumenModuluak, 'orduak_zorretan');
     }
 
     sumRpt() {
