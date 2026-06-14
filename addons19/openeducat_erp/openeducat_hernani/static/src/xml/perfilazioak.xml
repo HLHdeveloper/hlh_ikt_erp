@@ -94,10 +94,20 @@
 
                     <t t-if="state.selectedMintegi">
                         <t t-if="!state.showLaburpena">
-                            <button class="btn btn-sm btn-primary ms-auto"
-                                    t-on-click="() => this.openLaburpena()">
-                                <i class="fa fa-table me-1"/>LABURPENA IKUSI
-                            </button>
+                            <div class="ms-auto d-flex gap-1">
+                                <button class="btn btn-sm btn-primary"
+                                        t-on-click="() => this.openLaburpena()">
+                                    <i class="fa fa-table me-1"/>LABURPENA IKUSI
+                                </button>
+                                <button class="btn btn-sm btn-success"
+                                        t-on-click="() => this.saveBertsioa()">
+                                    <i class="fa fa-save me-1"/>GORDE <t t-esc="state.selectedMintegi.name"/> PERFILAZIOAK
+                                </button>
+                                <button t-attf-class="btn btn-sm {{ state.showBertsioak ? 'btn-secondary' : 'btn-outline-secondary' }}"
+                                        t-on-click="() => this.toggleBertsioak()">
+                                    <i class="fa fa-history me-1"/>BERTSIOAK
+                                </button>
+                            </div>
                         </t>
                         <t t-else="">
                             <button class="btn btn-sm btn-outline-secondary ms-auto"
@@ -107,6 +117,53 @@
                         </t>
                     </t>
                 </div>
+
+                <!-- Panel de versiones de perfilación del mintegi -->
+                <t t-if="state.selectedMintegi and state.showBertsioak and !state.showLaburpena">
+                    <div class="pfz-bertsioak border rounded p-2 mb-2">
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="fw-semibold text-muted small flex-grow-1">
+                                <t t-esc="state.selectedMintegi.name"/> — Gordetako bertsioak
+                                (<t t-esc="state.bertsioak.length"/>)
+                            </span>
+                            <label class="btn btn-sm btn-outline-secondary py-0 mb-0">
+                                <i class="fa fa-upload me-1"/>Inportatu
+                                <input type="file" accept="application/json,.json"
+                                       class="d-none" t-on-change="onImportFile"/>
+                            </label>
+                        </div>
+                        <t t-if="!state.bertsioak.length">
+                            <div class="text-muted small fst-italic">Ez dago gordetako bertsiorik.</div>
+                        </t>
+                        <t t-foreach="state.bertsioak" t-as="v" t-key="v.id">
+                            <div class="d-flex align-items-center gap-2 py-1 border-top">
+                                <span class="flex-grow-1 small">
+                                    <span t-attf-class="{{ v.is_auto ? 'text-muted fst-italic' : 'fw-semibold' }}">
+                                        <t t-esc="v.name"/>
+                                    </span>
+                                    <span class="badge bg-light text-dark border ms-2"
+                                          title="Esleitutako moduluak / karguak">
+                                        <t t-esc="v.n_mod"/> mod · <t t-esc="v.n_kargu"/> kargu
+                                    </span>
+                                    <span class="text-muted ms-2"><t t-esc="v.create_date"/></span>
+                                </span>
+                                <button class="btn btn-sm btn-outline-primary py-0"
+                                        t-on-click="() => this.loadBertsioa(v)">
+                                    <i class="fa fa-undo me-1"/>Kargatu
+                                </button>
+                                <button class="btn btn-sm btn-link text-secondary p-0"
+                                        title="Deskargatu (fitxategia)"
+                                        t-on-click="() => this.exportBertsioa(v)">
+                                    <i class="fa fa-download"/>
+                                </button>
+                                <button class="btn btn-sm btn-link text-danger p-0"
+                                        t-on-click="() => this.deleteBertsioa(v)">
+                                    <i class="fa fa-times"/>
+                                </button>
+                            </div>
+                        </t>
+                    </div>
+                </t>
 
                 <!-- Laburpena: resumen de todos los profesores del mintegi -->
                 <t t-if="state.selectedMintegi and state.showLaburpena">
@@ -128,7 +185,9 @@
                                         </span>
                                         <div class="pfz-laburpena-roles">
                                             <t t-foreach="lf.roles" t-as="role" t-key="role_index">
-                                                <span class="badge bg-info text-dark"><t t-esc="role"/></span>
+                                                <span t-attf-class="badge {{ role.type === 'tuto' ? 'pfz-role-tuto' : 'bg-info text-dark' }}">
+                                                    <t t-esc="role.label"/>
+                                                </span>
                                             </t>
                                         </div>
                                     </div>
@@ -212,6 +271,11 @@
                                             <span t-attf-class="pfz-faculty-name {{ f.overload ? 'pfz-overload' : '' }}">
                                                 <t t-esc="f.name"/>
                                             </span>
+                                            <span t-attf-class="badge pfz-faculty-ptpes {{ f.pt_pes === 'PT' ? 'pfz-ptpes-pt' : 'pfz-ptpes-pes' }}"
+                                                  title="PT/PES (klik eginez aldatu)"
+                                                  t-on-click.stop="() => this.togglePtPes(f)">
+                                                <t t-esc="f.pt_pes"/>
+                                            </span>
                                             <span class="badge pfz-faculty-gela bg-info text-dark" title="Gela orduak">
                                                 <t t-esc="f.gela"/>
                                             </span>
@@ -232,6 +296,46 @@
                                         </div>
                                     </t>
                                 </div>
+
+                                <!-- Mintegiko laburpena: taldeak + plazak -->
+                                <t t-if="state.selectedMintegi and !state.ingelesaMode">
+                                    <div class="pfz-mintegi-laburpena border-top px-2 pt-2 pb-2">
+                                        <div class="pfz-taldeak-box border rounded p-2 mb-2">
+                                            <div class="small fw-semibold text-uppercase text-success mb-1">Mintegiko taldeak</div>
+                                            <t t-if="!state.taldeakLaburpena.length">
+                                                <div class="text-muted small fst-italic">—</div>
+                                            </t>
+                                            <t t-else="">
+                                                <table class="table table-sm table-borderless mb-0 pfz-taldeak-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="small">Taldea</th>
+                                                            <th class="small text-end">esleitzeke_mod</th>
+                                                            <th class="small text-end">mod_kop</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <t t-foreach="state.taldeakLaburpena" t-as="tl" t-key="tl.code">
+                                                            <tr t-attf-class="{{ tl.pending === 0 ? 'pfz-taldea-full' : '' }}">
+                                                                <td class="small" t-esc="tl.code"/>
+                                                                <td class="small text-end"><t t-esc="tl.pending"/></td>
+                                                                <td class="small text-end"><t t-esc="tl.total"/></td>
+                                                            </tr>
+                                                        </t>
+                                                    </tbody>
+                                                </table>
+                                            </t>
+                                        </div>
+                                        <div class="small fw-semibold text-uppercase text-muted mb-1">Plazen laburpena</div>
+                                        <div class="d-flex gap-2">
+                                            <t t-foreach="this.plazakLaburpena()" t-as="p" t-key="p.cat">
+                                                <div t-attf-class="pfz-plaza-box {{ p.cat === 'PT' ? 'pfz-plaza-pt' : 'pfz-plaza-pes' }}">
+                                                    <span class="fw-bold" t-esc="p.cat"/> = <t t-esc="p.label"/>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </t>
 
                                 <!-- Karguak section -->
                                 <t t-if="state.selectedFaculty">

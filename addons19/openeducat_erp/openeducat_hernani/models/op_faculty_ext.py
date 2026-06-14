@@ -64,6 +64,11 @@ class OpFaculty(models.Model):
 
     kidergoa = fields.Char(string='Kidergoa')
 
+    # Distintivo PT/PES de la perfilación. Vacío = automático (PT si algún
+    # módulo del profesor tiene PT, si no PES). Con valor ('PT'/'PES') =
+    # override manual fijado desde el badge de Perfilazioak.
+    perfilazio_pt_pes = fields.Char(string='Perfilazio PT/PES')
+
     # Cargos (KARGUAK)
     kargu_ids = fields.Many2many(
         'op.kargu',
@@ -563,7 +568,14 @@ class OpFaculty(models.Model):
                 f.kidergoa,
                 COALESCE(
                     (SELECT SUM(s.gela_orduak) FROM op_subject s WHERE s.faculty_id = f.id), 0
-                ) AS gela
+                ) AS gela,
+                COALESCE(
+                    NULLIF(UPPER(f.perfilazio_pt_pes), ''),
+                    CASE WHEN EXISTS (
+                        SELECT 1 FROM op_subject s3
+                        WHERE s3.faculty_id = f.id AND UPPER(s3.pt_pes) LIKE 'PT%%'
+                    ) THEN 'PT' ELSE 'PES' END
+                ) AS pt_pes
             FROM op_faculty f
             JOIN res_partner rp ON rp.id = f.partner_id
             JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
@@ -576,9 +588,335 @@ class OpFaculty(models.Model):
         return [
             {'id': r[0], 'name': r[1], 'orduak': round(float(r[2]), 2),
              'overload': round(float(r[2]), 2) > 17, 'kidergoa': r[3] or '',
-             'gela': float(r[4])}
+             'gela': float(r[4]), 'pt_pes': r[5] or 'PES'}
             for r in cr.fetchall()
         ]
+
+    def _perfilazio_pt_pes(self, faculty_id):
+        """Distintivo PT/PES efectivo: override manual si existe, si no PT
+        cuando algún módulo del profesor tiene PT (pt_pes LIKE 'PT%'), si no PES."""
+        fac = self.browse(faculty_id)
+        override = (fac.perfilazio_pt_pes or '').strip().upper()
+        if override in ('PT', 'PES'):
+            return override
+        self.env.cr.execute("""
+            SELECT 1 FROM op_subject
+            WHERE faculty_id = %s AND UPPER(COALESCE(pt_pes, '')) LIKE 'PT%%' LIMIT 1
+        """, (faculty_id,))
+        return 'PT' if self.env.cr.fetchone() else 'PES'
+
+    @api.model
+    def toggle_perfilazio_pt_pes(self, faculty_id):
+        """Alterna manualmente el distintivo PT↔PES y lo persiste."""
+        current = self._perfilazio_pt_pes(faculty_id)
+        new = 'PES' if current == 'PT' else 'PT'
+        self.browse(faculty_id).perfilazio_pt_pes = new
+        return new
+
+    @api.model
+    def get_perfilazio_taldeak_laburpena(self, dept_id):
+        """Por cada taldea del mintegi: módulos sin asignar / total."""
+        self.env.cr.execute("""
+            SELECT b.code,
+                   COUNT(s.id) AS total,
+                   COUNT(s.id) FILTER (WHERE s.faculty_id IS NULL) AS pending
+            FROM op_batch b
+            JOIN op_course c ON c.id = b.course_id
+            LEFT JOIN op_subject s ON s.batch_id = b.id
+            WHERE c.department_id = %s
+            GROUP BY b.code
+            HAVING COUNT(s.id) > 0
+            ORDER BY b.code
+        """, (dept_id,))
+        return [{'code': r[0], 'total': int(r[1]), 'pending': int(r[2])}
+                for r in self.env.cr.fetchall()]
+
+    # ── Versiones de perfilación por mintegi (snapshots) ─────────────
+    def _perfilazio_dept_faculty_ids(self, dept_id):
+        """Profesores del mintegi (mismos que el panel Perfilazioak)."""
+        self.env.cr.execute("""
+            SELECT f.id FROM op_faculty f
+            JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
+            WHERE rel.op_department_id = %s AND f.active = true
+              AND (f.kidergoa = 'funtzionarioa' OR f.kidergoa = 'impersonala')
+        """, (dept_id,))
+        return [r[0] for r in self.env.cr.fetchall()]
+
+    def _perfilazio_dept_subject_ids(self, dept_id):
+        """Módulos de los zikloak del mintegi (taldea → zikloa → departamentua)."""
+        self.env.cr.execute("""
+            SELECT s.id FROM op_subject s
+            JOIN op_batch b ON b.id = s.batch_id
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s
+        """, (dept_id,))
+        return [r[0] for r in self.env.cr.fetchall()]
+
+    def _perfilazio_snapshot(self, dept_id):
+        """Captura el estado de perfilación del mintegi: módulo→profesor,
+        horas de karguak y distintivo PT/PES (override) de sus profesores."""
+        fac_ids = self._perfilazio_dept_faculty_ids(dept_id)
+        sub_ids = self._perfilazio_dept_subject_ids(dept_id)
+        modules = {
+            str(s.id): (s.faculty_id.id or None)
+            for s in self.env['op.subject'].browse(sub_ids)
+        }
+        karguak = [
+            {'faculty_id': pk.faculty_id.id, 'kargu_id': pk.kargu_id.id,
+             'orduak': pk.orduak}
+            for pk in self.env['op.perfilazio.kargu'].search(
+                [('faculty_id', 'in', fac_ids)])
+        ]
+        pt_pes = {
+            str(f.id): (f.perfilazio_pt_pes or None)
+            for f in self.browse(fac_ids)
+        }
+        return {'modules': modules, 'karguak': karguak, 'pt_pes': pt_pes}
+
+    # Nº máximo de autoguardados que se conservan por mintegi (los más
+    # antiguos se purgan). Las versiones manuales no tienen límite.
+    PERFILAZIO_AUTO_KEEP = 5
+
+    @api.model
+    def save_perfilazio_bertsioa(self, dept_id, name, is_auto=False):
+        Bertsioa = self.env['op.perfilazio.bertsioa']
+        v = Bertsioa.create({
+            'name': name or _('Bertsioa'),
+            'department_id': dept_id,
+            'is_auto': is_auto,
+            'data': self._perfilazio_snapshot(dept_id),
+        })
+        if is_auto:
+            autos = Bertsioa.search(
+                [('department_id', '=', dept_id), ('is_auto', '=', True)],
+                order='create_date desc')
+            if len(autos) > self.PERFILAZIO_AUTO_KEEP:
+                autos[self.PERFILAZIO_AUTO_KEEP:].unlink()
+        return {'id': v.id, 'name': v.name, 'is_auto': v.is_auto,
+                'create_date': fields.Datetime.to_string(v.create_date)}
+
+    @api.model
+    def get_perfilazio_bertsioak(self, dept_id):
+        vs = self.env['op.perfilazio.bertsioa'].search(
+            [('department_id', '=', dept_id)])
+        result = []
+        for v in vs:
+            data = v.data or {}
+            n_mod = sum(1 for fid in (data.get('modules') or {}).values() if fid)
+            n_kargu = len(data.get('karguak') or [])
+            result.append({
+                'id': v.id, 'name': v.name, 'is_auto': v.is_auto,
+                'oharra': v.oharra or '',
+                'create_date': fields.Datetime.to_string(v.create_date),
+                'n_mod': n_mod, 'n_kargu': n_kargu,
+            })
+        return result
+
+    def _apply_perfilazio_snapshot(self, dept_id, data):
+        skipped = {'modules': 0, 'karguak': 0, 'faculty': 0}
+        Subject = self.env['op.subject']
+        for sid, fid in (data.get('modules') or {}).items():
+            s = Subject.browse(int(sid))
+            if not s.exists():
+                skipped['modules'] += 1
+                continue
+            s.faculty_id = fid or False
+        # karguak: borrar los de los profesores del mintegi y recrear
+        fac_ids = self._perfilazio_dept_faculty_ids(dept_id)
+        PK = self.env['op.perfilazio.kargu']
+        PK.search([('faculty_id', 'in', fac_ids)]).unlink()
+        for k in (data.get('karguak') or []):
+            f = self.browse(k.get('faculty_id'))
+            kg = self.env['op.kargu'].browse(k.get('kargu_id'))
+            if not f.exists() or not kg.exists():
+                skipped['karguak'] += 1
+                continue
+            PK.create({'faculty_id': f.id, 'kargu_id': kg.id,
+                       'orduak': k.get('orduak') or 0})
+        for fid, val in (data.get('pt_pes') or {}).items():
+            f = self.browse(int(fid))
+            if not f.exists():
+                skipped['faculty'] += 1
+                continue
+            f.perfilazio_pt_pes = val or False
+        self.env.flush_all()
+        return skipped
+
+    @api.model
+    def load_perfilazio_bertsioa(self, version_id):
+        v = self.env['op.perfilazio.bertsioa'].browse(version_id)
+        if not v.exists():
+            raise UserError(_('Bertsioa ez da existitzen.'))
+        dept_id = v.department_id.id
+        # 1) Autoguardar el estado actual antes de sobrescribir
+        self.save_perfilazio_bertsioa(
+            dept_id,
+            _('Auto - %s') % fields.Datetime.to_string(fields.Datetime.now()),
+            is_auto=True)
+        # 2) Aplicar el snapshot
+        skipped = self._apply_perfilazio_snapshot(dept_id, v.data or {})
+        return {'ok': True, 'skipped': skipped}
+
+    @api.model
+    def delete_perfilazio_bertsioa(self, version_id):
+        self.env['op.perfilazio.bertsioa'].browse(version_id).unlink()
+        return True
+
+    # ── Export / Import portable (indexado por códigos, no por IDs) ───
+    # Clave portable de un profesor: email si lo tiene; si no (impersonalak
+    # tipo INFO_X1, sin email), 'name:<izena>'. Así sobrevive entre BDs/años.
+    def _faculty_portable_key(self, faculty):
+        if not faculty or not faculty.exists():
+            return None
+        email = faculty.partner_id.email
+        if email:
+            return email
+        name = faculty.partner_id.name or ''
+        return ('name:' + name) if name else None
+
+    def _faculty_by_portable_key(self, key):
+        if not key:
+            return None
+        if key.startswith('name:'):
+            f = self.search([('partner_id.name', '=', key[5:])], limit=1)
+        else:
+            f = self.search([('partner_id.email', '=', key)], limit=1)
+        return f.id if f else None
+
+    def _perfilazio_portable_from_data(self, data):
+        """Convierte un snapshot por IDs a formato portable: subject.code,
+        clave de profesor (email o name:) y kargu.code (estables entre BDs)."""
+        Subject = self.env['op.subject']
+        modules = {}
+        for sid, fid in (data.get('modules') or {}).items():
+            s = Subject.browse(int(sid))
+            if not s.exists() or not s.code:
+                continue
+            modules[s.code] = self._faculty_portable_key(self.browse(fid)) if fid else None
+        karguak = []
+        for k in (data.get('karguak') or []):
+            key = self._faculty_portable_key(self.browse(k.get('faculty_id')))
+            kg = self.env['op.kargu'].browse(k.get('kargu_id'))
+            if not key or not kg.exists() or not kg.code:
+                continue
+            karguak.append({'faculty': key, 'kargu': kg.code,
+                            'orduak': k.get('orduak') or 0})
+        pt_pes = {}
+        for fid, val in (data.get('pt_pes') or {}).items():
+            key = self._faculty_portable_key(self.browse(int(fid)))
+            if key:
+                pt_pes[key] = val or None
+        return {'modules': modules, 'karguak': karguak, 'pt_pes': pt_pes}
+
+    def _perfilazio_data_from_portable(self, portable):
+        """Resuelve el formato portable (códigos) a un snapshot por IDs de la
+        BD actual. Devuelve (data, missing) con los elementos no resueltos."""
+        missing = {'modules': 0, 'karguak': 0, 'faculty': 0}
+        Subject = self.env['op.subject']
+        modules = {}
+        for code, key in (portable.get('modules') or {}).items():
+            s = Subject.search([('code', '=', code)], limit=1)
+            if not s:
+                missing['modules'] += 1
+                continue
+            fid = self._faculty_by_portable_key(key) if key else None
+            if key and not fid:
+                missing['faculty'] += 1
+            modules[str(s.id)] = fid
+        karguak = []
+        for k in (portable.get('karguak') or []):
+            fid = self._faculty_by_portable_key(k.get('faculty'))
+            kg = self.env['op.kargu'].search([('code', '=', k.get('kargu'))], limit=1)
+            if not fid or not kg:
+                missing['karguak'] += 1
+                continue
+            karguak.append({'faculty_id': fid, 'kargu_id': kg.id,
+                            'orduak': k.get('orduak') or 0})
+        pt_pes = {}
+        for key, val in (portable.get('pt_pes') or {}).items():
+            fid = self._faculty_by_portable_key(key)
+            if not fid:
+                missing['faculty'] += 1
+                continue
+            pt_pes[str(fid)] = val or None
+        return {'modules': modules, 'karguak': karguak, 'pt_pes': pt_pes}, missing
+
+    @api.model
+    def export_perfilazio_bertsioa(self, version_id):
+        v = self.env['op.perfilazio.bertsioa'].browse(version_id)
+        if not v.exists():
+            raise UserError(_('Bertsioa ez da existitzen.'))
+        portable = self._perfilazio_portable_from_data(v.data or {})
+        portable.update({
+            'format': 'perfilazio_bertsioa', 'fmt_version': 1,
+            'department': v.department_id.code or '',
+            'department_name': v.department_id.name or '',
+            'name': v.name,
+        })
+        return portable
+
+    def _create_impersonal_named(self, dept_id, name):
+        """Crea un profesor impersonal con un nombre concreto (p.ej. INFO_X3)
+        en el mintegi indicado, igual que create_perfilazio_impersonal."""
+        if '_X' in name:
+            prefix, num = name.rsplit('_X', 1)
+            last = 'X' + num
+        else:
+            prefix, last = name, name
+        partner = self.env['res.partner'].create({'name': name})
+        return self.env['op.faculty'].create({
+            'partner_id': partner.id,
+            'first_name': prefix or name,
+            'last_name': last,
+            'birth_date': '1970-01-01',
+            'gender': 'male',
+            'kidergoa': 'impersonala',
+            'allowed_department_ids': [(6, 0, [dept_id])],
+        })
+
+    def _ensure_portable_impersonals(self, portable, dept_id):
+        """Crea los impersonalak (claves 'name:…') del fichero que no existan,
+        para que sus módulos/karguak se puedan restaurar. Devuelve cuántos creó."""
+        keys = set()
+        for v in (portable.get('modules') or {}).values():
+            if v:
+                keys.add(v)
+        for k in (portable.get('karguak') or []):
+            if k.get('faculty'):
+                keys.add(k['faculty'])
+        keys.update((portable.get('pt_pes') or {}).keys())
+        created = 0
+        for key in keys:
+            if not key or not key.startswith('name:'):
+                continue
+            if self._faculty_by_portable_key(key):
+                continue
+            self._create_impersonal_named(dept_id, key[5:])
+            created += 1
+        if created:
+            self.env.flush_all()
+        return created
+
+    @api.model
+    def import_perfilazio_bertsioa(self, dept_id, portable, name=None):
+        if not isinstance(portable, dict) or portable.get('format') != 'perfilazio_bertsioa':
+            raise UserError(_('Fitxategi baliogabea: ez da perfilazio-bertsio bat.'))
+        dept = self.env['op.department'].search(
+            [('code', '=', portable.get('department'))], limit=1)
+        target_dept = dept.id if dept else dept_id
+        # Crear los impersonalak que falten antes de resolver (así no se pierden)
+        created = self._ensure_portable_impersonals(portable, target_dept)
+        data, missing = self._perfilazio_data_from_portable(portable)
+        v = self.env['op.perfilazio.bertsioa'].create({
+            'name': name or portable.get('name') or _('Inportatua'),
+            'department_id': target_dept,
+            'is_auto': False,
+            'oharra': _('Inportatua fitxategitik'),
+            'data': data,
+        })
+        return {'id': v.id, 'name': v.name,
+                'department': (dept.code if dept else ''),
+                'missing': missing, 'created_impersonal': created}
 
     @api.model
     def create_perfilazio_impersonal(self, dept_id):
@@ -684,26 +1022,39 @@ class OpFaculty(models.Model):
             """, (fid,))
             kargu_codes = [r[0] or '' for r in cr.fetchall()]
             roles = []
+            seen_roles = set()
+
+            def add_role(label, rtype):
+                key = (rtype, label)
+                if key not in seen_roles:
+                    seen_roles.add(key)
+                    roles.append({'label': label, 'type': rtype})
+
             for code in kargu_codes:
                 up = code.upper()
                 if up.startswith('MB-'):
-                    roles.append('Mintegiburua')
+                    add_role('Mintegiburua', 'mb')
                 elif up.startswith('TUTO_'):
                     suffix = code[5:].strip()
-                    roles.append('Taldeko tutorea' + (f' ({suffix})' if suffix else ''))
+                    add_role('Taldeko tutorea' + (f' ({suffix})' if suffix else ''), 'tuto')
 
-            # Filas: módulos (Kodea, Gela, RPT = rpt_reala)
+            # Filas: módulos (Kodea, Gela, RPT = rpt_reala). Los módulos TUTO
+            # (p.ej. 1INF4_TUTO_1) también dan rol "Taldeko tutorea (taldea)".
             cr.execute("""
-                SELECT s.code, s.gela_orduak, s.rpt_reala
+                SELECT s.code, s.gela_orduak, s.rpt_reala, b.code
                 FROM op_subject s
+                LEFT JOIN op_batch b ON b.id = s.batch_id
                 WHERE s.faculty_id = %s
                 ORDER BY s.code
             """, (fid,))
-            rows = [
-                {'code': r[0] or '', 'gela': float(r[1] or 0),
-                 'rpt': float(r[2] or 0), 'is_kargu': False}
-                for r in cr.fetchall()
-            ]
+            rows = []
+            for r in cr.fetchall():
+                code = r[0] or ''
+                rows.append({'code': code, 'gela': float(r[1] or 0),
+                             'rpt': float(r[2] or 0), 'is_kargu': False})
+                if _modulu_is_tuto(code):
+                    taldea = r[3] or code.split('_TUTO')[0]
+                    add_role('Taldeko tutorea' + (f' ({taldea})' if taldea else ''), 'tuto')
             # Filas: karguak (Kodea, sin Gela, RPT = orduak)
             cr.execute("""
                 SELECT k.code, pk.orduak
@@ -783,10 +1134,12 @@ class OpFaculty(models.Model):
                 s.gela_orduak, s.rpt_total, s.orduak_zorretan,
                 s.faculty_id,
                 rp.name AS faculty_name,
-                s.rpt_reala, s.rpt_zorretan, s.emandako_orduak
+                s.rpt_reala, s.rpt_zorretan, s.emandako_orduak,
+                md.code AS mintegiko_irakaslea_code
             FROM op_subject s
             LEFT JOIN op_faculty f ON f.id = s.faculty_id
             LEFT JOIN res_partner rp ON rp.id = f.partner_id
+            LEFT JOIN op_department md ON md.id = s.mintegiko_irakaslea
             WHERE s.batch_id = %s
             ORDER BY s.code
         """, (batch_id,))
@@ -800,7 +1153,9 @@ class OpFaculty(models.Model):
                 'faculty_id': r[10], 'faculty_name': r[11],
                 'rpt_reala': float(r[12] or 0), 'rpt_zorretan': float(r[13] or 0),
                 'emandako_orduak': float(r[14] or 0),
-                'special_dept': _modulu_special_dept_code(r[1]),
+                # Override manual (mintegiko_irakaslea) tiene prioridad sobre el
+                # departamento derivado del código del módulo.
+                'special_dept': r[15] or _modulu_special_dept_code(r[1]),
                 'tuto': _modulu_is_tuto(r[1]),
             }
             for r in cr.fetchall()
@@ -850,7 +1205,8 @@ class OpFaculty(models.Model):
             row = cr.fetchone()
             orduak = round(float(row[0]), 2)
             result.append({'id': fid, 'orduak': orduak, 'overload': orduak > 17,
-                           'gela': float(row[1])})
+                           'gela': float(row[1]),
+                           'pt_pes': self._perfilazio_pt_pes(fid)})
         return result
 
     @api.model

@@ -328,6 +328,30 @@ En la cabecera, al seleccionar un ziklo aparecen dos **botones toggle** (antes d
 ### Apoyo Educativo (OLHMEK/OLHELE)
 Botón "+ Apoyo Educativo" (kodea I/II/III según dígito inicial de la taldea). Tabla con tope editable `guztira_orduak`; la suma de RPT de los módulos del grupo no puede superarlo (al llegar al tope: **BETETA**, se oculta la fila de creación). Modelo `op.apoyo.taldea` (uno por `batch_id`+`kodea`), módulos vía `op.subject.apoyo_taldea_id`.
 
+### Distintivo PT/PES por profesor
+Badge **PT/PES** en cada profesor del panel Irakasleak (izquierda del cuadro Gela). Automático: **PT** si algún módulo del profesor tiene `pt_pes` PT (LIKE 'PT%'), si no **PES**. **Modificable a mano** (clic alterna PT↔PES, persiste en `op.faculty.perfilazio_pt_pes`; vacío = automático). RPC `toggle_perfilazio_pt_pes`. Colores: PT morado clarito (`.pfz-ptpes-pt`), PES gris (`.pfz-ptpes-pes`).
+
+### Cuadro Mintegiko laburpena (bajo Irakasleak)
+- **Recuadro verde** con tabla **Taldea · esleitzeke_mod · mod_kop** (sin asignar / total de módulos por taldea del mintegi). Fila en verde cuando `esleitzeke_mod = 0` (todo asignado). RPC `get_perfilazio_taldeak_laburpena`.
+- **Plazen laburpena**: cuadros separados **PES** y **PT**. Se suma `orduak` (RPT total, incl. karguak) de los profesores **por su distintivo PT/PES**, y se convierte a plazas (17h = 1; 6h=1/3, 9h=1/2, 12h=2/3; resto no exacto → `+Xh`). Cálculo reactivo en JS (`plazakLaburpena`/`_plazaLabel`).
+
+### Campo `mintegiko_irakaslea` (op.subject)
+Many2one a `op.department` (dominio excluye el mintegi propio vía `own_department_id`). Si está fijado, el módulo (que sigue en su taldea/mintegi) se ofrece en Perfilazioak con el **desplegable de profesores de ESE departamento** (override manual del mecanismo `special_dept`). Ej: `2INF4_EEE` (INFOR) impartido por un profesor de ELEKTRIZITATEA.
+
+### Karguak: 0h y decimales
+- `allow_zero` (`_kargu_allows_zero`): TUTO de grupos **MLE, MSS, IEA, SEA, FMD, AST** pueden asignarse con **0h** (cotutor). Resto de TUTO_ y todos los MB: ≥1h.
+- `allow_decimal` (`_kargu_allows_decimal` = no TUTO/MB, p.ej. `ERALDI_TALDEA`, `DUAL_*`): horas con **campo numérico** `step=0.1` (un decimal). TUTO/MB usan selector de enteros. Banderas vienen de `get_all_karguak`/`get_perfilazio_karguak`.
+
+### LABURPENA IKUSI — roles
+Roles por profesor como `{label, type}`. **Mintegiburua** (kargu `MB-`) en turquesa; **Taldeko tutorea (taldea)** en **azul** (`.pfz-role-tuto`), detectado tanto de karguak `TUTO_` como de **módulos TUTO** asignados (código `(^|_)TUTO(_|$)`; taldea desde el `batch`). Roles deduplicados.
+
+### Versiones de perfilación (snapshots por mintegi)
+Modelo **`op.perfilazio.bertsioa`** (`name`, `department_id`, `is_auto`, `data` JSON). Botones junto a LABURPENA IKUSI: **GORDE \<MINTEGI\> PERFILAZIOAK** (guarda con nombre) y **BERTSIOAK** (panel de versiones: cada una con `N mod · M kargu`, **Kargatu**, **Deskargatu**, **Ezabatu**, e **Inportatu**).
+- Snapshot = **módulo→profesor** (módulos del mintegi) + **horas de karguak** + **PT/PES** de sus profesores. Tamaño ~0,4–1,5 KB/versión.
+- **Kargatu** autoguarda el estado actual antes de sobrescribir (`is_auto`); se conservan los **últimos 5 autoguardados** (`PERFILAZIO_AUTO_KEEP`).
+- **Export/Import portable** por códigos: `subject.code`, **email** del profesor o `name:<izena>` para impersonalak, `kargu.code`. Al **importar**, se **crean automáticamente los impersonalak** (`name:…`) que falten en el mintegi destino; lo demás no resuelto solo se avisa (`missing`).
+- RPC: `save/get/load/delete/export/import_perfilazio_bertsioa`. Acceso en `ir.model.access.csv`.
+
 ## Importación masiva de módulos (`import_moduluak.py`)
 
 Script reutilizable (odoo shell) para crear/actualizar `op.subject` desde tablas de zikloak pegadas por el usuario. Se ejecuta:

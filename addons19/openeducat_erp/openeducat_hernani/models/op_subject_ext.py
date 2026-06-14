@@ -11,6 +11,16 @@ class OpSubjectExt(models.Model):
         'op.apoyo.taldea', 'Apoyo multzoa', ondelete='set null', index=True)
     faculty_id = fields.Many2one('op.faculty', 'Irakaslea', ondelete='set null', index=True)
     talde_kodea = fields.Char(related='batch_id.code', string='Talde Kodea', store=False)
+    # Mintegi propio del módulo (vía taldea → zikloa → departamentua). Solo para
+    # el dominio del campo siguiente (excluir el departamento propio).
+    own_department_id = fields.Many2one(
+        'op.department', string='Moduluaren mintegia',
+        related='batch_id.course_id.department_id', store=False)
+    # Override manual: departamento (distinto del propio) cuyos profesores
+    # pueden impartir este módulo en Perfilazioak. Ej: 2INF4_EEE (mintegi
+    # INFORMATIKA) impartido por un profesor de ELEKTRIZITATEA.
+    mintegiko_irakaslea = fields.Many2one(
+        'op.department', string='Mintegiko irakaslea', ondelete='set null', index=True)
     pt_pes = fields.Selection([
         ('PT', 'PT'),
         ('PES', 'PES'),

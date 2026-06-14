@@ -203,6 +203,66 @@
     font-weight: 700;
     border: 1px solid #198754;
 }
+.pfz-faculty-ptpes {
+    font-size: .75rem;
+    margin-left: .35rem;
+    cursor: pointer;
+    min-width: 2.4rem;
+}
+.pfz-taldeak-box {
+    background-color: #e8f6ec;
+    border-color: #198754 !important;
+}
+.pfz-taldeak-table th {
+    color: #146c43;
+    font-weight: 600;
+    border-bottom: 1px solid #198754;
+}
+.pfz-taldeak-table td {
+    padding-top: .1rem;
+    padding-bottom: .1rem;
+}
+.pfz-taldea-full td {
+    background-color: #198754;
+    color: #fff;
+    font-weight: 600;
+}
+.pfz-taldea-full td:first-child {
+    border-top-left-radius: .35rem;
+    border-bottom-left-radius: .35rem;
+}
+.pfz-taldea-full td:last-child {
+    border-top-right-radius: .35rem;
+    border-bottom-right-radius: .35rem;
+}
+.pfz-plaza-box {
+    border-radius: .35rem;
+    padding: .15rem .55rem;
+    font-size: .8rem;
+    white-space: nowrap;
+}
+.pfz-plaza-pt {
+    background-color: #d8c4ec;
+    color: #4a148c;
+}
+.pfz-plaza-pes {
+    background-color: #e2e3e5;
+    color: #41464b;
+}
+.pfz-role-tuto {
+    background-color: #0d6efd;
+    color: #fff;
+}
+.pfz-ptpes-pt {
+    background-color: #d8c4ec;   /* morado clarito */
+    color: #4a148c !important;   /* morado oscuro, legible */
+    font-weight: 600;
+}
+.pfz-ptpes-pes {
+    background-color: #e2e3e5;   /* gris claro */
+    color: #41464b !important;
+    font-weight: 600;
+}
 .pfz-faculty-hours {
     font-size: .75rem;
     margin-left: .5rem;

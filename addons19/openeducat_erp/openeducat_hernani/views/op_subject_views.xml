@@ -26,6 +26,10 @@
                             <field name="hizkuntza"/>
                             <field name="kurtsoa"/>
                             <field name="gela_orduak" string="Gela Orduak"/>
+                            <field name="own_department_id" invisible="1"/>
+                            <field name="mintegiko_irakaslea" string="Mintegiko irakaslea"
+                                   domain="[('id', '!=', own_department_id)]"
+                                   options="{'no_create': True}"/>
                         </group>
                         <group>
                             <field name="pt_pes" string="PT_PES"/>

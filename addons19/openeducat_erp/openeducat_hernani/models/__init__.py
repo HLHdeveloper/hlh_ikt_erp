@@ -10,3 +10,4 @@ from . import op_report
 from . import op_subject_banaketa
 from . import op_apoyo_taldea
 from . import op_subject_ext
+from . import op_perfilazio_bertsioa

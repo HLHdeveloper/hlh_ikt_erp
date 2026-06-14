@@ -60,6 +60,11 @@ class Perfilazioak extends Component {
             showLaburpena: false,
             laburpenaData: [],
 
+            showBertsioak: false,
+            bertsioak: [],
+
+            taldeakLaburpena: [],
+
             loading: false,
         });
         onWillStart(() => this._loadMintegiak());
@@ -109,6 +114,7 @@ class Perfilazioak extends Component {
             this.state.zikloak = zikloak;
             this.state.irakasleak = irakasleak;
         }
+        await this._refreshTaldeakLaburpena();
         this.state.loading = false;
     }
 
@@ -288,6 +294,42 @@ class Perfilazioak extends Component {
         }
     }
 
+    // Mintegiko taldeak: módulos sin asignar / total (consulta servidor)
+    async _refreshTaldeakLaburpena() {
+        if (!this.state.selectedMintegi || this.state.ingelesaMode) {
+            this.state.taldeakLaburpena = [];
+            return;
+        }
+        this.state.taldeakLaburpena = await this.orm.call(
+            "op.faculty", "get_perfilazio_taldeak_laburpena",
+            [this.state.selectedMintegi.id]);
+    }
+
+    // Plazen laburpena: por distintivo PT/PES de los profesores, suma sus
+    // horas y las convierte a plazas (17h = 1; 6h=1/3, 9h=1/2, 12h=2/3).
+    plazakLaburpena() {
+        const hours = { PES: 0, PT: 0 };
+        for (const f of this.state.irakasleak) {
+            const cat = f.pt_pes === 'PT' ? 'PT' : 'PES';
+            hours[cat] += f.orduak || 0;
+        }
+        return ['PES', 'PT'].map(cat => ({ cat, label: this._plazaLabel(hours[cat]) }));
+    }
+
+    _plazaLabel(h) {
+        h = Math.round(h * 100) / 100;
+        const whole = Math.floor(h / 17 + 1e-9);
+        const rem = Math.round((h - whole * 17) * 100) / 100;
+        const parts = [];
+        if (whole) parts.push(String(whole));
+        if (rem > 0.001) {
+            const FR = [[6, '1/3'], [9, '1/2'], [12, '2/3']];
+            const m = FR.find(([hh]) => Math.abs(rem - hh) < 0.1);
+            parts.push(m ? m[1] : (Number.isInteger(rem) ? rem + 'h' : rem.toFixed(1) + 'h'));
+        }
+        return parts.length ? parts.join(' + ') : '0';
+    }
+
     // ── Apoyo Educativo ──────────────────────────────────────────────
     _emptyApoyoNew(kurtsoa = '') {
         return { code: '', pt_pes: '', orduak: 0, kurtsoa,
@@ -429,6 +471,15 @@ class Perfilazioak extends Component {
         await this._refreshResumen();
     }
 
+    // Alterna manualmente el distintivo PT/PES del profesor (persistente).
+    async togglePtPes(f) {
+        const val = await this.orm.call("op.faculty", "toggle_perfilazio_pt_pes", [f.id]);
+        f.pt_pes = val;
+        if (this.state.selectedFaculty && this.state.selectedFaculty.id === f.id) {
+            this.state.selectedFaculty.pt_pes = val;
+        }
+    }
+
     async onModuluClick(modulu) {
         // Los módulos especiales (no técnicos) solo se asignan mediante el
         // desplegable de la columna Irakaslea, no con los profesores del mintegi.
@@ -453,14 +504,17 @@ class Perfilazioak extends Component {
                 this.state.irakasleak[fidx].orduak = upd.orduak;
                 this.state.irakasleak[fidx].overload = upd.overload;
                 this.state.irakasleak[fidx].gela = upd.gela;
+                if (upd.pt_pes !== undefined) this.state.irakasleak[fidx].pt_pes = upd.pt_pes;
             }
             if (this.state.selectedFaculty && this.state.selectedFaculty.id === upd.id) {
                 this.state.selectedFaculty.orduak = upd.orduak;
                 this.state.selectedFaculty.overload = upd.overload;
                 this.state.selectedFaculty.gela = upd.gela;
+                if (upd.pt_pes !== undefined) this.state.selectedFaculty.pt_pes = upd.pt_pes;
             }
         }
         await this._refreshResumen();
+        await this._refreshTaldeakLaburpena();
         this.state.loading = false;
     }
 
@@ -487,14 +541,17 @@ class Perfilazioak extends Component {
                 this.state.irakasleak[fidx].orduak = upd.orduak;
                 this.state.irakasleak[fidx].overload = upd.overload;
                 this.state.irakasleak[fidx].gela = upd.gela;
+                if (upd.pt_pes !== undefined) this.state.irakasleak[fidx].pt_pes = upd.pt_pes;
             }
             if (this.state.selectedFaculty && this.state.selectedFaculty.id === upd.id) {
                 this.state.selectedFaculty.orduak = upd.orduak;
                 this.state.selectedFaculty.overload = upd.overload;
                 this.state.selectedFaculty.gela = upd.gela;
+                if (upd.pt_pes !== undefined) this.state.selectedFaculty.pt_pes = upd.pt_pes;
             }
         }
         await this._refreshResumen();
+        await this._refreshTaldeakLaburpena();
         this.state.loading = false;
     }
 
@@ -525,6 +582,7 @@ class Perfilazioak extends Component {
         this._updateFacultyHours(faculty.id, result);
         await this._reloadModuluak();
         await this._refreshResumen();
+        await this._refreshTaldeakLaburpena();
         this.state.loading = false;
     }
 
@@ -665,6 +723,106 @@ class Perfilazioak extends Component {
 
     closeLaburpena() {
         this.state.showLaburpena = false;
+    }
+
+    // ── Versiones de perfilación (snapshots por mintegi) ─────────────
+    async toggleBertsioak() {
+        this.state.showBertsioak = !this.state.showBertsioak;
+        if (this.state.showBertsioak) await this._loadBertsioak();
+    }
+
+    async _loadBertsioak() {
+        if (!this.state.selectedMintegi) return;
+        this.state.bertsioak = await this.orm.call(
+            "op.faculty", "get_perfilazio_bertsioak", [this.state.selectedMintegi.id]);
+    }
+
+    async saveBertsioa() {
+        if (!this.state.selectedMintegi) return;
+        const name = window.prompt(
+            `"${this.state.selectedMintegi.name}" perfilazioaren bertsio-izena:`);
+        if (!name || !name.trim()) return;
+        this.state.loading = true;
+        const v = await this.orm.call(
+            "op.faculty", "save_perfilazio_bertsioa",
+            [this.state.selectedMintegi.id, name.trim()]);
+        this.state.loading = false;
+        this.notification.add(`Gordeta: ${v.name}`, { type: 'success' });
+        this.state.showBertsioak = true;
+        await this._loadBertsioak();
+    }
+
+    async loadBertsioa(v) {
+        if (!confirm(`"${v.name}" bertsioa kargatu? Uneko egoera ordeztuko da `
+            + `(aldez aurretik automatikoki gordeko da).`)) return;
+        this.state.loading = true;
+        const res = await this.orm.call("op.faculty", "load_perfilazio_bertsioa", [v.id]);
+        // Recargar toda la vista del mintegi
+        await this._refreshIrakasleak();
+        if (this.state.selectedBatch) await this._reloadModuluak();
+        if (this.state.selectedFaculty) {
+            this.state.karguak = await this.orm.call(
+                "op.faculty", "get_perfilazio_karguak", [this.state.selectedFaculty.id]);
+            await this._refreshResumen();
+        }
+        await this._refreshTaldeakLaburpena();
+        await this._loadBertsioak();
+        this.state.loading = false;
+        const sk = res && res.skipped;
+        const extra = sk && (sk.modules || sk.karguak || sk.faculty)
+            ? ` (saltatuta: ${sk.modules} mod / ${sk.karguak} kargu / ${sk.faculty} irak.)` : '';
+        this.notification.add(`Kargatuta: ${v.name}${extra}`, { type: 'success' });
+    }
+
+    async deleteBertsioa(v) {
+        if (!confirm(`"${v.name}" bertsioa ezabatu?`)) return;
+        await this.orm.call("op.faculty", "delete_perfilazio_bertsioa", [v.id]);
+        this.state.bertsioak = this.state.bertsioak.filter(x => x.id !== v.id);
+    }
+
+    // Descarga una versión como fichero JSON portable (por códigos)
+    async exportBertsioa(v) {
+        const data = await this.orm.call(
+            "op.faculty", "export_perfilazio_bertsioa", [v.id]);
+        const blob = new Blob([JSON.stringify(data, null, 2)],
+            { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `perfilazioa_${data.department || 'dept'}_${v.name}.json`
+            .replace(/[^\w.\-]+/g, '_');
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Importa un fichero JSON de versión y crea una versión nueva en el mintegi
+    async onImportFile(ev) {
+        const file = ev.target.files && ev.target.files[0];
+        ev.target.value = '';   // permitir reimportar el mismo fichero
+        if (!file || !this.state.selectedMintegi) return;
+        const text = await file.text();
+        let parsed;
+        try { parsed = JSON.parse(text); }
+        catch (e) {
+            this.notification.add('Fitxategi baliogabea (JSON okerra).', { type: 'danger' });
+            return;
+        }
+        this.state.loading = true;
+        let res;
+        try {
+            res = await this.orm.call("op.faculty", "import_perfilazio_bertsioa",
+                [this.state.selectedMintegi.id, parsed]);
+        } finally {
+            this.state.loading = false;
+        }
+        this.state.showBertsioak = true;
+        await this._loadBertsioak();
+        const m = res.missing || {};
+        const created = res.created_impersonal
+            ? ` [${res.created_impersonal} impertsonal sortuta]` : '';
+        const extra = (m.modules || m.karguak || m.faculty)
+            ? ` (falta: ${m.modules || 0} mod / ${m.karguak || 0} kargu / ${m.faculty || 0} irak.)` : '';
+        this.notification.add(`Inportatuta: ${res.name}${created}${extra}`, { type: 'success' });
     }
 
     // Nº de columnas de la rejilla ≈ raíz cuadrada (12 prof → 4 columnas → 4x3)
