@@ -50,6 +50,8 @@ class Perfilazioak extends Component {
             newKarguId: null,
             newKarguOrduak: 0,
             newKarguRemaining: 0,
+            newKarguAllowZero: false,
+            newKarguAllowDecimal: false,
 
             resumenModuluak: [],
 
@@ -555,6 +557,8 @@ class Perfilazioak extends Component {
         this.state.newKarguId = null;
         this.state.newKarguOrduak = 0;
         this.state.newKarguRemaining = 0;
+        this.state.newKarguAllowZero = false;
+        this.state.newKarguAllowDecimal = false;
         this.state.addingKargu = true;
     }
 
@@ -562,6 +566,8 @@ class Perfilazioak extends Component {
         this.state.newKarguId = parseInt(ev.target.value) || null;
         const k = this.state.allKarguak.find(x => x.id === this.state.newKarguId);
         this.state.newKarguRemaining = k ? k.remaining : 0;
+        this.state.newKarguAllowZero = k ? !!k.allow_zero : false;
+        this.state.newKarguAllowDecimal = k ? !!k.allow_decimal : false;
         this.state.newKarguOrduak = 0;
     }
 
@@ -575,9 +581,18 @@ class Perfilazioak extends Component {
         return Array.from({ length: n > 0 ? n : 0 }, (_, i) => i + 1);
     }
 
-    // Opciones para una línea de kargu ya asignada (incluye su valor actual)
+    // Opciones del desplegable al añadir un kargu nuevo (0 incluido si el
+    // kargu admite 0h, p.ej. TUTO de cotutor sin RPT).
+    newKarguOptions() {
+        const opts = this.rangeOptions(this.state.newKarguRemaining);
+        return this.state.newKarguAllowZero ? [0, ...opts] : opts;
+    }
+
+    // Opciones para una línea de kargu ya asignada (incluye su valor actual
+    // y el 0 si el kargu admite 0h)
     rowKarguOptions(k) {
-        return this.rangeOptions(Math.max(k.max_orduak || 0, k.orduak || 0));
+        const opts = this.rangeOptions(Math.max(k.max_orduak || 0, k.orduak || 0));
+        return k.allow_zero ? [0, ...opts] : opts;
     }
 
     cancelAddKargu() {
@@ -585,7 +600,9 @@ class Perfilazioak extends Component {
     }
 
     async saveKargu() {
-        if (!this.state.newKarguId || !this.state.selectedFaculty || !this.state.newKarguOrduak) return;
+        if (!this.state.newKarguId || !this.state.selectedFaculty) return;
+        // Permitir guardar 0h solo cuando el kargu lo admite (TUTO de cotutor)
+        if (!this.state.newKarguOrduak && !this.state.newKarguAllowZero) return;
         const result = await this.orm.call("op.faculty", "upsert_perfilazio_kargu", [
             this.state.selectedFaculty.id,
             this.state.newKarguId,
@@ -658,6 +675,11 @@ class Perfilazioak extends Component {
 
     formatH(h) {
         return Number.isFinite(h) ? h.toFixed(1) + 'h' : '0.0h';
+    }
+
+    // Perfilación completa: RPT exactamente en 17h (ni de menos ni overload).
+    isComplete(f) {
+        return !f.overload && Math.abs((f.orduak || 0) - 17) < 0.005;
     }
 
     _round(n) {

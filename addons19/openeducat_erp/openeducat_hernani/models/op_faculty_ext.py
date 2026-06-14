@@ -38,6 +38,27 @@ def _modulu_is_tuto(code):
     return bool(code) and bool(re.search(r'(^|_)TUTO(_|$)', code.upper()))
 
 
+# Karguak TUTO de estos grupos pueden perfilarse con 0 horas (tutor sin RPT,
+# p.ej. cotutoreak). El resto de TUTO_ y todos los MB requieren ≥1h.
+ZERO_HOUR_TUTO_GROUPS = ('MLE', 'MSS', 'IEA', 'SEA', 'FMD', 'AST')
+
+
+def _kargu_allows_zero(code):
+    up = (code or '').upper()
+    if not up.startswith('TUTO_'):
+        return False
+    return any(grp in up for grp in ZERO_HOUR_TUTO_GROUPS)
+
+
+def _kargu_allows_decimal(code):
+    """Permite horas con un decimal (paso 0,1). Aplica a todos los karguak
+    salvo TUTO_* y MB-*, que se reparten en horas enteras."""
+    up = (code or '').upper()
+    if _modulu_is_tuto(code) or up.startswith('MB-') or up.startswith('MB_') or up == 'MB':
+        return False
+    return True
+
+
 class OpFaculty(models.Model):
     _inherit = 'op.faculty'
 
@@ -553,8 +574,8 @@ class OpFaculty(models.Model):
                 f.last_name
         """, (dept_id,))
         return [
-            {'id': r[0], 'name': r[1], 'orduak': float(r[2]),
-             'overload': float(r[2]) > 17, 'kidergoa': r[3] or '',
+            {'id': r[0], 'name': r[1], 'orduak': round(float(r[2]), 2),
+             'overload': round(float(r[2]), 2) > 17, 'kidergoa': r[3] or '',
              'gela': float(r[4])}
             for r in cr.fetchall()
         ]
@@ -827,7 +848,7 @@ class OpFaculty(models.Model):
                     COALESCE((SELECT SUM(s.gela_orduak) FROM op_subject s WHERE s.faculty_id = %s), 0)
             """, (fid, fid, fid))
             row = cr.fetchone()
-            orduak = float(row[0])
+            orduak = round(float(row[0]), 2)
             result.append({'id': fid, 'orduak': orduak, 'overload': orduak > 17,
                            'gela': float(row[1])})
         return result
@@ -849,7 +870,9 @@ class OpFaculty(models.Model):
         return [
             {'id': r[0], 'kargu_id': r[1], 'code': r[2] or '', 'name': r[3] or '',
              'kargu_rpt': float(r[4] or 0), 'orduak': float(r[5]),
-             'max_orduak': max(float(r[4] or 0) - float(r[6] or 0), 0.0)}
+             'max_orduak': max(float(r[4] or 0) - float(r[6] or 0), 0.0),
+             'allow_zero': _kargu_allows_zero(r[2]),
+             'allow_decimal': _kargu_allows_decimal(r[2])}
             for r in cr.fetchall()
         ]
 
@@ -868,7 +891,9 @@ class OpFaculty(models.Model):
         return [
             {'id': r[0], 'code': r[1] or '', 'name': r[2] or '',
              'rpt_total': float(r[3] or 0), 'assigned': float(r[4]),
-             'remaining': max(float(r[3] or 0) - float(r[5] or 0), 0.0)}
+             'remaining': max(float(r[3] or 0) - float(r[5] or 0), 0.0),
+             'allow_zero': _kargu_allows_zero(r[1]),
+             'allow_decimal': _kargu_allows_decimal(r[1])}
             for r in cr.fetchall()
         ]
 
@@ -899,12 +924,15 @@ class OpFaculty(models.Model):
             self.env['op.perfilazio.kargu'].create({
                 'faculty_id': faculty_id, 'kargu_id': kargu_id, 'orduak': orduak,
             })
+        # Volcar el write/create pendiente a BD antes del SQL crudo, si no
+        # el SUM(pk.orduak) leería el valor antiguo y el overload (>17) sería erróneo.
+        self.env['op.perfilazio.kargu'].flush_model(['orduak', 'faculty_id', 'kargu_id'])
         cr.execute("""
             SELECT
                 COALESCE((SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = %s), 0)
                 + COALESCE((SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = %s), 0)
         """, (faculty_id, faculty_id))
-        orduak_total = float(cr.fetchone()[0])
+        orduak_total = round(float(cr.fetchone()[0]), 2)
         return {'orduak': orduak_total, 'overload': orduak_total > 17}
 
     @api.model
@@ -918,7 +946,7 @@ class OpFaculty(models.Model):
                 COALESCE((SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = %s), 0)
                 + COALESCE((SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = %s), 0)
         """, (faculty_id, faculty_id))
-        orduak_total = float(cr.fetchone()[0])
+        orduak_total = round(float(cr.fetchone()[0]), 2)
         return {'orduak': orduak_total, 'overload': orduak_total > 17}
 
     @api.model

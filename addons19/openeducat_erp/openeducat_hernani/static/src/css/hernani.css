@@ -197,6 +197,12 @@
     color: #e67e00 !important;
     font-weight: 600;
 }
+.pfz-hours-complete {
+    background-color: #fff;
+    color: #198754 !important;
+    font-weight: 700;
+    border: 1px solid #198754;
+}
 .pfz-faculty-hours {
     font-size: .75rem;
     margin-left: .5rem;

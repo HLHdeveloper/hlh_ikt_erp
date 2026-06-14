@@ -215,7 +215,7 @@
                                             <span class="badge pfz-faculty-gela bg-info text-dark" title="Gela orduak">
                                                 <t t-esc="f.gela"/>
                                             </span>
-                                            <span t-attf-class="badge pfz-faculty-hours {{ f.overload ? 'bg-warning text-dark' : 'bg-light text-dark' }}" title="RPT orduak">
+                                            <span t-attf-class="badge pfz-faculty-hours {{ f.overload ? 'bg-warning text-dark' : (this.isComplete(f) ? 'pfz-hours-complete' : 'bg-light text-dark') }}" title="RPT orduak">
                                                 <t t-esc="this.formatH(f.orduak)"/>
                                             </span>
                                             <button class="btn btn-sm btn-link text-secondary p-0 ms-1 pfz-kargu-del pfz-clear-btn"
@@ -250,15 +250,23 @@
                                         <t t-foreach="state.karguak" t-as="k" t-key="k.id">
                                             <div class="pfz-kargu-row d-flex align-items-center gap-1 mb-1">
                                                 <span class="pfz-kargu-name small" t-esc="k.code"/>
-                                                <select class="form-control form-control-sm pfz-kargu-input"
-                                                        t-on-change="(ev) => this.onKarguHoursChange(ev, k)">
-                                                    <t t-foreach="this.rowKarguOptions(k)" t-as="h" t-key="h">
-                                                        <option t-att-value="h"
-                                                                t-att-selected="h === k.orduak ? 'selected' : ''">
-                                                            <t t-esc="h"/>
-                                                        </option>
-                                                    </t>
-                                                </select>
+                                                <t t-if="k.allow_decimal">
+                                                    <input type="number" step="0.1" min="0"
+                                                           class="form-control form-control-sm pfz-kargu-input"
+                                                           t-att-value="k.orduak"
+                                                           t-on-change="(ev) => this.onKarguHoursChange(ev, k)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <select class="form-control form-control-sm pfz-kargu-input"
+                                                            t-on-change="(ev) => this.onKarguHoursChange(ev, k)">
+                                                        <t t-foreach="this.rowKarguOptions(k)" t-as="h" t-key="h">
+                                                            <option t-att-value="h"
+                                                                    t-att-selected="Math.abs(h - k.orduak) &lt; 0.05 ? 'selected' : ''">
+                                                                <t t-esc="h"/>
+                                                            </option>
+                                                        </t>
+                                                    </select>
+                                                </t>
                                                 <span class="small text-muted">h</span>
                                                 <span class="small text-muted" t-attf-title="Kargu honen guztira: {{ k.kargu_rpt }}h">
                                                     / <t t-esc="k.kargu_rpt"/>
@@ -298,16 +306,25 @@
                                                     </div>
                                                 </t>
                                                 <div class="d-flex gap-1 align-items-center">
-                                                    <t t-if="state.newKarguId and state.newKarguRemaining > 0">
-                                                        <select class="form-control form-control-sm flex-grow-1"
-                                                                t-on-change="onNewKarguOrduak">
-                                                            <option value="">Orduak...</option>
-                                                            <t t-foreach="this.rangeOptions(state.newKarguRemaining)" t-as="h" t-key="h">
-                                                                <option t-att-value="h"><t t-esc="h"/>h</option>
-                                                            </t>
-                                                        </select>
+                                                    <t t-if="state.newKarguId and (state.newKarguRemaining > 0 or state.newKarguAllowZero)">
+                                                        <t t-if="state.newKarguAllowDecimal">
+                                                            <input type="number" step="0.1" min="0"
+                                                                   t-att-max="state.newKarguRemaining"
+                                                                   class="form-control form-control-sm flex-grow-1"
+                                                                   placeholder="Orduak..."
+                                                                   t-on-input="onNewKarguOrduak"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <select class="form-control form-control-sm flex-grow-1"
+                                                                    t-on-change="onNewKarguOrduak">
+                                                                <option value="">Orduak...</option>
+                                                                <t t-foreach="this.newKarguOptions()" t-as="h" t-key="h">
+                                                                    <option t-att-value="h"><t t-esc="h"/>h</option>
+                                                                </t>
+                                                            </select>
+                                                        </t>
                                                         <button class="btn btn-sm btn-primary"
-                                                                t-att-disabled="!state.newKarguOrduak ? 'disabled' : ''"
+                                                                t-att-disabled="(!state.newKarguOrduak and !state.newKarguAllowZero) ? 'disabled' : ''"
                                                                 t-on-click="() => this.saveKargu()">
                                                             <i class="fa fa-check"/>
                                                         </button>

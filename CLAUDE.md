@@ -294,7 +294,7 @@ Acción cliente OWL (menú `Perfilazioak`, `ir.actions.client` tag `perfilazioak
 ### Paneles
 - **Izquierda — Irakasleak**: lista de profesores del mintegi (funtzionarioak + impersonalak). Cada profesor muestra dos cuadros junto al nombre:
   - **Gela** (badge azul `bg-info`, `pfz-faculty-gela`) = `SUM(gela_orduak)` de sus módulos.
-  - **RPT** (badge gris/amarillo, `pfz-faculty-hours`) = `SUM(rpt_total)` módulos + horas de karguak. Amarillo si `> 17` (overload).
+  - **RPT** (badge `pfz-faculty-hours`) = `SUM(rpt_reala)` módulos + horas de karguak. Estados: **gris** si `< 17`; **borde+texto verde negrita** (`.pfz-hours-complete`) si `= 17` (perfilación completa); **amarillo** si `> 17` (overload). El criterio de 17h es float-safe: el total se **redondea a 2 decimales** antes de comparar (helper JS `isComplete`, y `round(...,2)` en el servidor) para que sumas de decimales (`rpt_reala` 0,9+3,2…) no falseen el 17 exacto.
   - Leyenda en la cabecera (`.pfz-legend`, `inline-flex` `nowrap`) distingue ambos cuadros.
   - Panel `.pfz-left` ensanchado a 420px (min 380px) para que quepan los dos apellidos + cuadros.
   - Debajo: sección **Karguak** del profesor seleccionado.
@@ -310,9 +310,12 @@ Acción cliente OWL (menú `Perfilazioak`, `ir.actions.client` tag `perfilazioak
 Cada kargu tiene un total de horas RPT (`op.kargu.rpt_total`). Las horas se reparten entre profesores y **la suma no puede superar el total del kargu**.
 - `get_all_karguak(faculty_id)` → `remaining` = total − horas asignadas a **otros** profesores.
 - `get_perfilazio_karguak(faculty_id)` → `max_orduak` por línea = total − asignadas a otros (máximo que ese profesor puede tener).
-- `upsert_perfilazio_kargu` → **guard de servidor**: lanza `UserError` si `orduak > rpt_total − asignadas_otros`.
-- UI: al añadir kargu, el desplegable muestra `(libre/total h libre)` y "Libre: Xh"; el campo de horas es un **selector limitado** a las horas libres (enteros 1…remaining). Si no quedan, muestra "Ez dago ordu librerik". Las líneas ya asignadas usan selector 1…`max_orduak` con su valor actual preseleccionado.
-- **Nota**: un kargu con `rpt_total = 0` no permite asignar horas (remaining 0). Hay que definir su total RPT en `op.kargu` para poder repartirlo.
+- `upsert_perfilazio_kargu` → **guard de servidor**: lanza `UserError` si `orduak > rpt_total − asignadas_otros`. Tras el write/create hace `flush_model([...])` **antes** del SQL crudo que recalcula el total (si no, el `SUM(pk.orduak)` leía el valor antiguo y el overload `>17` se quedaba pegado al modificar una línea existente). El total devuelto se redondea a 2 decimales (mismo fix de overload en `delete_perfilazio_kargu`, `assign_perfilazio_modulu` y `get_perfilazio_irakasleak`).
+- UI: al añadir kargu, el desplegable muestra `(libre/total h libre)` y "Libre: Xh". El tipo de entrada de horas depende del kargu (banderas que vienen del servidor en `get_all_karguak`/`get_perfilazio_karguak`):
+  - **TUTO_* y MB-*** → **selector** de horas enteras (1…remaining; líneas existentes 1…`max_orduak`).
+  - **`allow_zero`** (helper `_kargu_allows_zero`): los **TUTO de los grupos MLE, MSS, IEA, SEA, FMD, AST** pueden asignarse con **0h** (cotutor sin RPT); el selector incluye el `0` y se muestra aunque `remaining = 0`. El resto de TUTO_ y todos los MB requieren ≥1h.
+  - **`allow_decimal`** (helper `_kargu_allows_decimal` = todo lo que **no** es TUTO/MB, p.ej. `ERALDI_TALDEA`, `DUAL_*`) → **campo numérico** `type=number step=0.1 min=0 max=remaining` (admite 1 decimal, p.ej. 2,8h). El campo `op.perfilazio.kargu.orduak` es `Float`.
+- **Nota**: un kargu (no-`allow_zero`) con `rpt_total = 0` no permite asignar horas (remaining 0); hay que definir su total RPT en `op.kargu` para repartirlo.
 
 ### Eleanitza / Desdoblea (botones toggle)
 En la cabecera, al seleccionar un ziklo aparecen dos **botones toggle** (antes desplegables BAI/EZ):
@@ -355,6 +358,15 @@ docker exec -i odoo19 odoo shell -d kudeaketa --no-http < update_new_cols.py
 - **Emparejar por `code`** verificando contra BD antes de escribir. El prefijo/código del paste a veces es erróneo: el **taldea correcto se deduce del Kurtsoa** (1º→`1XXX`, 2º→`2XXX`) y el código real puede llevar romano (`EIP_I`/`EIP_II`) o sufijos (`ING_P_2`); mapear al código existente, **sin renombrar**. Si un código no existe → reportar, **no crear** (salvo que el usuario lo pida).
 - **Optativas HAUT**: filas `kode_jima='HAUT'` (o modulo "Módulo optativo") → crear `<taldea>_HAUT_1`/`_HAUT_2` y eliminar el placeholder `<taldea>_HAUTAZKOA` (patrón "Reemplazar", confirmado por el usuario). Verificar antes que el placeholder esté huérfano (sin faculty/matrículas/relaciones).
 - **Copias `HE_`/`DESDO_` inexistentes**: si el paste las referencia y no están, preguntar; al crearlas con datos del paste sin `RPT REALAK`, usar `rpt_reala = LPZ/RPT`.
+
+## Grados C (zikloak C_INF / C_MEK)
+
+Ciclos de **grado C** (`kurtsoa = C`) creados **solo en Odoo** (no existen en MySQL `ZIKLOAK`; conviven con la migración pero no se regeneran al re-ejecutar `migrate_laravel_to_odoo.py`). Jerarquía mintegia → ziklo → taldea → moduluak:
+
+- Zikloak (`op.course`): **C_INF** (mintegi INFORMATIKA), **C_MEK** (mintegi MEKANIKA). `name = code`, `evaluation_type = normal`.
+- Taldeak (`op.batch`): C_INF → `IFC_C_002_3B`, `IFC_C_003_4B`; C_MEK → `FME_C_001_3B`, `FME_C_002_4B`, `FME_C_005_5B`. Fechas curso 2025-09-01 → 2026-06-30.
+- Moduluak (`op.subject`): `code = <FAM><NB>_<modulo>` donde `<FAM>` = familia (`INF`=IFC, `MEK`=FME) y `<NB>` = nivel del taldea (`3B`/`4B`/`5B`). Ej: `INF3B_C_IPE`, `MEK4B_C_ZKME`. **El prefijo familia+nivel es obligatorio** (IFC y FME comparten niveles y módulos como `C_IPE`, y `op.subject.code` es `varchar(256)`, no 16). `name` = el código de módulo del paste (`C_IPE`).
+- Mapeo del paste: `PT/PS`→`pt_pes` (PS→`PES`); `Orduak`→`orduak`; `kurtsoa`=`C`; `aste banaketa`→banaketa **JARRAIAN** (bloque continuo, `op.subject.banaketa` con `guztira=0,egun_kopurua=0`); `LPZ/RPT Guz/Tot`→`rpt_total`; `RPT REALAK`→`rpt_reala`. Obligatorios `type='theory'`, `subject_type='compulsory'`. Cada módulo se vincula a su `batch_id` **y** al ziklo vía `op_course_op_subject_rel` (no existe campo `course_ids` en op.subject).
 
 ## Notas importantes
 
