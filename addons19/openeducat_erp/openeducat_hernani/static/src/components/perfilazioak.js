@@ -729,13 +729,31 @@ class Perfilazioak extends Component {
         this.state.showLaburpena = false;
     }
 
+    // Ordezkoak disponibles para un impersonal: los que NO están ya asignados
+    // a OTRA plaza (una plaza = un profesor). El propio ordezkoa de lf se
+    // mantiene para que se muestre como seleccionado.
+    availableOrdezkoak(lf) {
+        const taken = new Set(
+            this.state.laburpenaData
+                .filter(o => o.id !== lf.id && o.ordezko_esleitua_id)
+                .map(o => o.ordezko_esleitua_id));
+        return this.state.laburpenaOrdezkoak.filter(o => !taken.has(o.id));
+    }
+
     // Anota qué ordezkoa del mintegi cubrirá una perfilación impersonal.
     async onLaburpenaOrdezkoChange(lf, ev) {
         const val = ev.target.value;
         const ordezkoId = val ? parseInt(val, 10) : false;
-        await this.orm.call("op.faculty", "set_perfilazio_ordezko_esleitua",
-            [lf.id, ordezkoId]);
-        lf.ordezko_esleitua_id = ordezkoId;
+        const ok = await this.orm.call("op.faculty",
+            "set_perfilazio_ordezko_esleitua", [lf.id, ordezkoId]);
+        if (ok) {
+            lf.ordezko_esleitua_id = ordezkoId;
+        } else {
+            ev.target.value = lf.ordezko_esleitua_id || "";
+            this.notification.add(
+                "Ordezko hori beste plaza batean esleituta dago.",
+                { type: 'warning' });
+        }
     }
 
     // ── Versiones de perfilación (snapshots por mintegi) ─────────────

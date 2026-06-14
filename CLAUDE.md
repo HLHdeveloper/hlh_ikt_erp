@@ -348,8 +348,9 @@ Roles por profesor como `{label, type}`. **Mintegiburua** (kargu `MB-`) en turqu
 ### LABURPENA IKUSI — asignar ordezkoa a impersonalak
 Cada cuadro de profesor **impersonal** (INFO_X1, INFO_X2…) muestra un **desplegable de ordezkoak del mintegi** (`kidergoa='ordezkoa'`) para **anotar** qué ordezkoa cubrirá esa plaza X. **Solo es anotación**: la perfilación NO se mueve.
 - Campo **`op.faculty.ordezko_esleitua_id`** (Many2one a `op.faculty`, `ondelete='set null'`).
-- RPC: `get_perfilazio_ordezkoak(dept_id)` (lista de ordezkoak del mintegi), `set_perfilazio_ordezko_esleitua(faculty_id, ordezko_id)` (solo acepta impersonalak; `ordezko_id` falsy = limpiar). `get_perfilazio_laburpena` devuelve `ordezko_esleitua_id` (con `flush_model` previo a la lectura SQL).
-- Frontend: `state.laburpenaOrdezkoak` (cargado en `openLaburpena`), `onLaburpenaOrdezkoChange`; `<select>` en el cuadro impersonal; CSS `.pfz-laburpena-ordezko` / `.pfz-ordezko-select`.
+- **Una plaza = un profesor**: un ordezkoa solo puede asignarse a UNA plaza impersonal. El desplegable de cada `X` **solo muestra ordezkoak no asignados a otra plaza** (más el propio, para verse seleccionado). `set_perfilazio_ordezko_esleitua` **rechaza** (`False`) si el ordezkoa ya está en otra plaza.
+- RPC: `get_perfilazio_ordezkoak(dept_id)` (lista de ordezkoak del mintegi), `set_perfilazio_ordezko_esleitua(faculty_id, ordezko_id)` (solo acepta impersonalak; `ordezko_id` falsy = limpiar; guard de unicidad). `get_perfilazio_laburpena` devuelve `ordezko_esleitua_id` (con `flush_model` previo a la lectura SQL).
+- Frontend: `state.laburpenaOrdezkoak` (cargado en `openLaburpena`), `availableOrdezkoak(lf)` (filtra los ya tomados), `onLaburpenaOrdezkoChange` (revierte y avisa si el backend rechaza); `<select>` en el cuadro impersonal; CSS `.pfz-laburpena-ordezko` / `.pfz-ordezko-select`.
 
 ### Versiones de perfilación (snapshots por mintegi)
 Modelo **`op.perfilazio.bertsioa`** (`name`, `department_id`, `is_auto`, `data` JSON). Botones junto a LABURPENA IKUSI: **GORDE \<MINTEGI\> PERFILAZIOAK** (guarda con nombre) y **BERTSIOAK** (panel de versiones: cada una con `N mod · M kargu`, **Kargatu**, **Deskargatu**, **Ezabatu**, e **Inportatu**).

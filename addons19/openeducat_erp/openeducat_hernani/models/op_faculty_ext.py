@@ -1109,11 +1109,21 @@ class OpFaculty(models.Model):
     @api.model
     def set_perfilazio_ordezko_esleitua(self, faculty_id, ordezko_id):
         """Anota qué ordezkoa cubrirá una perfilación impersonal. No mueve la
-        perfilación; solo guarda la referencia. ordezko_id falsy = limpiar."""
+        perfilación; solo guarda la referencia. ordezko_id falsy = limpiar.
+        Una plaza = un profesor: rechaza si el ordezkoa ya está asignado a
+        otra plaza impersonal (devuelve False)."""
         faculty = self.env['op.faculty'].browse(faculty_id)
         if not faculty.exists() or faculty.kidergoa != 'impersonala':
             return False
-        faculty.ordezko_esleitua_id = int(ordezko_id) if ordezko_id else False
+        oid = int(ordezko_id) if ordezko_id else False
+        if oid:
+            clash = self.env['op.faculty'].search_count([
+                ('ordezko_esleitua_id', '=', oid),
+                ('id', '!=', faculty.id),
+            ])
+            if clash:
+                return False
+        faculty.ordezko_esleitua_id = oid
         return True
 
     @api.model

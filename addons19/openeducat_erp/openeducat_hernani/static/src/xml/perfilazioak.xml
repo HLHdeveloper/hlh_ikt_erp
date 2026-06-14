@@ -196,7 +196,7 @@
                                         <select class="form-select form-select-sm pfz-ordezko-select"
                                                 t-on-change="(ev) => this.onLaburpenaOrdezkoChange(lf, ev)">
                                             <option value="">— Ordezkoa esleitu —</option>
-                                            <t t-foreach="state.laburpenaOrdezkoak" t-as="ord" t-key="ord.id">
+                                            <t t-foreach="this.availableOrdezkoak(lf)" t-as="ord" t-key="ord.id">
                                                 <option t-att-value="ord.id"
                                                         t-att-selected="lf.ordezko_esleitua_id === ord.id">
                                                     <t t-esc="ord.name"/>
