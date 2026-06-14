@@ -69,6 +69,14 @@ class OpFaculty(models.Model):
     # override manual fijado desde el badge de Perfilazioak.
     perfilazio_pt_pes = fields.Char(string='Perfilazio PT/PES')
 
+    # Ordezkoa asignado a una perfilación impersonal (INFO_X1, INFO_X2…).
+    # Solo es una anotación de planificación: la perfilación NO se mueve,
+    # solo se deja constancia de qué ordezkoa cubrirá esa plaza X.
+    ordezko_esleitua_id = fields.Many2one(
+        'op.faculty', string='Ordezko esleitua',
+        ondelete='set null', index=True,
+        help='Perfilazio impertsonal hau estaliko duen mintegiko ordezkoa.')
+
     # Cargos (KARGUAK)
     kargu_ids = fields.Many2many(
         'op.kargu',
@@ -997,8 +1005,11 @@ class OpFaculty(models.Model):
         nombre, los roles (Mintegiburua / Taldeko tutorea) y las filas de su
         perfilación (módulos + karguak) con columnas Kodea, Gela, RPT."""
         cr = self.env.cr
+        # Asegurar que las escrituras ORM pendientes (p.ej. ordezko_esleitua_id)
+        # están en BD antes de leer con SQL crudo.
+        self.env['op.faculty'].flush_model(['ordezko_esleitua_id'])
         cr.execute("""
-            SELECT f.id, rp.name, f.kidergoa
+            SELECT f.id, rp.name, f.kidergoa, f.ordezko_esleitua_id
             FROM op_faculty f
             JOIN res_partner rp ON rp.id = f.partner_id
             JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
@@ -1011,7 +1022,7 @@ class OpFaculty(models.Model):
         faculties = cr.fetchall()
 
         result = []
-        for fid, name, kidergoa in faculties:
+        for fid, name, kidergoa, ordezko_eid in faculties:
             # Roles desde los karguak perfilados (op_perfilazio_kargu)
             cr.execute("""
                 SELECT k.code
@@ -1074,8 +1085,36 @@ class OpFaculty(models.Model):
                 'roles': roles, 'rows': rows,
                 'gela_total': gela_total, 'rpt_total': rpt_total,
                 'overload': rpt_total > 17,
+                'ordezko_esleitua_id': ordezko_eid or False,
             })
         return result
+
+    @api.model
+    def get_perfilazio_ordezkoak(self, dept_id):
+        """Lista de ordezkoak (kidergoa='ordezkoa') del mintegi indicado,
+        para el desplegable de asignación de plazas impersonales en
+        LABURPENA_IKUSI."""
+        cr = self.env.cr
+        cr.execute("""
+            SELECT f.id, rp.name
+            FROM op_faculty f
+            JOIN res_partner rp ON rp.id = f.partner_id
+            JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
+            WHERE rel.op_department_id = %s AND f.active = true
+              AND f.kidergoa = 'ordezkoa'
+            ORDER BY f.last_name, rp.name
+        """, (dept_id,))
+        return [{'id': r[0], 'name': r[1] or ''} for r in cr.fetchall()]
+
+    @api.model
+    def set_perfilazio_ordezko_esleitua(self, faculty_id, ordezko_id):
+        """Anota qué ordezkoa cubrirá una perfilación impersonal. No mueve la
+        perfilación; solo guarda la referencia. ordezko_id falsy = limpiar."""
+        faculty = self.env['op.faculty'].browse(faculty_id)
+        if not faculty.exists() or faculty.kidergoa != 'impersonala':
+            return False
+        faculty.ordezko_esleitua_id = int(ordezko_id) if ordezko_id else False
+        return True
 
     @api.model
     def delete_perfilazio_impersonal(self, faculty_id):

@@ -191,6 +191,19 @@
                                             </t>
                                         </div>
                                     </div>
+                                    <!-- Impersonalak: desplegable de ordezkoak del mintegi -->
+                                    <div t-if="lf.kidergoa === 'impersonala'" class="pfz-laburpena-ordezko px-2 py-1">
+                                        <select class="form-select form-select-sm pfz-ordezko-select"
+                                                t-on-change="(ev) => this.onLaburpenaOrdezkoChange(lf, ev)">
+                                            <option value="">— Ordezkoa esleitu —</option>
+                                            <t t-foreach="state.laburpenaOrdezkoak" t-as="ord" t-key="ord.id">
+                                                <option t-att-value="ord.id"
+                                                        t-att-selected="lf.ordezko_esleitua_id === ord.id">
+                                                    <t t-esc="ord.name"/>
+                                                </option>
+                                            </t>
+                                        </select>
+                                    </div>
                                     <table class="table table-sm pfz-table pfz-laburpena-table mb-0">
                                         <thead class="table-light">
                                             <tr>

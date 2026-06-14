@@ -59,6 +59,7 @@ class Perfilazioak extends Component {
 
             showLaburpena: false,
             laburpenaData: [],
+            laburpenaOrdezkoak: [],
 
             showBertsioak: false,
             bertsioak: [],
@@ -715,14 +716,26 @@ class Perfilazioak extends Component {
     async openLaburpena() {
         if (!this.state.selectedMintegi) return;
         this.state.loading = true;
+        const deptId = this.state.selectedMintegi.id;
         this.state.laburpenaData = await this.orm.call(
-            "op.faculty", "get_perfilazio_laburpena", [this.state.selectedMintegi.id]);
+            "op.faculty", "get_perfilazio_laburpena", [deptId]);
+        this.state.laburpenaOrdezkoak = await this.orm.call(
+            "op.faculty", "get_perfilazio_ordezkoak", [deptId]);
         this.state.showLaburpena = true;
         this.state.loading = false;
     }
 
     closeLaburpena() {
         this.state.showLaburpena = false;
+    }
+
+    // Anota qué ordezkoa del mintegi cubrirá una perfilación impersonal.
+    async onLaburpenaOrdezkoChange(lf, ev) {
+        const val = ev.target.value;
+        const ordezkoId = val ? parseInt(val, 10) : false;
+        await this.orm.call("op.faculty", "set_perfilazio_ordezko_esleitua",
+            [lf.id, ordezkoId]);
+        lf.ordezko_esleitua_id = ordezkoId;
     }
 
     // ── Versiones de perfilación (snapshots por mintegi) ─────────────
