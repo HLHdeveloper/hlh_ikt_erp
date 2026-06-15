@@ -69,11 +69,11 @@
             <field name="search_view_id" ref="view_op_kargu_search"/>
         </record>
 
-        <!-- Menu bajo SIS > Configuración -->
+        <!-- Menu superior del SIS (entre Irakasleak y Perfilazioak) -->
         <menuitem id="menu_op_kargu"
-                  name="Irakasleen Karguak"
-                  parent="openeducat_core.menu_op_school_config"
-                  sequence="80"
+                  name="Karguak"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="45"
                   action="act_open_op_kargu_view"
                   groups="openeducat_core.group_op_back_office_admin"/>
 

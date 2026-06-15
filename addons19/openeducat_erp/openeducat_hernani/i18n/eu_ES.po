@@ -2384,9 +2384,13 @@ msgstr "Irakasleen Grebak"
 
 #. module: openeducat_hernani
 #: model:ir.actions.act_window,name:openeducat_hernani.act_open_op_kargu_view
-#: model:ir.ui.menu,name:openeducat_hernani.menu_op_kargu
 msgid "Irakasleen Karguak"
 msgstr "Irakasleen Karguak"
+
+#. module: openeducat_hernani
+#: model:ir.ui.menu,name:openeducat_hernani.menu_op_kargu
+msgid "Karguak"
+msgstr "Karguak"
 
 #. module: openeducat_hernani
 #: model:ir.actions.act_window,name:openeducat_hernani.act_open_op_ordezkapen_view

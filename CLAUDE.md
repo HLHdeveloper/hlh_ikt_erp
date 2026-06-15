@@ -78,14 +78,17 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 ### Menú SIS (orden actual)
 ```
 [10] Mintegiak        → op.department
-[20] Irakasleak       → op.faculty
-[30] Taldeak          → op.batch
-[40] Moduluak         → op.subject
-[50] Ikasleak         → op.student
-[60] General
+[20] Taldeak          → op.batch
+[30] Moduluak         → op.subject
+[40] Irakasleak       → op.faculty
+[45] Karguak          → op.kargu  (menu_op_kargu, antes bajo Konfigurazioa)
+[50] Perfilazioak     → action_perfilazioak (OWL)
+[60] Ikasleak         → op.student
 [70] Txostenak        → Dashboard OWL (sis_dashboard_action)
-[80] Konfigurazioa
+[80] Orokorra (General)
+[90] Konfigurazioa
 ```
+Orden y secuencias en `views/op_sis_menu.xml`; `menu_op_kargu` (nivel superior, name "Karguak") en `views/op_kargu_views.xml`. La traducción eu_ES del menú Karguak está en `i18n/eu_ES.po` (la acción sigue "Irakasleen Karguak").
 
 El menú Txostenak abre directamente el **SIS Dashboard** (OWL component):
 - **Sección Irakasleak**: 6 tarjetas (total, funtzionarioak, ordezkoak, bajan, karguak, gainontzeko karguak)

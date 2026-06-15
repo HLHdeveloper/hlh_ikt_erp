@@ -7,7 +7,7 @@
             <field name="action" ref="openeducat_hernani.action_sis_dashboard"/>
         </record>
 
-        <!-- 1 · Mintegiak -->
+        <!-- 1 · Mintegiak (seq 10) -->
         <menuitem id="menu_op_department_sis_main"
                   name="Mintegiak"
                   parent="openeducat_core.menu_op_school_root"
@@ -15,44 +15,49 @@
                   action="openeducat_core.act_open_op_department_view"
                   groups="openeducat_core.group_op_back_office_admin"/>
 
-        <!-- 2 · Irakasleak (seq 20, ya existe en openeducat_core) -->
-
-        <!-- 3 · Taldeak (renombrar "Grupos", seq 30) -->
+        <!-- 2 · Taldeak (renombrar "Grupos", seq 20) -->
         <record id="openeducat_core.menu_op_batch_main" model="ir.ui.menu">
             <field name="name">Taldeak</field>
-            <field name="sequence">30</field>
+            <field name="sequence">20</field>
         </record>
 
-        <!-- 4 · Moduluak (seq 40) -->
+        <!-- 3 · Moduluak (seq 30) -->
         <menuitem id="menu_op_subject_sis_main"
                   name="Moduluak"
                   parent="openeducat_core.menu_op_school_root"
-                  sequence="40"
+                  sequence="30"
                   action="openeducat_core.act_open_op_subject_view"
                   groups="openeducat_core.group_op_back_office_admin,openeducat_core.group_op_faculty"/>
 
-        <!-- 5 · Perfilazioak (seq 45) -->
+        <!-- 4 · Irakasleak (seq 40) -->
+        <record id="openeducat_core.menu_op_faculty_main" model="ir.ui.menu">
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- 5 · Karguak (seq 45) → ver op_kargu_views.xml (menu_op_kargu) -->
+
+        <!-- 6 · Perfilazioak (seq 50) -->
         <menuitem id="menu_perfilazioak_sis"
                   name="Perfilazioak"
                   parent="openeducat_core.menu_op_school_root"
-                  sequence="45"
+                  sequence="50"
                   action="openeducat_hernani.action_perfilazioak"
                   groups="openeducat_core.group_op_back_office_admin"/>
 
-        <!-- 6 · Ikasleak (seq 50) -->
+        <!-- 7 · Ikasleak (seq 60) -->
         <record id="openeducat_core.menu_op_school_main" model="ir.ui.menu">
-            <field name="sequence">50</field>
-        </record>
-
-        <!-- 6 · General (seq 60) -->
-        <record id="openeducat_core.menu_op_general_main" model="ir.ui.menu">
             <field name="sequence">60</field>
         </record>
 
-        <!-- 7 · Reporting (seq 70) → dashboard directo, sin submenús -->
+        <!-- 8 · Txostenak / Reporting (seq 70) → dashboard directo, sin submenús -->
         <record id="openeducat_core.menu_op_report_main" model="ir.ui.menu">
             <field name="sequence">70</field>
             <field name="action" ref="openeducat_hernani.action_sis_dashboard"/>
+        </record>
+
+        <!-- 9 · Orokorra / General (seq 80) -->
+        <record id="openeducat_core.menu_op_general_main" model="ir.ui.menu">
+            <field name="sequence">80</field>
         </record>
 
         <!-- Mover Fees Analysis a Konfigurazioa para que Reporting no tenga hijos -->
@@ -60,10 +65,10 @@
             <field name="parent_id" ref="openeducat_core.menu_op_school_config"/>
         </record>
 
-        <!-- 8 · Konfigurazioa (seq 80) -->
+        <!-- 10 · Konfigurazioa (seq 90) -->
         <record id="openeducat_core.menu_op_school_config" model="ir.ui.menu">
             <field name="name">Konfigurazioa</field>
-            <field name="sequence">80</field>
+            <field name="sequence">90</field>
         </record>
 
     </data>
