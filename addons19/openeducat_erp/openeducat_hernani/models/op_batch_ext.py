@@ -17,3 +17,8 @@ class OpBatch(models.Model):
         'op.student.course', 'batch_id',
         string='Alumnos matriculados',
     )
+
+    # Tope total de horas de desdoble del grupo (Perfilazioak / Desdoblea).
+    # La suma de las horas de desdoble de los módulos DESDO_ del grupo no puede
+    # superar este valor. 0 = sin tope (comportamiento previo).
+    desdoble_orduak = fields.Float(string='Desdoble orduak guztira')

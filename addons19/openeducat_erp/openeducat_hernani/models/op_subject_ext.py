@@ -57,3 +57,29 @@ class OpSubjectExt(models.Model):
     def _compute_aste_banaketa(self):
         for rec in self:
             rec.aste_banaketa = rec.banaketa_id.name or False
+
+    def action_open_form(self):
+        """Abre la ficha (formulario) del módulo desde la lista. Necesario
+        porque la lista es editable (solo 'Aste Banaketa') y en ese modo el
+        clic en una fila no abre el formulario; el resto de campos se editan
+        en la ficha vía este botón."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': self.display_name,
+            'res_model': 'op.subject',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    @api.onchange('gela_orduak')
+    def _onchange_gela_orduak(self):
+        # Aste banaketa va ligada a las horas de gela: si al cambiar gela la
+        # banaketa elegida ya no cuadra (guztira != gela_orduak), se limpia
+        # para que el desplegable vuelva a ofrecer solo las opciones válidas y
+        # no quede un valor fuera de dominio (que dispararía el modal de campo
+        # inválido al guardar inline en la lista).
+        for rec in self:
+            if rec.banaketa_id and rec.banaketa_id.guztira != rec.gela_orduak:
+                rec.banaketa_id = False

@@ -1,4 +1,5 @@
 from . import op_kargu
+from . import op_kargu_mintegi
 from . import op_perfilazio_kargu
 from . import op_greba
 from . import op_ordezkapen

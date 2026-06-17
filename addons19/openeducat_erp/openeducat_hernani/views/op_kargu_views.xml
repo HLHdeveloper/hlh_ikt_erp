@@ -30,11 +30,13 @@
                             </group>
                             <group>
                                 <field name="gsuite_email"/>
-                                <field name="rpt_total" string="RPT Total (h/aste)"/>
+                                <field name="perfilazio_ids" invisible="1"/>
+                                <field name="rpt_total" string="RPT Total (h/aste)"
+                                       readonly="perfilazio_ids"/>
                             </group>
                         </group>
                         <notebook>
-                            <page name="faculty" string="Irakasleak">
+                            <page name="faculty" string="Uneko Irakasleak">
                                 <field name="faculty_ids" nolabel="1">
                                     <tree>
                                         <field name="name"/>
@@ -42,6 +44,20 @@
                                         <field name="main_department_id"/>
                                     </tree>
                                 </field>
+                            </page>
+                            <page name="perfilazioa" string="Perfilazio Irakasleak">
+                                <field name="perfilazio_ids" nolabel="1">
+                                    <tree editable="bottom">
+                                        <field name="department_id" string="Mintegia"
+                                               options="{'no_create': True, 'no_open': True}"/>
+                                        <field name="pt_pes" string="PT/PES"/>
+                                        <field name="orduak" string="Orduak (h/aste)"/>
+                                    </tree>
+                                </field>
+                                <group class="oe_subtotal_footer">
+                                    <field name="rpt_total" string="RPT Total (h/aste)"
+                                           readonly="perfilazio_ids"/>
+                                </group>
                             </page>
                         </notebook>
                     </sheet>

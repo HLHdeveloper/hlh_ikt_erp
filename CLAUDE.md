@@ -56,6 +56,7 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 | Modelo | Tabla MySQL origen | Descripción |
 |---|---|---|
 | `op.kargu` | `KARGUAK` + `IRAKASLE_KARGU` | Cargos de profesores |
+| `op.kargu.mintegi` | — | Reparto de horas (RPT) de un kargu por mintegi + PT/PES |
 | `op.greba` | `IRAKASLEAK_GREBAK` | Huelgas de profesores |
 | `op.ordezkapen` | `ORDEZKAPENAK` | Sustituciones entre profesores |
 | `op.report.batch.student` | — (SQL view) | Informe: ikasleak taldeka |
@@ -95,6 +96,14 @@ El menú Txostenak abre directamente el **SIS Dashboard** (OWL component):
 - **Sección Ikasleak**: 1 tarjeta con drill-down 3 niveles
 - Drill-down irakasleak: tarjeta → mintegiak → irakasleak / kargu types → irakasleak → formulario
 - Drill-down ikasleak: tarjeta → mintegiak → taldeak → ikasleak → formulario (editable)
+
+## Ficha de Kargua (op.kargu) — reparto por mintegi
+
+Form `view_op_kargu_form` (acción "Irakasleen Karguak", menú Karguak):
+- Pestaña **"Uneko Irakasleak"** (antes "Irakasleak"): `faculty_ids`, profesores actuales del cargo.
+- Pestaña **"Perfilazio Irakasleak"**: lista editable de `perfilazio_ids` (modelo **`op.kargu.mintegi`**), una línea por reparto: **Mintegia** (`department_id`) · **PT/PES** (`pt_pes`) · **Orduak (h/aste)** (`orduak`). Único por `(kargu_id, department_id, pt_pes)`.
+- **`rpt_total`** = Float normal (NO computed) sincronizado por `_sync_rpt_total()`: si hay líneas → **suma** de sus horas; si **no hay líneas** → conserva el valor **manual**. En la vista es `readonly="perfilazio_ids"` (readonly cuando hay reparto). La sincronización se dispara desde `op.kargu.mintegi.create/write/unlink` (→ `kargu_id._sync_rpt_total()`) y desde `op.kargu.create/write`. **No usar computed editable** aquí: el form envía siempre el valor del campo (0.0) y Odoo lo trata como override manual, cancelando el recálculo (por eso `rpt_total` se quedaba a 0).
+- Ejemplo: BERRIKUNTZA_TALDEA con `rpt_total=1` (manual, sin reparto) → al añadir línea Informatika/PT/1h, RPT Total = suma = 1h.
 
 ## Migración de datos (migrate_laravel_to_odoo.py)
 
@@ -304,10 +313,12 @@ Acción cliente OWL (menú `Perfilazioak`, `ir.actions.client` tag `perfilazioak
 - **Derecha — Moduluak** (de la taldea seleccionada) + **Perfilazio Laburpena** (resumen del profesor).
 
 ### Tablas
-- **Moduluak**: Kodea · PT/PES · Orduak · Kurtsoa · Aste Ban. · **Gela** · **RPT Guzt** (`rpt_total`) · **RPT Reala** (`rpt_reala`) · **RPT Zorretan** (`rpt_zorretan`) · Irakaslea. Clic en fila asigna/desasigna el módulo al profesor seleccionado. (Las tres columnas RPT muestran respectivamente `rpt_total`/`rpt_reala`/`rpt_zorretan`; ninguna usa `orduak_zorretan`.)
+- **Moduluak**: Kodea · PT/PES · **PL** · Orduak · Kurtsoa · Aste Ban. · **Gela** · **RPT Guzt** (`rpt_total`) · **RPT Reala** (`rpt_reala`) · **RPT Zorretan** (`rpt_zorretan`) · Irakaslea. Clic en fila asigna/desasigna el módulo al profesor seleccionado. (Las tres columnas RPT muestran respectivamente `rpt_total`/`rpt_reala`/`rpt_zorretan`; ninguna usa `orduak_zorretan`.)
 
 **RPT = `rpt_reala` en toda la perfilación.** El RPT de los módulos usa `rpt_reala` en: la tabla Moduluak, la **Perfilazio Laburpena** (resumen por irakasle, incl. total GUZTIRA), la **Laburpena del mintegi** (`get_perfilazio_laburpena`) y los **totales/badge RPT del panel de irakasle** (`get_perfilazio_irakasleak` y los recálculos tras asignar módulo/kargu, overload `>17`). En el lado servidor las claves de dict siguen llamándose `rpt_total` pero transportan `rpt_reala`. **Excepciones que mantienen `rpt_total`**: Apoyo Educativo (tope del multzo) y la tabla MODULUAK KOPIATU. Las columnas **Zorretan** fuera de la tabla Moduluak siguen mostrando `orduak_zorretan`.
-- **Perfilazio Laburpena**: columnas Taldea · Kurtsoa · Kodea · PT/PES · Orduak · **Gela** · RPT · Aste Ban. (8 columnas; la columna **Zorretan se eliminó** del perfil del profesor — `orduak_zorretan` sigue existiendo como campo de módulo, solo no se muestra aquí). Filas de módulos (rm) + filas de karguak (k, con "—" en columnas de módulo). Última fila **GUZTIRA** (etiqueta bajo PT/PES) con **totales** de Gela (`sumGela`) y RPT (`sumRpt` = módulos `rpt_reala` + karguak). La columna RPT muestra `rpt_reala`.
+**Columna PL** (`op.subject.pl`, mostrada `PL1`/`PL2`/`PL1/PL2`) presente en 4 tablas, siempre entre PT/PES y Orduak: tabla **Moduluak** (RPC `get_perfilazio_moduluak` e `get_perfilazio_ingelesa_moduluak`), **Perfilazio Laburpena** resumen del profesor (RPC `get_perfilazio_resumen`; filas de kargu y GUZTIRA con `—`) y **MODULUAK KOPIATU** (RPC `get_perfilazio_ziklo_moduluak`; misma tabla para Eleanitza y Desdoblea). En el SQL el valor se formatea con `.replace('_', '/')`.
+
+- **Perfilazio Laburpena**: columnas Kodea · PT/PES · **PL** · Orduak · **Gela** · RPT · Aste Ban. (7 columnas; Taldea y Kurtsoa **eliminadas** a petición del usuario; la columna **Zorretan se eliminó** del perfil del profesor — `orduak_zorretan` sigue existiendo como campo de módulo, solo no se muestra aquí). Filas de módulos (rm) + filas de karguak (k, con "—" en columnas de módulo). Última fila **GUZTIRA** (etiqueta bajo PT/PES) con **totales** de Gela (`sumGela`) y RPT (`sumRpt` = módulos `rpt_reala` + karguak). La columna RPT muestra `rpt_reala`.
 
 ### Reparto de horas de karguak (cap por `op.kargu.rpt_total`)
 Cada kargu tiene un total de horas RPT (`op.kargu.rpt_total`). Las horas se reparten entre profesores y **la suma no puede superar el total del kargu**.
@@ -335,7 +346,10 @@ Botón "+ Apoyo Educativo" (kodea I/II/III según dígito inicial de la taldea).
 Badge **PT/PES** en cada profesor del panel Irakasleak (izquierda del cuadro Gela). Automático: **PT** si algún módulo del profesor tiene `pt_pes` PT (LIKE 'PT%'), si no **PES**. **Modificable a mano** (clic alterna PT↔PES, persiste en `op.faculty.perfilazio_pt_pes`; vacío = automático). RPC `toggle_perfilazio_pt_pes`. Colores: PT morado clarito (`.pfz-ptpes-pt`), PES gris (`.pfz-ptpes-pes`).
 
 ### Cuadro Mintegiko laburpena (bajo Irakasleak)
-- **Recuadro verde** con tabla **Taldea · esleitzeke_mod · mod_kop** (sin asignar / total de módulos por taldea del mintegi). Fila en verde cuando `esleitzeke_mod = 0` (todo asignado). RPC `get_perfilazio_taldeak_laburpena`.
+- Dos tablas en fila (`d-flex`, 50%/50%):
+  - **Mintegiko taldeak**: tabla **Taldea · esleitzeke_mod · mod_kop** (sin asignar / total de módulos por taldea del mintegi). Fila en verde cuando `esleitzeke_mod = 0`. RPC `get_perfilazio_taldeak_laburpena`.
+  - **Mintegiko karguak**: karguak con una línea en su pestaña "Perfilazio Irakasleak" (`op.kargu.mintegi`) para ese mintegi. Columnas **Kargua · esleitzeke orduak · ordu guztiak**: `ordu guztiak` = suma de líneas del kargu para ese dept; `esleitzeke` = `ordu guztiak − horas ya repartidas a profesores` (`op.perfilazio.kargu`), clamp a 0. Fila verde si `esleitzeke = 0`. Última fila **GUZTIRA** = suma de la columna `ordu guztiak` (helper JS `mintegiKarguakGuztira`). RPC `get_perfilazio_mintegi_karguak`. Estado JS `mintegiKarguak` (cargado en `_refreshTaldeakLaburpena`). **Decremento en vivo**: `saveKargu`/`onKarguHoursChange`/`removeKargu` llaman a `_refreshTaldeakLaburpena` para que `esleitzeke` baje al repartir horas. La caja izquierda (`.pfz-left`) se ensanchó a 720px (min 640) para las dos tablas; código de kargu en una línea (`white-space: nowrap`), karguak con `flex: 1.7` vs taldeak `flex: 1`.
+  - **Tope de asignación = RPT Total**: `upsert_perfilazio_kargu` ya impide asignar a un profesor más de `rpt_total − asignadas_a_otros`; como `rpt_total` = suma de líneas mintegi, nunca se supera el RPT Total del kargu.
 - **Plazen laburpena**: cuadros separados **PES** y **PT**. Se suma `orduak` (RPT total, incl. karguak) de los profesores **por su distintivo PT/PES**, y se convierte a plazas (17h = 1; 6h=1/3, 9h=1/2, 12h=2/3; resto no exacto → `+Xh`). Cálculo reactivo en JS (`plazakLaburpena`/`_plazaLabel`).
 
 ### Campo `mintegiko_irakaslea` (op.subject)
@@ -414,3 +428,6 @@ Ciclos de **grado C** (`kurtsoa = C`) creados **solo en Odoo** (no existen en My
 - `op_department_op_faculty_rel` se gestiona con `patch_mintegi_irakasle.py` (fuente: `MINTEGI_IRAKASLE`). Los cambios manuales desde la UI del departamento se perderán al re-ejecutar el script.
 - CSS personalizado en `static/src/css/hernani.css`: dashboard, columnas ajustadas al contenido (`table-layout: auto`), cabecera "Ezabatu Mintegitik" en lista de facultad.
 - El campo `gela_orduak` (`fields.Integer`) se muestra como **"Gela"** en la vista lista y como **"Gela Orduak"** en el formulario. Es intencionado: en el listado de moduluak el espacio es limitado y el usuario pidió la etiqueta corta.
+- La **lista de Moduluak** (`view_op_subject_tree_hernani`) es **editable solo en la columna "Aste Banaketa"** (`editable="bottom"` + todas las demás columnas con `readonly="1"`; "Aste Banaketa" = Many2one `banaketa_id`, no el calculado `aste_banaketa`). El resto de campos se editan en la **ficha**: botón **"Fitxa"** (icono lápiz, primera columna) que llama a `op.subject.action_open_form` y abre el formulario (`target='current'`). Motivo: en una lista editable el clic en fila entra en edición inline y NO abre el formulario; el botón da ese acceso. Odoo no permite "una columna inline + otra abre ficha" en la misma lista (la editabilidad es de toda la lista).
+- **Aste Banaketa ligada a Gela**: `banaketa_id` (lista y formulario) usa `domain="[('guztira','=',gela_orduak)]"` → el desplegable solo ofrece distribuciones cuyo total semanal = `gela_orduak` (ej. módulo de 7h gela → opciones de 7h). `guztira` es Integer; `gela_orduak` Float (comparan bien).
+- Para evitar el **modal de "campo inválido"** al editar inline: `@api.onchange('gela_orduak')` en `op.subject` (`_onchange_gela_orduak`) **limpia `banaketa_id`** si su `guztira` deja de cuadrar con el nuevo `gela_orduak` (así no queda un Many2one fuera de dominio). Un valor de banaketa fuera de dominio (ej. histórico `1FMD3_PSAD_2`: gela=2 con banaketa `2/2/2/2`=8h, ya saneado) disparaba el modal al guardar cualquier columna de esa fila.

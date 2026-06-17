@@ -391,7 +391,10 @@ class OpFaculty(models.Model):
                 EXISTS(SELECT 1 FROM op_subject h
                        WHERE h.code = 'HE_' || s.code) AS has_he,
                 EXISTS(SELECT 1 FROM op_subject d
-                       WHERE d.code = 'DESDO_' || s.code) AS has_desdo
+                       WHERE d.code = 'DESDO_' || s.code) AS has_desdo,
+                (SELECT d.rpt_total FROM op_subject d
+                 WHERE d.code = 'DESDO_' || s.code LIMIT 1) AS desdo_orduak,
+                s.pl
             FROM op_subject s
             WHERE s.batch_id = %s
               AND s.active = true
@@ -406,14 +409,19 @@ class OpFaculty(models.Model):
                 'gela_orduak': float(r[7] or 0),
                 'rpt_total': float(r[8] or 0), 'orduak_zorretan': float(r[9] or 0),
                 'has_he': r[10], 'has_desdo': r[11],
+                # Horas de desdoble: las de la copia DESDO_ existente, o por
+                # defecto el RPT total del módulo origen (comportamiento previo).
+                'desdo_orduak': float(r[12]) if r[12] is not None else float(r[8] or 0),
+                'pl': (r[13] or '').replace('_', '/'),
             }
             for r in cr.fetchall()
         ]
 
-    def _copy_subject_with_prefix(self, src, prefix):
+    def _copy_subject_with_prefix(self, src, prefix, overrides=None):
         """Crea la copia DESDO_/HE_ de un módulo (mismo ciclo/taldea/curso,
         sin profesor), saneando campos Selection con datos heredados inválidos.
-        Devuelve el registro creado, o False si ya existía."""
+        `overrides` permite fijar campos adicionales en la copia (p.ej. las horas
+        de desdoble). Devuelve el registro creado, o False si ya existía."""
         Subject = self.env['op.subject']
         new_code = prefix + (src.code or '')
         if Subject.with_context(active_test=False).search(
@@ -437,12 +445,74 @@ class OpFaculty(models.Model):
         for field, (allowed, fallback) in sel_fields.items():
             if row[field] is not None and row[field] not in allowed:
                 defaults[field] = fallback
+        if overrides:
+            defaults.update(overrides)
         return src.copy(defaults)
 
+    def _desdo_used_orduak(self, batch_id, exclude_code=None):
+        """Suma de horas de desdoble (rpt_total de las copias DESDO_ activas)
+        de una taldea, opcionalmente excluyendo una copia por su code."""
+        cr = self.env.cr
+        cr.execute("""
+            SELECT COALESCE(SUM(rpt_total), 0)
+            FROM op_subject
+            WHERE batch_id = %s AND active = true
+              AND code ~* '^DESDO_' AND code <> %s
+        """, (batch_id, exclude_code or ''))
+        return float(cr.fetchone()[0] or 0)
+
+    def _clamp_desdo_orduak(self, src, desdo_orduak):
+        """Acota las horas de desdoble: al RPT total del módulo origen y al tope
+        de horas de desdoble del grupo (batch.desdoble_orduak; 0 = sin tope).
+        La suma de desdoble del grupo no puede superar ese tope."""
+        try:
+            v = float(desdo_orduak)
+        except (TypeError, ValueError):
+            return None
+        if v < 0:
+            v = 0.0
+        cap = float(src.rpt_total or 0)
+        if v > cap:
+            v = cap
+        total = float(src.batch_id.desdoble_orduak or 0)
+        if total > 0:
+            used_others = self._desdo_used_orduak(
+                src.batch_id.id, exclude_code='DESDO_' + (src.code or ''))
+            group_cap = max(total - used_others, 0.0)
+            if v > group_cap:
+                v = group_cap
+        return round(v, 2)
+
     @api.model
-    def toggle_perfilazio_kopia(self, subject_id, prefix):
+    def get_perfilazio_desdoble_info(self, batch_id):
+        """Tope de horas de desdoble del grupo y horas ya consumidas (suma de
+        rpt_total de las copias DESDO_ de la taldea)."""
+        batch = self.env['op.batch'].browse(batch_id)
+        total = float(batch.desdoble_orduak or 0) if batch.exists() else 0.0
+        used = self._desdo_used_orduak(batch_id)
+        return {'total': round(total, 2), 'used': round(used, 2),
+                'remaining': round(max(total - used, 0.0), 2)}
+
+    @api.model
+    def set_perfilazio_desdoble_total(self, batch_id, orduak):
+        """Fija el tope total de horas de desdoble del grupo (batch.desdoble_orduak)."""
+        batch = self.env['op.batch'].browse(batch_id)
+        if not batch.exists():
+            return False
+        try:
+            v = max(float(orduak), 0.0)
+        except (TypeError, ValueError):
+            v = 0.0
+        batch.write({'desdoble_orduak': round(v, 2)})
+        self.env.flush_all()
+        return self.get_perfilazio_desdoble_info(batch_id)
+
+    @api.model
+    def toggle_perfilazio_kopia(self, subject_id, prefix, desdo_orduak=None):
         """Alterna la existencia de la copia DESDO_/HE_ de un módulo.
-        - Si no existe: la crea (seleccionar).
+        - Si no existe: la crea (seleccionar). Para DESDO_, si se indica
+          `desdo_orduak`, la copia se crea con ese RPT (total y reala) en vez
+          de heredar el RPT completo del módulo origen.
         - Si existe: la elimina (deseleccionar). Al borrarla, si estaba
           asignada a un profesor desaparece de su perfilación y sus horas se
           recalculan automáticamente (las sumas son sobre módulos existentes).
@@ -458,9 +528,38 @@ class OpFaculty(models.Model):
             existing.unlink()
             self.env.flush_all()
             return {'exists': False}
-        self._copy_subject_with_prefix(src, prefix)
+        overrides = None
+        applied = None
+        if prefix == 'DESDO_' and desdo_orduak is not None:
+            v = self._clamp_desdo_orduak(src, desdo_orduak)
+            if v is not None:
+                overrides = {'rpt_total': v, 'rpt_reala': v}
+                applied = v
+        self._copy_subject_with_prefix(src, prefix, overrides=overrides)
         self.env.flush_all()
-        return {'exists': True}
+        return {'exists': True, 'orduak': applied}
+
+    @api.model
+    def set_perfilazio_desdoble_orduak(self, subject_id, desdo_orduak):
+        """Actualiza las horas (RPT) de la copia DESDO_ ya existente de un
+        módulo origen. Las acota a [0, rpt_total del origen] y fija tanto
+        rpt_total como rpt_reala (RPT = rpt_reala en la perfilación). Si la
+        copia está asignada a un profesor, sus horas se recalcularán al
+        recargar. Devuelve {'orduak': horas_aplicadas} o False si no existe."""
+        Subject = self.env['op.subject']
+        src = Subject.browse(subject_id)
+        if not src.exists() or not src.code:
+            return False
+        copy = Subject.with_context(active_test=False).search(
+            [('code', '=', 'DESDO_' + src.code)], limit=1)
+        if not copy:
+            return False
+        v = self._clamp_desdo_orduak(src, desdo_orduak)
+        if v is None:
+            return False
+        copy.write({'rpt_total': v, 'rpt_reala': v})
+        self.env.flush_all()
+        return {'orduak': v}
 
     # ── Apoyo Educativo ──────────────────────────────────────────────
     APOYO_KODEAK = ('I', 'II', 'III')
@@ -638,6 +737,37 @@ class OpFaculty(models.Model):
         """, (dept_id,))
         return [{'code': r[0], 'total': int(r[1]), 'pending': int(r[2])}
                 for r in self.env.cr.fetchall()]
+
+    @api.model
+    def get_perfilazio_mintegi_karguak(self, dept_id):
+        """Karguak con una línea en 'Perfilazio Irakasleak' (op.kargu.mintegi)
+        para este mintegi. Por cada kargu: 'total' = horas asignadas a este
+        mintegi (suma de sus líneas del dept); 'pending' (esleitzeke) = horas
+        aún sin repartir a profesores (total − horas en op.perfilazio.kargu)."""
+        self.env.cr.execute("""
+            SELECT k.code, k.name,
+                   COALESCE(SUM(km.orduak), 0) AS total_mintegi,
+                   COALESCE((SELECT SUM(pk.orduak)
+                             FROM op_perfilazio_kargu pk
+                             WHERE pk.kargu_id = k.id), 0) AS esleituak
+            FROM op_kargu_mintegi km
+            JOIN op_kargu k ON k.id = km.kargu_id
+            WHERE km.department_id = %s
+            GROUP BY k.id, k.code, k.name
+            ORDER BY k.code
+        """, (dept_id,))
+        rows = []
+        for r in self.env.cr.fetchall():
+            total = round(float(r[2] or 0), 2)
+            esleituak = float(r[3] or 0)
+            rows.append({
+                'code': r[0] or r[1] or '',
+                'total': total,
+                # 'esleitzeke' = horas aún sin repartir a profesores; nunca
+                # negativo (un kargu sobre-asignado muestra 0 por asignar).
+                'pending': round(max(total - esleituak, 0.0), 2),
+            })
+        return rows
 
     # ── Versiones de perfilación por mintegi (snapshots) ─────────────
     def _perfilazio_dept_faculty_ids(self, dept_id):
@@ -980,7 +1110,7 @@ class OpFaculty(models.Model):
         cr.execute("""
             SELECT s.code, s.name, s.rpt_reala, b.name AS batch_name,
                    s.kurtsoa, s.pt_pes, s.orduak, s.gela_orduak,
-                   s.aste_banaketa, s.orduak_zorretan
+                   s.aste_banaketa, s.orduak_zorretan, s.pl
             FROM op_subject s
             LEFT JOIN op_batch b ON b.id = s.batch_id
             WHERE s.faculty_id = %s
@@ -994,6 +1124,7 @@ class OpFaculty(models.Model):
                 'kurtsoa': r[4] or '', 'pt_pes': r[5] or '',
                 'orduak': float(r[6] or 0), 'gela_orduak': float(r[7] or 0),
                 'aste_banaketa': r[8] or '', 'orduak_zorretan': float(r[9] or 0),
+                'pl': (r[10] or '').replace('_', '/'),
             }
             for r in cr.fetchall()
         ]
@@ -1150,7 +1281,8 @@ class OpFaculty(models.Model):
                 s.gela_orduak, s.rpt_total, s.orduak_zorretan,
                 s.faculty_id,
                 rp.name AS faculty_name,
-                s.rpt_reala, s.rpt_zorretan, s.emandako_orduak
+                s.rpt_reala, s.rpt_zorretan, s.emandako_orduak,
+                s.pl
             FROM op_subject s
             LEFT JOIN op_faculty f ON f.id = s.faculty_id
             LEFT JOIN res_partner rp ON rp.id = f.partner_id
@@ -1169,6 +1301,7 @@ class OpFaculty(models.Model):
                 'emandako_orduak': float(r[14] or 0),
                 'special_dept': _modulu_special_dept_code(r[1]),
                 'tuto': _modulu_is_tuto(r[1]),
+                'pl': (r[15] or '').replace('_', '/'),
             }
             for r in cr.fetchall()
         ]
@@ -1184,7 +1317,8 @@ class OpFaculty(models.Model):
                 s.faculty_id,
                 rp.name AS faculty_name,
                 s.rpt_reala, s.rpt_zorretan, s.emandako_orduak,
-                md.code AS mintegiko_irakaslea_code
+                md.code AS mintegiko_irakaslea_code,
+                s.pl
             FROM op_subject s
             LEFT JOIN op_faculty f ON f.id = s.faculty_id
             LEFT JOIN res_partner rp ON rp.id = f.partner_id
@@ -1206,6 +1340,7 @@ class OpFaculty(models.Model):
                 # departamento derivado del código del módulo.
                 'special_dept': r[15] or _modulu_special_dept_code(r[1]),
                 'tuto': _modulu_is_tuto(r[1]),
+                'pl': (r[16] or '').replace('_', '/'),
             }
             for r in cr.fetchall()
         ]

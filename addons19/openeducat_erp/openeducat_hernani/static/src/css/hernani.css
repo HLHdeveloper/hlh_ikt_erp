@@ -143,8 +143,8 @@
     min-width: 180px;
 }
 .pfz-left {
-    width: 420px;
-    min-width: 380px;
+    width: 720px;
+    min-width: 640px;
     flex-shrink: 0;
     border: 2px solid var(--hlh-pistacho-mid) !important;
     border-radius: .5rem;
@@ -209,9 +209,17 @@
     cursor: pointer;
     min-width: 2.4rem;
 }
-.pfz-taldeak-box {
+.pfz-taldeak-box,
+.pfz-karguak-box {
     background-color: #e8f6ec;
     border-color: #198754 !important;
+}
+.pfz-karguak-box .pfz-taldeak-table td:first-child {
+    white-space: nowrap;
+}
+.pfz-karguak-guztira td {
+    border-top: 1px solid #198754;
+    color: #146c43;
 }
 .pfz-taldeak-table th {
     color: #146c43;
@@ -396,6 +404,16 @@
 }
 .pfz-kopia--desdo:hover {
     background: #e1d5f0 !important;
+}
+/* Columna "Desdoble Orduak": input numérico compacto */
+.pfz-desdo-input {
+    width: 5rem;
+    text-align: right;
+}
+/* Tope total de horas de desdoble del grupo */
+.pfz-desdo-total {
+    width: 5rem;
+    text-align: right;
 }
 
 /* Apoyo Educativo: inputs compactos en la fila de creación */

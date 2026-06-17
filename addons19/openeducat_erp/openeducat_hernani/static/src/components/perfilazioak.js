@@ -33,6 +33,12 @@ class Perfilazioak extends Component {
             desdoblea: 'EZ',
             zikloModuluak: [],
             selectedKopiak: {},
+            // Horas de desdoble por módulo (clave = id del módulo origen).
+            // Solo se usan con Desdoblea: la copia DESDO_ se crea con estas
+            // horas en vez del RPT completo.
+            desdoOrduak: {},
+            // Tope total de horas de desdoble del grupo (taldea) y consumo.
+            desdoInfo: { total: 0, used: 0, remaining: 0 },
             kopiakMsg: '',
 
             // Apoyo Educativo (solo ciclos OLH*): grupos I/II/III con tope RPT
@@ -65,6 +71,7 @@ class Perfilazioak extends Component {
             bertsioak: [],
 
             taldeakLaburpena: [],
+            mintegiKarguak: [],
 
             loading: false,
         });
@@ -217,8 +224,15 @@ class Perfilazioak extends Component {
     _initKopiaSelection() {
         const flag = this._activeKopiaFlag();
         const sel = {};
-        for (const m of this.state.zikloModuluak) sel[m.id] = !!m[flag];
+        const desdo = {};
+        for (const m of this.state.zikloModuluak) {
+            sel[m.id] = !!m[flag];
+            // Horas de desdoble: las de la copia existente, o el RPT completo
+            // como valor por defecto (lo aporta el servidor en desdo_orduak).
+            desdo[m.id] = m.desdo_orduak !== undefined ? m.desdo_orduak : m.rpt_total;
+        }
         this.state.selectedKopiak = sel;
+        this.state.desdoOrduak = desdo;
     }
 
     async _refreshKopiaPanel() {
@@ -229,6 +243,31 @@ class Perfilazioak extends Component {
         }
         if (!this.state.zikloModuluak.length) await this._ensureZikloModuluak();
         this._initKopiaSelection();
+        await this._refreshDesdoInfo();
+    }
+
+    // Tope total de horas de desdoble del grupo y horas consumidas.
+    async _refreshDesdoInfo() {
+        if (this.state.desdoblea !== 'BAI' || !this.state.selectedBatch) {
+            this.state.desdoInfo = { total: 0, used: 0, remaining: 0 };
+            return;
+        }
+        this.state.desdoInfo = await this.orm.call(
+            "op.faculty", "get_perfilazio_desdoble_info",
+            [this.state.selectedBatch.id]);
+    }
+
+    // Cambio del tope total de horas de desdoble del grupo.
+    async onDesdoTotalChange(ev) {
+        if (!this.state.selectedBatch) return;
+        let v = parseFloat(ev.target.value);
+        if (isNaN(v) || v < 0) v = 0;
+        this.state.loading = true;
+        this.state.desdoInfo = await this.orm.call(
+            "op.faculty", "set_perfilazio_desdoble_total",
+            [this.state.selectedBatch.id, v]);
+        ev.target.value = this.state.desdoInfo.total;
+        this.state.loading = false;
     }
 
     async toggleEleanitza() {
@@ -248,12 +287,23 @@ class Perfilazioak extends Component {
         const prefix = this._activeKopiaPrefix();
         if (!prefix) return;
         this.state.loading = true;
+        // Con Desdoblea, la copia DESDO_ se crea con las horas fijadas en la
+        // columna "Desdoble Orduak" (en vez del RPT completo del módulo).
+        const args = [modulu.id, prefix];
+        if (this.state.desdoblea === 'BAI') {
+            args.push(this.state.desdoOrduak[modulu.id]);
+        }
         const res = await this.orm.call(
-            "op.faculty", "toggle_perfilazio_kopia", [modulu.id, prefix]);
+            "op.faculty", "toggle_perfilazio_kopia", args);
         const flag = this._activeKopiaFlag();
         const zm = this.state.zikloModuluak.find(x => x.id === modulu.id);
         if (zm) zm[flag] = res.exists;
         this.state.selectedKopiak[modulu.id] = res.exists;
+        // La copia puede haberse creado con menos horas de las pedidas si el
+        // tope del grupo no daba para más: reflejar las realmente aplicadas.
+        if (res.exists && res.orduak !== null && res.orduak !== undefined) {
+            this.state.desdoOrduak[modulu.id] = res.orduak;
+        }
         this._recomputeZikloIndicator();
         // Al crear/eliminar una copia puede cambiar la perfilación de algún
         // profesor (si la copia estaba asignada): recargar moduluak, irakasleak
@@ -261,6 +311,36 @@ class Perfilazioak extends Component {
         if (this.state.selectedBatch) await this._reloadModuluak();
         await this._refreshIrakasleak();
         await this._refreshResumen();
+        await this._refreshDesdoInfo();
+        this.state.loading = false;
+    }
+
+    // Cambio en la columna "Desdoble Orduak": acota a [0, RPT] y, si la copia
+    // DESDO_ ya existe, actualiza sus horas en caliente (recalcula perfilación).
+    async onDesdoOrduakChange(modulu, ev) {
+        let v = parseFloat(ev.target.value);
+        let max = modulu.rpt_total || 0;
+        // Tope del grupo: para una copia aún no creada, lo libre es remaining.
+        if (!modulu.has_desdo && this.state.desdoInfo.total > 0) {
+            max = Math.min(max, this.state.desdoInfo.remaining);
+        }
+        if (isNaN(v) || v < 0) v = 0;
+        if (v > max) v = max;
+        v = Math.round(v * 100) / 100;
+        this.state.desdoOrduak[modulu.id] = v;
+        ev.target.value = v;  // reflejar el valor acotado en el input
+        if (!modulu.has_desdo) return;  // aún no creada: se usará al crearla
+        this.state.loading = true;
+        const res = await this.orm.call(
+            "op.faculty", "set_perfilazio_desdoble_orduak", [modulu.id, v]);
+        // El servidor acota también al tope del grupo: reflejar lo aplicado.
+        if (res && res.orduak !== undefined) {
+            this.state.desdoOrduak[modulu.id] = res.orduak;
+        }
+        if (this.state.selectedBatch) await this._reloadModuluak();
+        await this._refreshIrakasleak();
+        await this._refreshResumen();
+        await this._refreshDesdoInfo();
         this.state.loading = false;
     }
 
@@ -299,11 +379,21 @@ class Perfilazioak extends Component {
     async _refreshTaldeakLaburpena() {
         if (!this.state.selectedMintegi || this.state.ingelesaMode) {
             this.state.taldeakLaburpena = [];
+            this.state.mintegiKarguak = [];
             return;
         }
         this.state.taldeakLaburpena = await this.orm.call(
             "op.faculty", "get_perfilazio_taldeak_laburpena",
             [this.state.selectedMintegi.id]);
+        this.state.mintegiKarguak = await this.orm.call(
+            "op.faculty", "get_perfilazio_mintegi_karguak",
+            [this.state.selectedMintegi.id]);
+    }
+
+    // GUZTIRA de "Mintegiko karguak": suma de la columna "ordu guztiak".
+    mintegiKarguakGuztira() {
+        const t = this.state.mintegiKarguak.reduce((s, mk) => s + (mk.total || 0), 0);
+        return Math.round(t * 100) / 100;
     }
 
     // Plazen laburpena: por distintivo PT/PES de los profesores, suma sus
@@ -670,6 +760,8 @@ class Perfilazioak extends Component {
         this.state.karguak = await this.orm.call("op.faculty", "get_perfilazio_karguak", [this.state.selectedFaculty.id]);
         this._updateFacultyHours(this.state.selectedFaculty.id, result);
         this.state.addingKargu = false;
+        // Refrescar "Mintegiko karguak": las horas esleitzeke decrementan.
+        await this._refreshTaldeakLaburpena();
     }
 
     async onKarguHoursChange(ev, kargu) {
@@ -679,12 +771,14 @@ class Perfilazioak extends Component {
         ]);
         kargu.orduak = orduak;
         this._updateFacultyHours(this.state.selectedFaculty.id, result);
+        await this._refreshTaldeakLaburpena();
     }
 
     async removeKargu(kargu) {
         const result = await this.orm.call("op.faculty", "delete_perfilazio_kargu", [kargu.id]);
         this.state.karguak = this.state.karguak.filter(k => k.id !== kargu.id);
         this._updateFacultyHours(this.state.selectedFaculty.id, result);
+        await this._refreshTaldeakLaburpena();
     }
 
     async _refreshResumen() {
