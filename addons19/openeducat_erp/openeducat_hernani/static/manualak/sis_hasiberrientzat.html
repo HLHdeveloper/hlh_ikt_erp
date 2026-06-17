@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Manual de usuario — SIS (Moduluak · Karguak · Perfilazioak)</title><style>
+:root{--g:#198754;--g2:#146c43;--bg:#f6faf7}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+ line-height:1.6;color:#222;max-width:880px;margin:0 auto;padding:2rem 1.2rem;
+ background:#fff}
+h1{color:var(--g2);border-bottom:3px solid var(--g);padding-bottom:.3rem}
+h2{color:var(--g2);margin-top:2rem;border-bottom:1px solid #cde7d6;padding-bottom:.2rem}
+h3{color:var(--g)}
+a{color:var(--g2)}
+code{background:#eef5f0;padding:.1rem .35rem;border-radius:.25rem;font-size:.92em}
+blockquote{margin:1rem 0;padding:.6rem 1rem;background:var(--bg);
+ border-left:4px solid var(--g);border-radius:.25rem;color:#33493d}
+table{border-collapse:collapse;width:100%;margin:1rem 0}
+th,td{border:1px solid #cfe3d6;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#e8f6ec;color:var(--g2)}
+hr{border:none;border-top:1px solid #d7e6dc;margin:2rem 0}
+ul,ol{padding-left:1.4rem}
+li{margin:.25rem 0}
+</style></head><body><h1>Manual de usuario — SIS (Moduluak · Karguak · Perfilazioak)</h1>
+<h3>Guía para personas que empiezan, paso a paso</h3>
+<blockquote>Este manual explica, con palabras sencillas, cómo usar las tres pantallas principales del SIS: <strong>Moduluak</strong> (módulos), <strong>Karguak</strong> (cargos) y <strong>Perfilazioak</strong> (perfilación). No hace falta saber de informática: solo seguir los pasos.</blockquote>
+<hr/>
+<h2>0. Antes de empezar</h2>
+<ul><li><strong>Cómo entrar</strong>: abre el navegador (Chrome, Firefox…) y entra en la dirección de Odoo del centro. Inicia sesión con tu usuario y contraseña.</li><li><strong>El menú SIS</strong>: arriba verás un menú con apartados. Los que cubre este manual son <strong>Moduluak</strong>, <strong>Karguak</strong> y <strong>Perfilazioak</strong>.</li><li><strong>Guardar</strong>: en las fichas, los cambios se guardan con el icono del <strong>disquete</strong> (arriba a la izquierda). En las listas editables, se guarda al salir de la fila (clic fuera o tecla *Enter*).</li><li><strong>Si algo no se ve bien</strong>: pulsa <strong>Ctrl + Mayúsculas + R</strong> para recargar la página del todo. Resuelve la mayoría de problemas visuales.</li></ul>
+<h3>Pequeño diccionario (euskera → castellano)</h3>
+<table><thead><tr><th>Euskera</th><th>Castellano</th></tr></thead><tbody><tr><td>Moduluak</td><td>Módulos / asignaturas</td></tr><tr><td>Karguak</td><td>Cargos</td></tr><tr><td>Irakaslea / Irakasleak</td><td>Profesor / profesores</td></tr><tr><td>Mintegia / Mintegiak</td><td>Departamento(s)</td></tr><tr><td>Taldea / Taldeak</td><td>Grupo(s)</td></tr><tr><td>Zikloa / Zikloak</td><td>Ciclo(s) formativo(s)</td></tr><tr><td>Orduak</td><td>Horas</td></tr><tr><td>Gela</td><td>Aula (horas de aula)</td></tr><tr><td>RPT</td><td>Horas de plantilla del módulo/cargo</td></tr><tr><td>Aste Banaketa</td><td>Reparto semanal de horas</td></tr><tr><td>PT / PES</td><td>Cuerpo del profesorado (Técnico / Secundaria)</td></tr><tr><td>PL1 / PL2</td><td>Perfil lingüístico</td></tr><tr><td>Eleanitza</td><td>Multilingüe (copias HE_)</td></tr><tr><td>Desdoblea</td><td>Desdoble (copias DESDO_)</td></tr><tr><td>Esleitzeke</td><td>Pendiente de asignar</td></tr><tr><td>Guztira</td><td>Total</td></tr><tr><td>Laburpena</td><td>Resumen</td></tr></tbody></table>
+<hr/>
+<h2>1. MODULUAK (módulos)</h2>
+<p>Es la lista de todos los módulos del centro. Cada fila es un módulo de un grupo.</p>
+<h3>1.1. Ver y buscar</h3>
+<ul><li>Usa el buscador de arriba para filtrar por <strong>código</strong> o <strong>nombre</strong>.</li><li>Las columnas muestran: código del módulo, grupo (Talde Kodea), PT/PES, PL, horas (Orduak), curso, horas de aula (Gela), reparto semanal (Aste Banaketa) y las distintas columnas de RPT.</li></ul>
+<h3>1.2. Editar directamente en la lista (solo &quot;Aste Banaketa&quot;)</h3>
+<p>En la lista <strong>solo se puede cambiar la columna &quot;Aste Banaketa&quot;</strong> sin abrir la ficha:</p>
+<ol><li>Haz clic en la celda <strong>Aste Banaketa</strong> del módulo.</li><li>Se abre un desplegable que <strong>solo muestra los repartos que cuadran con las horas de aula (Gela)</strong> de ese módulo. Por ejemplo, un módulo de 7 horas de aula solo ofrece repartos que suman 7 (7, 4/3, 2/2/2/1…).</li><li>Elige uno y haz clic fuera de la fila para guardar.</li></ol>
+<blockquote>Si cambias las horas de Gela de un módulo y el reparto ya no cuadra, el campo Aste Banaketa <strong>se vacía solo</strong> para que elijas uno nuevo válido.</blockquote>
+<h3>1.3. Editar el resto de datos (en la ficha)</h3>
+<p>El resto de columnas <strong>no</strong> se editan en la lista. Para cambiarlas:</p>
+<ol><li>Pulsa el botón <strong>&quot;Fitxa&quot;</strong> (icono de lápiz, primera columna de la fila).</li><li>Se abre la <strong>ficha del módulo</strong> con todos los campos.</li><li>Cambia lo que necesites y pulsa el <strong>disquete</strong> para guardar.</li></ol>
+<hr/>
+<h2>2. KARGUAK (cargos)</h2>
+<p>Es la lista de cargos (tutorías, coordinaciones, responsables…). Cada cargo tiene un total de horas (<strong>RPT Total</strong>) que luego se reparte entre profesores.</p>
+<h3>2.1. La ficha de un cargo</h3>
+<p>Al abrir un cargo verás:</p>
+<ul><li><strong>Datos básicos</strong>: código, nombre, email y <strong>RPT Total (h/aste)</strong>.</li><li>Dos pestañas:</li><li><strong>Uneko Irakasleak</strong> (&quot;profesores actuales&quot;): los profesores que tienen asignado ahora mismo ese cargo.</li><li><strong>Perfilazio Irakasleak</strong>: el <strong>reparto del cargo por departamento</strong>.</li></ul>
+<h3>2.2. Repartir las horas de un cargo por departamento</h3>
+<p>En la pestaña <strong>Perfilazio Irakasleak</strong>:</p>
+<ol><li>Pulsa <strong>&quot;Añadir línea&quot;</strong>.</li><li>En <strong>Mintegia</strong>, elige el departamento al que corresponde ese cargo.</li><li>En <strong>PT/PES</strong>, elige el cuerpo.</li><li>En <strong>Orduak (h/aste)</strong>, escribe las horas de ese cargo para ese departamento.</li><li>Repite si el cargo se reparte entre varios departamentos.</li></ol>
+<p><strong>RPT Total</strong> se calcula solo: es la <strong>suma</strong> de las horas de todas las líneas.</p>
+<ul><li>Si el cargo <strong>no tiene ninguna línea</strong> de reparto, el RPT Total se queda con el valor que escribas a mano.</li><li>Ejemplo: el cargo <strong>BERRIKUNTZA_TALDEA</strong> tiene 1h. Añades una línea *Informatika / PES / 1h* y el RPT Total queda en 1h.</li></ul>
+<blockquote>Importante: estas horas son el <strong>máximo</strong> que se podrá repartir luego entre profesores en Perfilazioak. Nunca se podrá asignar a profesores más horas que el RPT Total del cargo.</blockquote>
+<hr/>
+<h2>3. PERFILAZIOAK (perfilación)</h2>
+<p>Es la pantalla donde se reparte el trabajo del curso: qué módulos y cargos da cada profesor, departamento por departamento.</p>
+<h3>3.1. Cómo está organizada la pantalla</h3>
+<ul><li><strong>Arriba</strong>: selectores de <strong>Mintegia</strong> (departamento), <strong>Zikloa</strong> (ciclo) y <strong>Taldea</strong> (grupo). Al elegir un ciclo aparecen los botones <strong>Eleanitza</strong> y <strong>Desdoblea</strong>. También están los botones <strong>LABURPENA IKUSI</strong>, <strong>GORDE … PERFILAZIOAK</strong> y <strong>BERTSIOAK</strong>.</li><li><strong>Panel izquierdo — Irakasleak</strong>: la lista de profesores del departamento. Cada profesor muestra:</li><li>un distintivo <strong>PT/PES</strong> (se puede cambiar haciendo clic en él);</li><li>un cuadro azul <strong>Gela</strong> (horas de aula sumadas);</li><li>un cuadro <strong>RPT</strong> con las horas totales. Está en <strong>gris</strong> si va por debajo de 17, en <strong>verde</strong> cuando llega justo a 17 (perfilación completa) y en <strong>amarillo</strong> si pasa de 17 (sobrecarga).</li><li>Debajo, al seleccionar un profesor, aparece su sección de <strong>Karguak</strong> y su <strong>Perfilazio Laburpena</strong>.</li><li><strong>Panel derecho — Moduluak</strong>: los módulos del grupo elegido. Se asignan haciendo <strong>clic</strong> en la fila.</li><li><strong>Cuadros de resumen del departamento</strong> (debajo del panel izquierdo): ver 3.6.</li></ul>
+<h3>3.2. Asignar un módulo a un profesor</h3>
+<ol><li>Elige <strong>Mintegia → Zikloa → Taldea</strong> arriba.</li><li>En el panel izquierdo, haz <strong>clic en un profesor</strong> para seleccionarlo (queda resaltado).</li><li>En el panel derecho (Moduluak), haz <strong>clic en un módulo</strong> para asignárselo. El módulo se marca como asignado y el cuadro <strong>RPT</strong> del profesor sube.</li><li>Para <strong>quitar</strong> un módulo, vuelve a hacer clic en él.</li></ol>
+<blockquote>Algunos módulos especiales (de otro departamento) no se asignan con clic, sino con un <strong>desplegable</strong> que aparece en su fila.</blockquote>
+<h3>3.3. Asignar horas de un cargo a un profesor</h3>
+<ol><li>Selecciona el profesor (panel izquierdo).</li><li>En su sección <strong>Karguak</strong>, elige un cargo del desplegable e indica las horas.</li><li>El sistema <strong>no deja pasar del total del cargo</strong> (RPT Total): si lo intentas, avisa con un mensaje. Las horas que quedan libres se ven como *&quot;X/Y h libre&quot;*.</li></ol>
+<h3>3.4. Distintivo PT / PES</h3>
+<ul><li>Cada profesor tiene un distintivo <strong>PT</strong> o <strong>PES</strong> que se calcula solo según sus módulos.</li><li>Si necesitas cambiarlo a mano, <strong>haz clic en el distintivo</strong> (alterna PT↔PES).</li></ul>
+<h3>3.5. Eleanitza y Desdoblea (copias de módulos)</h3>
+<p>Algunos módulos se imparten en versión <strong>multilingüe</strong> (Eleanitza) o <strong>desdoblados</strong> (Desdoblea). Para ello se crean *copias* del módulo:</p>
+<ol><li>Selecciona el ciclo y el grupo.</li><li>Pulsa el botón <strong>Eleanitza</strong> (verde) o <strong>Desdoblea</strong> (morado). Son excluyentes: activar uno apaga el otro.</li><li>Se abre la tabla <strong>MODULUAK KOPIATU</strong>. Haz <strong>clic en un módulo</strong> para crear su copia (<code>HE_</code> para eleanitza, <code>DESDO_</code> para desdoble). Vuelve a hacer clic para quitarla.</li><li>En <strong>Desdoblea</strong>, además puedes escribir cuántas horas van al desdoble en la columna <strong>Desdoble Orduak</strong>. Al quitar la copia, ese valor vuelve al RPT del módulo.</li></ol>
+<p>Las copias se reparten luego a profesores <strong>igual que un módulo normal</strong> (clic).</p>
+<h3>3.6. Los cuadros de resumen del departamento</h3>
+<p>Debajo del panel de profesores verás:</p>
+<ul><li><strong>Mintegiko taldeak</strong>: por cada grupo, cuántos módulos quedan <strong>sin asignar</strong> (esleitzeke_mod) y el total. La fila se pone <strong>verde</strong> cuando está todo asignado.</li><li><strong>Eleanitza / Desdobleak</strong>: horas de las copias creadas. *ordu guztiak* = total de horas; *esleitzeke orduak* = horas que aún no tienen profesor. Fila GUZTIRA con la suma.</li><li><strong>Mintegiko karguak</strong>: los cargos de ese departamento. *ordu guztiak* = horas del cargo; *esleitzeke orduak* = horas del cargo que faltan por repartir a profesores (bajan según vas asignando). Fila GUZTIRA con la suma.</li><li><strong>Ordu ez lektiboak</strong> (recuadro naranja): total de horas no lectivas del departamento = GUZTIRA de Mintegiko karguak + GUZTIRA de Eleanitza/Desdobleak.</li><li><strong>Plazen laburpena</strong>: dos cuadros (PES y PT) que muestran las <strong>plazas</strong> (17 horas = 1 plaza). Por ejemplo, *PES = 3 + 11h* significa 3 plazas completas y 11 horas sueltas.</li></ul>
+<h3>3.7. Apoyo Educativo</h3>
+<p>En ciclos con apoyo (OLHMEK/OLHELE), el botón <strong>&quot;+ Apoyo Educativo&quot;</strong> abre una tabla con un tope de horas editable. Vas creando módulos de apoyo y la suma de sus horas no puede pasar del tope (al llegar, muestra <strong>BETETA</strong> = completo).</p>
+<h3>3.8. LABURPENA IKUSI (ver el resumen del departamento)</h3>
+<p>El botón <strong>LABURPENA IKUSI</strong> muestra, de un vistazo, la perfilación de <strong>todos</strong> los profesores del departamento en tarjetas. Ahí también puedes:</p>
+<ul><li>Ver los roles de cada profesor (mintegiburua, tutor…).</li><li>En las plazas &quot;impersonales&quot; (INFO_X1, INFO_X2…), elegir con un desplegable qué <strong>ordezkoa</strong> (sustituto) cubrirá esa plaza. Es solo una anotación.</li></ul>
+<hr/>
+<h2>4. PASOS PARA PERFILAR UN DEPARTAMENTO (de principio a fin)</h2>
+<p>Sigue este orden para perfilar un departamento completo:</p>
+<ol><li><strong>Preparar los cargos (una vez).</strong> En <strong>Karguak</strong>, abre cada cargo del departamento y, en la pestaña <strong>Perfilazio Irakasleak</strong>, añade la línea *Mintegia + PT/PES + horas*. Así el cargo queda con su RPT Total correcto. *(Sin este paso, en Perfilazioak no habrá horas de cargo que repartir.)*</li></ol>
+<ol><li><strong>Entrar en Perfilazioak y elegir el departamento</strong> (Mintegia) arriba.</li></ol>
+<ol><li><strong>Crear las copias Eleanitza/Desdoblea que toquen.</strong> Para cada grupo que las necesite: elige el ciclo y el grupo, activa <strong>Eleanitza</strong> o <strong>Desdoblea</strong>, y marca los módulos en <strong>MODULUAK KOPIATU</strong> (en desdoble, fija las horas).</li></ol>
+<ol><li><strong>Repartir los módulos.</strong> Grupo a grupo (Taldea): selecciona un profesor y ve haciendo clic en sus módulos. Repite con cada profesor hasta que la tabla <strong>Mintegiko taldeak</strong> quede en <strong>verde</strong> (todos los módulos asignados).</li></ol>
+<ol><li><strong>Repartir las horas de los cargos.</strong> Selecciona cada profesor y, en su sección <strong>Karguak</strong>, asígnale las horas de sus cargos. Vigila que la tabla <strong>Mintegiko karguak</strong> vaya bajando su *esleitzeke* hasta 0.</li></ol>
+<ol><li><strong>Ajustar el distintivo PT/PES</strong> de los profesores si hiciera falta (clic en el distintivo).</li></ol>
+<ol><li><strong>Revisar el equilibrio.</strong> Mira el cuadro <strong>RPT</strong> de cada profesor: el objetivo normal es <strong>17h</strong> (verde). Comprueba <strong>Plazen laburpena</strong> y <strong>Ordu ez lektiboak</strong>.</li></ol>
+<ol><li><strong>Ver el resumen</strong> con <strong>LABURPENA IKUSI</strong> y, en las plazas impersonales, anotar el ordezkoa que las cubrirá.</li></ol>
+<ol><li><strong>Guardar la configuración</strong> (siguiente apartado).</li></ol>
+<hr/>
+<h2>5. GUARDAR CONFIGURACIONES Y DESCARGAR JSON</h2>
+<p>La perfilación de un departamento se puede <strong>guardar como versión</strong> para no perderla y poder volver atrás.</p>
+<h3>5.1. Guardar una versión</h3>
+<ul><li>Pulsa <strong>&quot;GORDE &lt;DEPARTAMENTO&gt; PERFILAZIOAK&quot;</strong>, ponle un nombre y acepta.</li><li>Se guarda una &quot;foto&quot; del reparto: qué módulo tiene cada profesor, las horas de cargos y el distintivo PT/PES.</li></ul>
+<h3>5.2. Gestionar versiones (BERTSIOAK)</h3>
+<p>Pulsa <strong>&quot;BERTSIOAK&quot;</strong> para abrir el panel de versiones. Cada versión muestra cuántos módulos y cargos tiene, y ofrece:</p>
+<ul><li><strong>Kargatu</strong> (cargar): vuelve a esa versión. Antes de sobrescribir, el sistema <strong>guarda solo</strong> el estado actual (autoguardado), por si quieres recuperarlo.</li><li><strong>Deskargatu</strong> (descargar): baja la versión como <strong>archivo JSON</strong> a tu ordenador. Sirve para tener una copia o pasarla a otro departamento.</li><li><strong>Ezabatu</strong> (borrar): elimina la versión.</li><li><strong>Inportatu</strong> (importar): sube un archivo JSON guardado antes.</li></ul>
+<h3>5.3. Qué es el archivo JSON</h3>
+<p>Es un archivo de texto pequeño con la perfilación guardada. Al <strong>importarlo</strong>, el sistema reconoce a los profesores por su <strong>email</strong> (y crea automáticamente las plazas impersonales que falten). Lo que no consiga emparejar, te lo avisa.</p>
+<hr/>
+<h2>6. Consejos rápidos</h2>
+<ul><li>Trabaja <strong>departamento a departamento</strong> y <strong>grupo a grupo</strong>; es más fácil no perderse.</li><li>El <strong>color del cuadro RPT</strong> es tu mejor guía: gris (falta), verde (17 justo), amarillo (pasado).</li><li>Guarda una <strong>versión</strong> cada vez que termines algo importante; recuperar es fácil.</li><li>Si la pantalla se ve rara, <strong>Ctrl + Mayúsculas + R</strong>.</li></ul>
+<hr/>
+<p>*Este manual se irá ampliando y mejorando. Si echas en falta algo o algún paso no queda claro, anótalo para añadirlo en la próxima versión.*</p></body></html>

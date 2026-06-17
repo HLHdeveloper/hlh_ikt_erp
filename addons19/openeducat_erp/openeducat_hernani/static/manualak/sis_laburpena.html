@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SIS — Manual resumen (usuarios medios/avanzados)</title><style>
+:root{--g:#198754;--g2:#146c43;--bg:#f6faf7}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+ line-height:1.6;color:#222;max-width:880px;margin:0 auto;padding:2rem 1.2rem;
+ background:#fff}
+h1{color:var(--g2);border-bottom:3px solid var(--g);padding-bottom:.3rem}
+h2{color:var(--g2);margin-top:2rem;border-bottom:1px solid #cde7d6;padding-bottom:.2rem}
+h3{color:var(--g)}
+a{color:var(--g2)}
+code{background:#eef5f0;padding:.1rem .35rem;border-radius:.25rem;font-size:.92em}
+blockquote{margin:1rem 0;padding:.6rem 1rem;background:var(--bg);
+ border-left:4px solid var(--g);border-radius:.25rem;color:#33493d}
+table{border-collapse:collapse;width:100%;margin:1rem 0}
+th,td{border:1px solid #cfe3d6;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#e8f6ec;color:var(--g2)}
+hr{border:none;border-top:1px solid #d7e6dc;margin:2rem 0}
+ul,ol{padding-left:1.4rem}
+li{margin:.25rem 0}
+</style></head><body><h1>SIS — Manual resumen (usuarios medios/avanzados)</h1>
+<h3>Moduluak · Karguak · Perfilazioak — referencia rápida</h3>
+<blockquote>Referencia condensada de funcionalidades y particularidades. Para la guía paso a paso, ver <code>MANUAL_SIS_HASIBERRIENTZAT.md</code>.</blockquote>
+<hr/>
+<h2>Moduluak (op.subject)</h2>
+<ul><li><strong>Lista editable solo en &quot;Aste Banaketa&quot;</strong>; el resto de columnas es de solo lectura. Botón <strong>&quot;Fitxa&quot;</strong> (lápiz) en cada fila → abre el formulario para editar todo.</li><li><strong>Aste Banaketa</strong> filtra el desplegable por <code>guztira = gela_orduak</code> (un módulo de 7h de aula solo ofrece repartos de 7h). Al cambiar Gela, si el reparto deja de cuadrar se <strong>vacía solo</strong> (evita el aviso de campo inválido).</li><li>Campos clave: <code>code</code>, <code>kode_jima</code>, <code>pt_pes</code>, <code>pl</code> (PL1/PL2/PL1_PL2), <code>orduak</code>, <code>gela_orduak</code>, <code>kurtsoa</code>, <code>banaketa_id</code>/<code>aste_banaketa</code>, <code>rpt_total</code>, <code>rpt_reala</code>, <code>rpt_zorretan</code>, <code>emandako_orduak</code>, <code>orduak_zorretan</code>.</li><li><code>talde_kodea</code> = <code>batch_id.code</code> (solo lectura). <code>mintegiko_irakaslea</code>: permite que un módulo lo imparta profesorado de <strong>otro</strong> departamento.</li></ul>
+<h2>Karguak (op.kargu)</h2>
+<ul><li>Pestañas en la ficha: <strong>Uneko Irakasleak</strong> (<code>faculty_ids</code>) y <strong>Perfilazio Irakasleak</strong> (<code>op.kargu.mintegi</code>: Mintegia + PT/PES + Orduak; único por mintegi+PT/PES).</li><li><strong>RPT Total</strong>: si hay reparto por mintegi → <strong>suma</strong> de las líneas (campo de solo lectura); si no hay reparto → valor <strong>manual</strong>. La sincronización es vía <code>create/write/unlink</code> (no es un campo computed; evita que el form pise el valor con 0).</li><li>El RPT Total es el <strong>tope</strong> de horas repartibles a profesores en Perfilazioak.</li></ul>
+<h2>Perfilazioak (acción OWL)</h2>
+<p>Flujo: <strong>Mintegia → Zikloa → Taldea</strong>. Panel izquierdo (Irakasleak) + panel derecho (Moduluak + Perfilazio Laburpena del profesor).</p>
+<h3>Asignación</h3>
+<ul><li><strong>Módulo → profesor</strong>: clic en la fila de la tabla <strong>Moduluak</strong>. Módulos especiales (otro depto.) y TUTO: desplegable en la fila.</li><li><strong>Kargu → profesor</strong>: sección Karguak del profesor. Guard de servidor: <code>orduak ≤ rpt_total − asignadas_a_otros</code> (no se supera el RPT Total).</li><li><strong>Distintivo PT/PES</strong>: automático (PT si algún módulo es PT), clic para forzar.</li></ul>
+<h3>Badges del profesor</h3>
+<ul><li><strong>Gela</strong> = Σ <code>gela_orduak</code>. <strong>RPT</strong> = Σ <code>rpt_reala</code> módulos + horas de karguak. Estados: gris <code>&lt;17</code>, verde <code>=17</code> (completa, comparación redondeada a 2 dec.), amarillo <code>&gt;17</code> (overload).</li></ul>
+<h3>Eleanitza / Desdoblea</h3>
+<ul><li>Botones toggle excluyentes (verde / morado). Abren <strong>MODULUAK KOPIATU</strong>: clic crea/borra copia <code>HE_</code> / <code>DESDO_</code>. En desdoble, columna <strong>Desdoble Orduak</strong> (al deseleccionar vuelve al RPT del módulo). Filtrado por taldea seleccionada.</li></ul>
+<h3>Cuadros de resumen del mintegi (panel izquierdo)</h3>
+<ul><li><strong>Mintegiko taldeak</strong>: <code>esleitzeke_mod</code> / <code>mod_kop</code> por grupo (verde si 0 pendientes).</li><li><strong>Eleanitza / Desdobleak</strong>: filas eleanitza/desdoblea con *esleitzeke* y *ordu guztiak* (Σ <code>rpt_reala</code> de copias <code>HE_</code>/<code>DESDO_</code>, pendientes = sin <code>faculty_id</code>) + fila GUZTIRA.</li><li><strong>Mintegiko karguak</strong>: cargos del depto.; *ordu guztiak* = Σ líneas del depto., *esleitzeke* = ordu guztiak − repartidas a profesores (<code>op.perfilazio.kargu</code>), clamp 0, fila GUZTIRA. Decremento en vivo al asignar.</li><li><strong>Ordu ez lektiboak</strong> (naranja) = Mintegiko karguak GUZTIRA + Eleanitza/ Desdobleak GUZTIRA.</li><li><strong>Plazen laburpena</strong>: 2 cuadros PES/PT con <strong>plazas</strong> (17h=1; p.ej. 62h → <code>3 + 11h</code>) y total de horas. Backend <code>get_perfilazio_plazak_laburpena</code> (<code>lekt</code> = módulos normales, <code>ez_lekt</code> = <code>HE_</code>/<code>DESDO_</code> + karguak por distintivo).</li></ul>
+<h3>Otras funciones</h3>
+<ul><li><strong>Apoyo Educativo</strong>: multzo con tope <code>guztira_orduak</code>; suma de RPT ≤ tope (<strong>BETETA</strong> al llegar).</li><li><strong>LABURPENA IKUSI</strong>: tarjetas de todos los profesores del depto.; roles; asignación de <strong>ordezkoa</strong> a plazas impersonales (1 plaza = 1 ordezkoa, anotación).</li></ul>
+<h3>Versiones y JSON (snapshots, op.perfilazio.bertsioa)</h3>
+<ul><li><strong>GORDE …</strong>: guarda versión (módulo→profesor + horas de karguak + PT/PES).</li><li><strong>BERTSIOAK</strong>: panel con <strong>Kargatu</strong> (autoguarda antes de sobrescribir; conserva los últimos 5 autoguardados), <strong>Deskargatu</strong> (export JSON portable por email/código), <strong>Ezabatu</strong>, <strong>Inportatu</strong> (crea impersonales que falten; avisa de lo no resuelto).</li></ul>
+<hr/>
+<h2>Orden recomendado para perfilar un mintegi</h2>
+<ol><li>Karguak → Perfilazio Irakasleak (definir horas por mintegi).</li><li>Perfilazioak → elegir Mintegia.</li><li>Crear copias Eleanitza/Desdoblea (con sus horas).</li><li>Repartir módulos (Mintegiko taldeak en verde).</li><li>Repartir horas de cargos (Mintegiko karguak → esleitzeke a 0).</li><li>Ajustar PT/PES; revisar RPT (17h), Plazen laburpena, Ordu ez lektiboak.</li><li>LABURPENA IKUSI (+ ordezkoak impersonales).</li><li>GORDE versión / Deskargatu JSON.</li></ol>
+<hr/>
+<h2>Notas técnicas útiles</h2>
+<ul><li>RPT en la perfilación = <strong><code>rpt_reala</code></strong> (no <code>rpt_total</code>), salvo Apoyo y MODULUAK KOPIATU.</li><li>Tras cambios visuales: recargar con <strong>Ctrl+Mayús+R</strong>.</li><li>Las versiones pesan ~0,4–1,5 KB; el export JSON es portable entre departamentos (empareja por email del profesor / código de módulo y cargo).</li></ul>
+<p>*Documento vivo: ampliar conforme evolucione el SIS.*</p></body></html>

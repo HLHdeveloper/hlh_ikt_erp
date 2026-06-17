@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="openeducat_hernani.LaguntzaMenu">
+        <Dropdown class="'o_laguntza_menu'" togglerClass="'py-1 py-lg-0 d-flex align-items-center'">
+            <t t-set-slot="toggler">
+                <i class="fa fa-question-circle me-1"/>
+                <span class="d-none d-md-inline">LAGUNTZA</span>
+            </t>
+            <DropdownItem onSelected="() => this.openManual('sis_hasiberrientzat.html')">
+                <i class="fa fa-book me-2"/>SIS – Hasiberrientzat (eskuliburu osoa)
+            </DropdownItem>
+            <DropdownItem onSelected="() => this.openManual('sis_laburpena.html')">
+                <i class="fa fa-list-ul me-2"/>SIS – Laburpena (erreferentzia azkarra)
+            </DropdownItem>
+        </Dropdown>
+    </t>
+
+</templates>

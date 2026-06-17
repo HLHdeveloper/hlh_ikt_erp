@@ -15,6 +15,8 @@
             'openeducat_hernani/static/src/components/perfilazioak.js',
             'openeducat_hernani/static/src/xml/perfilazioak.xml',
             'openeducat_hernani/static/src/components/subject_form.js',
+            'openeducat_hernani/static/src/components/laguntza.js',
+            'openeducat_hernani/static/src/xml/laguntza.xml',
         ],
     },
     'data': [
