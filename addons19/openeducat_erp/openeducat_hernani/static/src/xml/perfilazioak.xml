@@ -328,7 +328,8 @@
                                 <t t-if="state.selectedMintegi and !state.ingelesaMode">
                                     <div class="pfz-mintegi-laburpena border-top px-2 pt-2 pb-2">
                                         <div class="d-flex gap-2 mb-2 align-items-start">
-                                            <div class="pfz-taldeak-box border rounded p-2" style="flex: 1 1 0; min-width: 0;">
+                                          <div class="d-flex flex-column gap-2" style="flex: 1 1 0; min-width: 0;">
+                                            <div class="pfz-taldeak-box border rounded p-2">
                                                 <div class="small fw-semibold text-uppercase text-success mb-1">Mintegiko taldeak</div>
                                                 <t t-if="!state.taldeakLaburpena.length">
                                                     <div class="text-muted small fst-italic">—</div>
@@ -354,7 +355,37 @@
                                                     </table>
                                                 </t>
                                             </div>
-                                            <div class="pfz-karguak-box border rounded p-2" style="flex: 1.7 1 0; min-width: 0;">
+                                            <div class="pfz-taldeak-box border rounded p-2">
+                                                <div class="small fw-semibold text-uppercase text-success mb-1">Eleanitza / Desdobleak</div>
+                                                <table class="table table-sm table-borderless mb-0 pfz-taldeak-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="small"></th>
+                                                            <th class="small text-end">esleitzeke orduak</th>
+                                                            <th class="small text-end">ordu guztiak</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr t-attf-class="{{ state.eleanitzaLaburpena.eleanitza.pending === 0 and state.eleanitzaLaburpena.eleanitza.total > 0 ? 'pfz-taldea-full' : '' }}">
+                                                            <td class="small fw-semibold">eleanitza</td>
+                                                            <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.eleanitza.pending"/></td>
+                                                            <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.eleanitza.total"/></td>
+                                                        </tr>
+                                                        <tr t-attf-class="{{ state.eleanitzaLaburpena.desdoblea.pending === 0 and state.eleanitzaLaburpena.desdoblea.total > 0 ? 'pfz-taldea-full' : '' }}">
+                                                            <td class="small fw-semibold">desdoblea</td>
+                                                            <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.desdoblea.pending"/></td>
+                                                            <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.desdoblea.total"/></td>
+                                                        </tr>
+                                                        <tr class="pfz-karguak-guztira fw-bold">
+                                                            <td class="small">GUZTIRA</td>
+                                                            <td class="small text-end"><t t-esc="this.eleanitzaGuztira('pending')"/></td>
+                                                            <td class="small text-end"><t t-esc="this.eleanitzaGuztira('total')"/></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                          </div>
+                                            <div class="pfz-karguak-box border rounded p-2" style="flex: 1 1 0; min-width: 0;">
                                                 <div class="small fw-semibold text-uppercase text-success mb-1">Mintegiko karguak</div>
                                                 <t t-if="!state.mintegiKarguak.length">
                                                     <div class="text-muted small fst-italic">—</div>
@@ -386,13 +417,22 @@
                                                 </t>
                                             </div>
                                         </div>
-                                        <div class="small fw-semibold text-uppercase text-muted mb-1">Plazen laburpena</div>
-                                        <div class="d-flex gap-2">
-                                            <t t-foreach="this.plazakLaburpena()" t-as="p" t-key="p.cat">
-                                                <div t-attf-class="pfz-plaza-box {{ p.cat === 'PT' ? 'pfz-plaza-pt' : 'pfz-plaza-pes' }}">
-                                                    <span class="fw-bold" t-esc="p.cat"/> = <t t-esc="p.label"/>
+                                        <div class="d-flex gap-3 align-items-start">
+                                            <div class="pfz-ezlekt-box border rounded p-2">
+                                                <div class="small fw-semibold text-uppercase text-muted mb-1">Ordu ez lektiboak</div>
+                                                <div class="pfz-ezlekt-val fw-bold"><t t-esc="this.orduEzLektiboak()"/> h</div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="small fw-semibold text-uppercase text-muted mb-1">Plazen laburpena</div>
+                                                <div class="d-flex gap-2">
+                                                    <t t-foreach="this.plazakLaburpena()" t-as="p" t-key="p.cat">
+                                                        <div t-attf-class="pfz-plaza-box {{ p.cat === 'PT' ? 'pfz-plaza-pt' : 'pfz-plaza-pes' }}">
+                                                            <div class="pfz-plaza-main"><span class="fw-bold" t-esc="p.cat"/> = <t t-esc="p.label"/></div>
+                                                            <div class="pfz-plaza-sub small"><t t-esc="p.total"/> h</div>
+                                                        </div>
+                                                    </t>
                                                 </div>
-                                            </t>
+                                            </div>
                                         </div>
                                     </div>
                                 </t>

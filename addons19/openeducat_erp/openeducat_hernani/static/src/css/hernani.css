@@ -143,8 +143,8 @@
     min-width: 180px;
 }
 .pfz-left {
-    width: 720px;
-    min-width: 640px;
+    width: 800px;
+    min-width: 720px;
     flex-shrink: 0;
     border: 2px solid var(--hlh-pistacho-mid) !important;
     border-radius: .5rem;
@@ -244,10 +244,28 @@
     border-bottom-right-radius: .35rem;
 }
 .pfz-plaza-box {
-    border-radius: .35rem;
-    padding: .15rem .55rem;
-    font-size: .8rem;
+    border-radius: .4rem;
+    padding: .4rem .8rem;
+    font-size: 1rem;
     white-space: nowrap;
+    text-align: center;
+}
+.pfz-plaza-main {
+    font-size: 1.05rem;
+}
+.pfz-plaza-sub {
+    opacity: .75;
+    font-size: .72rem;
+}
+.pfz-ezlekt-box {
+    background-color: #fff7e6;
+    border-color: #e0a800 !important;
+    text-align: center;
+    min-width: 9rem;
+}
+.pfz-ezlekt-val {
+    font-size: 1.35rem;
+    color: #b8860b;
 }
 .pfz-plaza-pt {
     background-color: #d8c4ec;

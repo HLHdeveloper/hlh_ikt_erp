@@ -72,6 +72,14 @@ class Perfilazioak extends Component {
 
             taldeakLaburpena: [],
             mintegiKarguak: [],
+            eleanitzaLaburpena: {
+                eleanitza: { total: 0, pending: 0 },
+                desdoblea: { total: 0, pending: 0 },
+            },
+            plazakOrduak: {
+                PES: { lekt: 0, ez_lekt: 0 },
+                PT: { lekt: 0, ez_lekt: 0 },
+            },
 
             loading: false,
         });
@@ -303,6 +311,9 @@ class Perfilazioak extends Component {
         // tope del grupo no daba para más: reflejar las realmente aplicadas.
         if (res.exists && res.orduak !== null && res.orduak !== undefined) {
             this.state.desdoOrduak[modulu.id] = res.orduak;
+        } else if (!res.exists) {
+            // Al deseleccionar, "Desdoble Orduak" vuelve al RPT del módulo.
+            this.state.desdoOrduak[modulu.id] = modulu.rpt_total || 0;
         }
         this._recomputeZikloIndicator();
         // Al crear/eliminar una copia puede cambiar la perfilación de algún
@@ -312,6 +323,8 @@ class Perfilazioak extends Component {
         await this._refreshIrakasleak();
         await this._refreshResumen();
         await this._refreshDesdoInfo();
+        // Las copias HE_/DESDO_ cambian los totales de "Eleanitza / Desdobleak".
+        await this._refreshTaldeakLaburpena();
         this.state.loading = false;
     }
 
@@ -341,6 +354,8 @@ class Perfilazioak extends Component {
         await this._refreshIrakasleak();
         await this._refreshResumen();
         await this._refreshDesdoInfo();
+        // Refrescar "Eleanitza / Desdobleak": cambian las horas de desdoble.
+        await this._refreshTaldeakLaburpena();
         this.state.loading = false;
     }
 
@@ -380,6 +395,14 @@ class Perfilazioak extends Component {
         if (!this.state.selectedMintegi || this.state.ingelesaMode) {
             this.state.taldeakLaburpena = [];
             this.state.mintegiKarguak = [];
+            this.state.eleanitzaLaburpena = {
+                eleanitza: { total: 0, pending: 0 },
+                desdoblea: { total: 0, pending: 0 },
+            };
+            this.state.plazakOrduak = {
+                PES: { lekt: 0, ez_lekt: 0 },
+                PT: { lekt: 0, ez_lekt: 0 },
+            };
             return;
         }
         this.state.taldeakLaburpena = await this.orm.call(
@@ -388,6 +411,26 @@ class Perfilazioak extends Component {
         this.state.mintegiKarguak = await this.orm.call(
             "op.faculty", "get_perfilazio_mintegi_karguak",
             [this.state.selectedMintegi.id]);
+        this.state.eleanitzaLaburpena = await this.orm.call(
+            "op.faculty", "get_perfilazio_eleanitza_laburpena",
+            [this.state.selectedMintegi.id]);
+        this.state.plazakOrduak = await this.orm.call(
+            "op.faculty", "get_perfilazio_plazak_laburpena",
+            [this.state.selectedMintegi.id]);
+    }
+
+    // ORDU EZ LEKTIBOAK = Mintegiko karguak GUZTIRA + Eleanitza/Desdobleak GUZTIRA.
+    orduEzLektiboak() {
+        const e = this.state.eleanitzaLaburpena;
+        const t = this.mintegiKarguakGuztira()
+            + (e.eleanitza.total || 0) + (e.desdoblea.total || 0);
+        return Math.round(t * 100) / 100;
+    }
+
+    // GUZTIRA de la tabla Eleanitza / Desdobleak.
+    eleanitzaGuztira(field) {
+        const e = this.state.eleanitzaLaburpena;
+        return Math.round(((e.eleanitza[field] || 0) + (e.desdoblea[field] || 0)) * 100) / 100;
     }
 
     // GUZTIRA de "Mintegiko karguak": suma de la columna "ordu guztiak".
@@ -399,12 +442,13 @@ class Perfilazioak extends Component {
     // Plazen laburpena: por distintivo PT/PES de los profesores, suma sus
     // horas y las convierte a plazas (17h = 1; 6h=1/3, 9h=1/2, 12h=2/3).
     plazakLaburpena() {
-        const hours = { PES: 0, PT: 0 };
-        for (const f of this.state.irakasleak) {
-            const cat = f.pt_pes === 'PT' ? 'PT' : 'PES';
-            hours[cat] += f.orduak || 0;
-        }
-        return ['PES', 'PT'].map(cat => ({ cat, label: this._plazaLabel(hours[cat]) }));
+        const po = this.state.plazakOrduak;
+        return ['PES', 'PT'].map(cat => {
+            const lekt = Math.round((po[cat].lekt || 0) * 100) / 100;
+            const ez = Math.round((po[cat].ez_lekt || 0) * 100) / 100;
+            const total = Math.round((lekt + ez) * 100) / 100;
+            return { cat, lekt, ez, total, label: this._plazaLabel(total) };
+        });
     }
 
     _plazaLabel(h) {
@@ -569,6 +613,8 @@ class Perfilazioak extends Component {
         if (this.state.selectedFaculty && this.state.selectedFaculty.id === f.id) {
             this.state.selectedFaculty.pt_pes = val;
         }
+        // El distintivo cambia el reparto lektiboak/ez-lektiboak de "Plazen laburpena".
+        await this._refreshTaldeakLaburpena();
     }
 
     async onModuluClick(modulu) {

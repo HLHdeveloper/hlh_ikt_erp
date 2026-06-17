@@ -769,6 +769,65 @@ class OpFaculty(models.Model):
             })
         return rows
 
+    @api.model
+    def get_perfilazio_eleanitza_laburpena(self, dept_id):
+        """Horas de los módulos copia ELEANITZA (code 'HE_…') y DESDOBLE
+        ('DESDO_…') del mintegi (taldea→zikloa→dept). 'total' (ordu guztiak) =
+        suma de rpt_reala de esas copias; 'pending' (esleitzeke) = suma de
+        rpt_reala de las que aún no tienen profesor asignado."""
+        self.env.cr.execute(r"""
+            SELECT
+                CASE WHEN s.code ~* '^HE_' THEN 'eleanitza' ELSE 'desdoblea' END AS mota,
+                COALESCE(SUM(s.rpt_reala), 0) AS total,
+                COALESCE(SUM(s.rpt_reala) FILTER (WHERE s.faculty_id IS NULL), 0) AS pending
+            FROM op_subject s
+            JOIN op_batch b ON b.id = s.batch_id
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s
+              AND s.active = true
+              AND (s.code ~* '^HE_' OR s.code ~* '^DESDO_')
+            GROUP BY mota
+        """, (dept_id,))
+        res = {'eleanitza': {'total': 0.0, 'pending': 0.0},
+               'desdoblea': {'total': 0.0, 'pending': 0.0}}
+        for r in self.env.cr.fetchall():
+            res[r[0]] = {'total': round(float(r[1]), 2),
+                         'pending': round(float(r[2]), 2)}
+        return res
+
+    @api.model
+    def get_perfilazio_plazak_laburpena(self, dept_id):
+        """Por distintivo PT/PES de los profesores del mintegi, desglosa sus
+        horas en lektiboak (módulos normales) y ez lektiboak (módulos copia
+        HE_/DESDO_ + karguak). lekt+ez_lekt = total que se convierte a plazas."""
+        fac_ids = self._perfilazio_dept_faculty_ids(dept_id)
+        res = {'PT': {'lekt': 0.0, 'ez_lekt': 0.0},
+               'PES': {'lekt': 0.0, 'ez_lekt': 0.0}}
+        if not fac_ids:
+            return res
+        cr = self.env.cr
+        cr.execute(r"""
+            SELECT faculty_id,
+                   COALESCE(SUM(rpt_reala) FILTER (WHERE code !~* '^(HE_|DESDO_)'), 0),
+                   COALESCE(SUM(rpt_reala) FILTER (WHERE code ~* '^(HE_|DESDO_)'), 0)
+            FROM op_subject WHERE faculty_id = ANY(%s) GROUP BY faculty_id
+        """, (fac_ids,))
+        mod = {r[0]: (float(r[1]), float(r[2])) for r in cr.fetchall()}
+        cr.execute("""
+            SELECT faculty_id, COALESCE(SUM(orduak), 0)
+            FROM op_perfilazio_kargu WHERE faculty_id = ANY(%s) GROUP BY faculty_id
+        """, (fac_ids,))
+        karg = {r[0]: float(r[1]) for r in cr.fetchall()}
+        for fid in fac_ids:
+            lekt, ez_mod = mod.get(fid, (0.0, 0.0))
+            cat = 'PT' if self._perfilazio_pt_pes(fid) == 'PT' else 'PES'
+            res[cat]['lekt'] += lekt
+            res[cat]['ez_lekt'] += ez_mod + karg.get(fid, 0.0)
+        for c in res:
+            res[c]['lekt'] = round(res[c]['lekt'], 2)
+            res[c]['ez_lekt'] = round(res[c]['ez_lekt'], 2)
+        return res
+
     # ── Versiones de perfilación por mintegi (snapshots) ─────────────
     def _perfilazio_dept_faculty_ids(self, dept_id):
         """Profesores del mintegi (mismos que el panel Perfilazioak)."""
