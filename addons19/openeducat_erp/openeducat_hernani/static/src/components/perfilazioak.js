@@ -433,9 +433,10 @@ class Perfilazioak extends Component {
         return Math.round(((e.eleanitza[field] || 0) + (e.desdoblea[field] || 0)) * 100) / 100;
     }
 
-    // GUZTIRA de "Mintegiko karguak": suma de la columna "ordu guztiak".
-    mintegiKarguakGuztira() {
-        const t = this.state.mintegiKarguak.reduce((s, mk) => s + (mk.total || 0), 0);
+    // GUZTIRA de "Mintegiko karguak": suma de una columna ('total' = ordu
+    // guztiak por defecto; 'pending' = esleitzeke orduak).
+    mintegiKarguakGuztira(field = 'total') {
+        const t = this.state.mintegiKarguak.reduce((s, mk) => s + (mk[field] || 0), 0);
         return Math.round(t * 100) / 100;
     }
 
@@ -602,7 +603,8 @@ class Perfilazioak extends Component {
         }
         this.state.selectedFaculty = faculty;
         this.state.addingKargu = false;
-        this.state.karguak = await this.orm.call("op.faculty", "get_perfilazio_karguak", [faculty.id]);
+        this.state.karguak = await this.orm.call("op.faculty", "get_perfilazio_karguak",
+            [faculty.id, this.state.selectedMintegi?.id]);
         await this._refreshResumen();
     }
 
@@ -748,7 +750,8 @@ class Perfilazioak extends Component {
 
     async openAddKargu() {
         this.state.allKarguak = await this.orm.call(
-            "op.faculty", "get_all_karguak", [this.state.selectedFaculty.id]);
+            "op.faculty", "get_all_karguak",
+            [this.state.selectedFaculty.id, this.state.selectedMintegi?.id]);
         this.state.newKarguId = null;
         this.state.newKarguOrduak = 0;
         this.state.newKarguRemaining = 0;
@@ -802,8 +805,10 @@ class Perfilazioak extends Component {
             this.state.selectedFaculty.id,
             this.state.newKarguId,
             this.state.newKarguOrduak,
+            this.state.selectedMintegi?.id,
         ]);
-        this.state.karguak = await this.orm.call("op.faculty", "get_perfilazio_karguak", [this.state.selectedFaculty.id]);
+        this.state.karguak = await this.orm.call("op.faculty", "get_perfilazio_karguak",
+            [this.state.selectedFaculty.id, this.state.selectedMintegi?.id]);
         this._updateFacultyHours(this.state.selectedFaculty.id, result);
         this.state.addingKargu = false;
         // Refrescar "Mintegiko karguak": las horas esleitzeke decrementan.
@@ -814,6 +819,7 @@ class Perfilazioak extends Component {
         const orduak = parseFloat(ev.target.value) || 0;
         const result = await this.orm.call("op.faculty", "upsert_perfilazio_kargu", [
             this.state.selectedFaculty.id, kargu.kargu_id, orduak,
+            this.state.selectedMintegi?.id,
         ]);
         kargu.orduak = orduak;
         this._updateFacultyHours(this.state.selectedFaculty.id, result);
@@ -933,7 +939,8 @@ class Perfilazioak extends Component {
         if (this.state.selectedBatch) await this._reloadModuluak();
         if (this.state.selectedFaculty) {
             this.state.karguak = await this.orm.call(
-                "op.faculty", "get_perfilazio_karguak", [this.state.selectedFaculty.id]);
+                "op.faculty", "get_perfilazio_karguak",
+                [this.state.selectedFaculty.id, this.state.selectedMintegi?.id]);
             await this._refreshResumen();
         }
         await this._refreshTaldeakLaburpena();

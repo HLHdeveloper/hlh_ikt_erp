@@ -409,7 +409,7 @@
                                                             </t>
                                                             <tr class="pfz-karguak-guztira fw-bold">
                                                                 <td class="small">GUZTIRA</td>
-                                                                <td class="small text-end">—</td>
+                                                                <td class="small text-end"><t t-esc="this.mintegiKarguakGuztira('pending')"/></td>
                                                                 <td class="small text-end"><t t-esc="this.mintegiKarguakGuztira()"/></td>
                                                             </tr>
                                                         </tbody>

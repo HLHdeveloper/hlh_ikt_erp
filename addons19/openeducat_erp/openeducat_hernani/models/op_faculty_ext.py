@@ -40,7 +40,8 @@ def _modulu_is_tuto(code):
 
 # Karguak TUTO de estos grupos pueden perfilarse con 0 horas (tutor sin RPT,
 # p.ej. cotutoreak). El resto de TUTO_ y todos los MB requieren ≥1h.
-ZERO_HOUR_TUTO_GROUPS = ('MLE', 'MSS', 'IEA', 'SEA', 'FMD', 'AST')
+# 'FG_ESP' (TUTO_FG_ESP) es un cargo de tutor sin RPT (0h) sin grupo propio.
+ZERO_HOUR_TUTO_GROUPS = ('MLE', 'MSS', 'IEA', 'SEA', 'FMD', 'AST', 'FG_ESP')
 
 
 def _kargu_allows_zero(code):
@@ -749,13 +750,16 @@ class OpFaculty(models.Model):
                    COALESCE(SUM(km.orduak), 0) AS total_mintegi,
                    COALESCE((SELECT SUM(pk.orduak)
                              FROM op_perfilazio_kargu pk
-                             WHERE pk.kargu_id = k.id), 0) AS esleituak
+                             JOIN op_department_op_faculty_rel dfr
+                                  ON dfr.op_faculty_id = pk.faculty_id
+                             WHERE pk.kargu_id = k.id
+                               AND dfr.op_department_id = %s), 0) AS esleituak
             FROM op_kargu_mintegi km
             JOIN op_kargu k ON k.id = km.kargu_id
             WHERE km.department_id = %s
             GROUP BY k.id, k.code, k.name
             ORDER BY k.code
-        """, (dept_id,))
+        """, (dept_id, dept_id))
         rows = []
         for r in self.env.cr.fetchall():
             total = round(float(r[2] or 0), 2)
@@ -1181,7 +1185,13 @@ class OpFaculty(models.Model):
                 # 'rpt_total' gakoak rpt_reala balioa darama (Laburpenak RPT reala erakusten du)
                 'rpt_total': float(r[2] or 0), 'batch': r[3] or '',
                 'kurtsoa': r[4] or '', 'pt_pes': r[5] or '',
-                'orduak': float(r[6] or 0), 'gela_orduak': float(r[7] or 0),
+                'orduak': float(r[6] or 0),
+                # Módulos desdoble (DESDO_): la columna Gela = RPT (rpt_reala),
+                # no las horas de gela del módulo completo (p.ej. DESDO_ de 2h
+                # RPT muestra Gela 2h, no las 5h del módulo original).
+                'gela_orduak': (float(r[2] or 0)
+                                if (r[0] or '').upper().startswith('DESDO_')
+                                else float(r[7] or 0)),
                 'aste_banaketa': r[8] or '', 'orduak_zorretan': float(r[9] or 0),
                 'pl': (r[10] or '').replace('_', '/'),
             }
@@ -1251,7 +1261,12 @@ class OpFaculty(models.Model):
             rows = []
             for r in cr.fetchall():
                 code = r[0] or ''
-                rows.append({'code': code, 'gela': float(r[1] or 0),
+                # Módulos desdoble (DESDO_): Gela = RPT (rpt_reala), no el
+                # gela_orduak del módulo completo (mismo criterio que el
+                # resumen del profesor, get_perfilazio_resumen).
+                gela = (float(r[2] or 0) if code.upper().startswith('DESDO_')
+                        else float(r[1] or 0))
+                rows.append({'code': code, 'gela': gela,
                              'rpt': float(r[2] or 0), 'is_kargu': False})
                 if _modulu_is_tuto(code):
                     taldea = r[3] or code.split('_TUTO')[0]
@@ -1453,19 +1468,58 @@ class OpFaculty(models.Model):
         return result
 
     @api.model
-    def get_perfilazio_karguak(self, faculty_id):
+    def get_perfilazio_karguak(self, faculty_id, dept_id=None):
         cr = self.env.cr
-        cr.execute("""
-            SELECT pk.id, pk.kargu_id, k.code, k.name, k.rpt_total, pk.orduak,
-                   COALESCE((
-                       SELECT SUM(pk2.orduak) FROM op_perfilazio_kargu pk2
-                       WHERE pk2.kargu_id = k.id AND pk2.faculty_id <> pk.faculty_id
-                   ), 0) AS assigned_others
-            FROM op_perfilazio_kargu pk
-            JOIN op_kargu k ON k.id = pk.kargu_id
-            WHERE pk.faculty_id = %s
-            ORDER BY k.name
-        """, (faculty_id,))
+        if dept_id:
+            # Si el kargu tiene reparto por mintegi (op.kargu.mintegi), 'kargu_rpt'
+            # y 'max_orduak' se calculan sobre la asignación de ESTE mintegi y las
+            # horas de otros solo entre profesores del mismo mintegi. Si NO tiene
+            # líneas (p.ej. TUTO_/MB- asociados por código), se usa el rpt_total
+            # global y las horas de todos los demás profesores.
+            cr.execute("""
+                SELECT pk.id, pk.kargu_id, k.code, k.name,
+                       CASE WHEN EXISTS (SELECT 1 FROM op_kargu_mintegi km
+                                         WHERE km.kargu_id = k.id)
+                            THEN COALESCE((SELECT SUM(km.orduak)
+                                           FROM op_kargu_mintegi km
+                                           WHERE km.kargu_id = k.id
+                                             AND km.department_id = %(dept)s), 0)
+                            ELSE COALESCE(k.rpt_total, 0)
+                       END AS kargu_total,
+                       pk.orduak,
+                       CASE WHEN EXISTS (SELECT 1 FROM op_kargu_mintegi km
+                                         WHERE km.kargu_id = k.id)
+                            THEN COALESCE((
+                                     SELECT SUM(pk2.orduak)
+                                     FROM op_perfilazio_kargu pk2
+                                     JOIN op_department_op_faculty_rel dfr
+                                          ON dfr.op_faculty_id = pk2.faculty_id
+                                     WHERE pk2.kargu_id = k.id
+                                       AND dfr.op_department_id = %(dept)s
+                                       AND pk2.faculty_id <> pk.faculty_id), 0)
+                            ELSE COALESCE((
+                                     SELECT SUM(pk2.orduak)
+                                     FROM op_perfilazio_kargu pk2
+                                     WHERE pk2.kargu_id = k.id
+                                       AND pk2.faculty_id <> pk.faculty_id), 0)
+                       END AS assigned_others
+                FROM op_perfilazio_kargu pk
+                JOIN op_kargu k ON k.id = pk.kargu_id
+                WHERE pk.faculty_id = %(fac)s
+                ORDER BY k.name
+            """, {'dept': dept_id, 'fac': faculty_id})
+        else:
+            cr.execute("""
+                SELECT pk.id, pk.kargu_id, k.code, k.name, k.rpt_total, pk.orduak,
+                       COALESCE((
+                           SELECT SUM(pk2.orduak) FROM op_perfilazio_kargu pk2
+                           WHERE pk2.kargu_id = k.id AND pk2.faculty_id <> pk.faculty_id
+                       ), 0) AS assigned_others
+                FROM op_perfilazio_kargu pk
+                JOIN op_kargu k ON k.id = pk.kargu_id
+                WHERE pk.faculty_id = %s
+                ORDER BY k.name
+            """, (faculty_id,))
         return [
             {'id': r[0], 'kargu_id': r[1], 'code': r[2] or '', 'name': r[3] or '',
              'kargu_rpt': float(r[4] or 0), 'orduak': float(r[5]),
@@ -1476,8 +1530,95 @@ class OpFaculty(models.Model):
         ]
 
     @api.model
-    def get_all_karguak(self, faculty_id=None):
+    def get_all_karguak(self, faculty_id=None, dept_id=None):
         cr = self.env.cr
+        if dept_id:
+            # Karguak ofrecidos en la perfilación de ESTE mintegi, de dos fuentes:
+            #  (1) Karguak con línea en 'Perfilazio Irakasleak' (op.kargu.mintegi)
+            #      para este mintegi (orduak>0): total y libres = asignación del
+            #      mintegi (suma de sus líneas); 'others' = horas repartidas a
+            #      OTROS profesores DEL MISMO mintegi.
+            #  (2) Karguak TUTO_/MB- asociados a este mintegi POR CÓDIGO aunque no
+            #      tengan línea: TUTO_<taldea> (la taldea pertenece al ciclo del
+            #      mintegi) y MB-<dept> (sufijo = código de mintegi o, si el código
+            #      está mal escrito, vía el mintegi de quien lo ostenta). Total y
+            #      libres = rpt_total global del kargu (estos karguak son de un
+            #      único mintegi). Se excluyen los que ya tengan línea de ESTE
+            #      mintegi para no duplicar con (1).
+            cr.execute(r"""
+                SELECT id, code, name, total, others FROM (
+                    SELECT k.id, k.code, k.name,
+                           COALESCE(SUM(km.orduak), 0) AS total,
+                           COALESCE((
+                               SELECT SUM(pk.orduak)
+                               FROM op_perfilazio_kargu pk
+                               JOIN op_department_op_faculty_rel dfr
+                                    ON dfr.op_faculty_id = pk.faculty_id
+                               WHERE pk.kargu_id = k.id
+                                 AND dfr.op_department_id = %(dept)s
+                                 AND pk.faculty_id <> %(fac)s
+                           ), 0) AS others
+                    FROM op_kargu_mintegi km
+                    JOIN op_kargu k ON k.id = km.kargu_id
+                    WHERE km.department_id = %(dept)s
+                    GROUP BY k.id, k.code, k.name
+                    HAVING COALESCE(SUM(km.orduak), 0) > 0
+
+                    UNION ALL
+
+                    SELECT k.id, k.code, k.name,
+                           COALESCE(k.rpt_total, 0) AS total,
+                           COALESCE((
+                               SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk
+                               WHERE pk.kargu_id = k.id AND pk.faculty_id <> %(fac)s
+                           ), 0) AS others
+                    FROM op_kargu k
+                    WHERE NOT EXISTS (
+                              SELECT 1 FROM op_kargu_mintegi km2
+                              WHERE km2.kargu_id = k.id AND km2.department_id = %(dept)s)
+                      AND (
+                          (k.code LIKE 'TUTO\_%%' AND (
+                              EXISTS (
+                                  SELECT 1 FROM op_batch b
+                                  JOIN op_course c ON c.id = b.course_id
+                                  WHERE b.code = substring(k.code FROM 6)
+                                    AND c.department_id = %(dept)s)
+                              -- Si el código no corresponde a ninguna taldea
+                              -- (p.ej. TUTO_FG_ESP), se asocia al mintegi de
+                              -- quien ostenta el cargo.
+                              OR (NOT EXISTS (
+                                      SELECT 1 FROM op_batch b
+                                      WHERE b.code = substring(k.code FROM 6))
+                                  AND EXISTS (
+                                      SELECT 1 FROM op_faculty_kargu_rel fk
+                                      JOIN op_department_op_faculty_rel r
+                                           ON r.op_faculty_id = fk.faculty_id
+                                      WHERE fk.kargu_id = k.id
+                                        AND r.op_department_id = %(dept)s))))
+                          OR
+                          (k.code LIKE 'MB-%%' AND (
+                              EXISTS (SELECT 1 FROM op_department d
+                                      WHERE d.id = %(dept)s
+                                        AND d.code = substring(k.code FROM 4))
+                              OR EXISTS (
+                                  SELECT 1 FROM op_faculty_kargu_rel fk
+                                  JOIN op_department_op_faculty_rel r
+                                       ON r.op_faculty_id = fk.faculty_id
+                                  WHERE fk.kargu_id = k.id
+                                    AND r.op_department_id = %(dept)s)))
+                      )
+                ) q
+                ORDER BY name
+            """, {'dept': dept_id, 'fac': faculty_id or 0})
+            return [
+                {'id': r[0], 'code': r[1] or '', 'name': r[2] or '',
+                 'rpt_total': round(float(r[3] or 0), 2),
+                 'assigned': round(float(r[4] or 0), 2),
+                 'remaining': round(max(float(r[3] or 0) - float(r[4] or 0), 0.0), 2),
+                 'allow_zero': _kargu_allows_zero(r[1]),
+                 'allow_decimal': _kargu_allows_decimal(r[1])}
+                for r in cr.fetchall()
+            ]
         cr.execute("""
             SELECT k.id, k.code, k.name, k.rpt_total,
                    COALESCE(SUM(pk.orduak), 0) AS assigned,
@@ -1497,22 +1638,42 @@ class OpFaculty(models.Model):
         ]
 
     @api.model
-    def upsert_perfilazio_kargu(self, faculty_id, kargu_id, orduak):
+    def upsert_perfilazio_kargu(self, faculty_id, kargu_id, orduak, dept_id=None):
         orduak = float(orduak or 0)
         kargu = self.env['op.kargu'].browse(kargu_id)
         cr = self.env.cr
-        cr.execute("""
-            SELECT COALESCE(SUM(orduak), 0) FROM op_perfilazio_kargu
-            WHERE kargu_id = %s AND faculty_id <> %s
-        """, (kargu_id, faculty_id))
-        assigned_others = float(cr.fetchone()[0])
-        max_allowed = float(kargu.rpt_total or 0) - assigned_others
+        if dept_id and kargu.perfilazio_ids:
+            # Kargu con reparto por mintegi: tope = horas asignadas a este mintegi
+            # (líneas op.kargu.mintegi del dept) − horas ya repartidas a OTROS
+            # profesores del mismo mintegi.
+            cr.execute("""
+                SELECT COALESCE(SUM(km.orduak), 0) FROM op_kargu_mintegi km
+                WHERE km.kargu_id = %s AND km.department_id = %s
+            """, (kargu_id, dept_id))
+            kargu_total = float(cr.fetchone()[0])
+            cr.execute("""
+                SELECT COALESCE(SUM(pk.orduak), 0)
+                FROM op_perfilazio_kargu pk
+                JOIN op_department_op_faculty_rel dfr
+                     ON dfr.op_faculty_id = pk.faculty_id
+                WHERE pk.kargu_id = %s AND dfr.op_department_id = %s
+                  AND pk.faculty_id <> %s
+            """, (kargu_id, dept_id, faculty_id))
+            assigned_others = float(cr.fetchone()[0])
+        else:
+            cr.execute("""
+                SELECT COALESCE(SUM(orduak), 0) FROM op_perfilazio_kargu
+                WHERE kargu_id = %s AND faculty_id <> %s
+            """, (kargu_id, faculty_id))
+            assigned_others = float(cr.fetchone()[0])
+            kargu_total = float(kargu.rpt_total or 0)
+        max_allowed = kargu_total - assigned_others
         if orduak > max_allowed:
             raise UserError(_(
                 "'%(kargu)s' karguak %(libre)s ordu libre baino ez ditu "
                 "(guztira: %(total)sh, beste irakasleek esleituta: %(besteak)sh).",
-                kargu=kargu.code, libre=max_allowed,
-                total=float(kargu.rpt_total or 0), besteak=assigned_others,
+                kargu=kargu.code, libre=round(max_allowed, 2),
+                total=round(kargu_total, 2), besteak=round(assigned_others, 2),
             ))
         existing = self.env['op.perfilazio.kargu'].search([
             ('faculty_id', '=', faculty_id), ('kargu_id', '=', kargu_id)
