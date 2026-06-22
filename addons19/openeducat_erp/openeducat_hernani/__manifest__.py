@@ -31,6 +31,7 @@
         'views/op_department_views.xml',
         'views/op_course_views.xml',
         'views/op_subject_views.xml',
+        'views/op_classroom_views.xml',
         'views/op_perfilazioak_views.xml',
         'views/op_report_views.xml',
         'views/op_sis_menu.xml',

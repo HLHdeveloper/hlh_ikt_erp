@@ -534,3 +534,27 @@
     --ListRenderer-margin-x: var(--notebook-margin-x);
     --ListRenderer-table-padding-x: var(--notebook-padding-x);
 }
+
+/* ── PLAZAK IKUSI: tabla de plazas (vacantes) del mintegi ───────────── */
+.pfz-plazak-table {
+    table-layout: auto;
+}
+.pfz-plazak-table th {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+.pfz-plazak-table .pfz-plaza-info {
+    min-width: 340px;
+    white-space: normal;
+}
+.pfz-plazak-table td {
+    vertical-align: middle;
+}
+.pfz-plazak-table input.form-control-sm {
+    min-width: 110px;
+}
+.pfz-plazak-table select.form-select-sm {
+    min-width: 90px;
+    width: auto;
+}

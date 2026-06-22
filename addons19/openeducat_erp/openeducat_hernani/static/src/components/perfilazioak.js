@@ -67,6 +67,9 @@ class Perfilazioak extends Component {
             laburpenaData: [],
             laburpenaOrdezkoak: [],
 
+            showPlazak: false,
+            plazakData: [],
+
             showBertsioak: false,
             bertsioak: [],
 
@@ -106,6 +109,8 @@ class Perfilazioak extends Component {
         this.state.ingelesaMode = false;
         this.state.showLaburpena = false;
         this.state.laburpenaData = [];
+        this.state.showPlazak = false;
+        this.state.plazakData = [];
         this._resetKopiak();
         this._resetApoyo();
 
@@ -873,6 +878,55 @@ class Perfilazioak extends Component {
 
     closeLaburpena() {
         this.state.showLaburpena = false;
+    }
+
+    // ── Plazak (tabla de plazas/vacantes del mintegi) ────────────────
+    async openPlazak() {
+        if (!this.state.selectedMintegi) return;
+        this.state.loading = true;
+        this.state.plazakData = await this.orm.call(
+            "op.faculty", "get_perfilazio_plazak", [this.state.selectedMintegi.id]);
+        this.state.showPlazak = true;
+        this.state.loading = false;
+    }
+
+    closeViews() {
+        this.state.showLaburpena = false;
+        this.state.showPlazak = false;
+    }
+
+    // Guarda en vivo las columnas editables (BAKANTEA / OHARRAK) de una plaza.
+    async onPlazaFieldChange(plaza, field, ev) {
+        const value = ev.target.value;
+        await this.orm.call("op.faculty", "set_perfilazio_plaza",
+            [plaza.id, field, value]);
+        plaza[field] = value;
+    }
+
+    // Exporta la tabla de plazas a CSV (separador ';' por las comas decimales).
+    exportPlazakCsv() {
+        const cols = [
+            ['izena', 'IZENA'], ['pt_pes', 'PT/PES'], ['taldea', 'TALDEA'],
+            ['jardunaldi_mota', 'JARDUNALDI_MOTA'], ['hizkuntza_perfila', 'HIZKUNTZA_PERFILA'],
+            ['plazaren_informazioa', 'PLAZAREN INFORMAZIOA'], ['jarduna', 'JARDUNA'],
+            ['bakantea', 'BAKANTEA'], ['oharrak', 'OHARRAK'],
+        ];
+        const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+        const sep = ';';
+        const lines = [cols.map(c => esc(c[1])).join(sep)];
+        for (const p of this.state.plazakData) {
+            lines.push(cols.map(c => esc(p[c[0]])).join(sep));
+        }
+        // BOM para que Excel reconozca UTF-8 (eñes, tildes, euskera).
+        const blob = new Blob(['﻿' + lines.join('\r\n')],
+            { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `plazak_${this.state.selectedMintegi?.name || 'mintegi'}.csv`
+            .replace(/[^\w.\-]+/g, '_');
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // Ordezkoak disponibles para un impersonal: los que NO están ya asignados

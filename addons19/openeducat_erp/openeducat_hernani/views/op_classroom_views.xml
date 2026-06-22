@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Tree: añadir columna Irakasgela -->
+        <record id="view_op_classroom_tree_hernani" model="ir.ui.view">
+            <field name="name">op.classroom.tree.hernani</field>
+            <field name="model">op.classroom</field>
+            <field name="inherit_id" ref="openeducat_classroom.view_op_classroom_tree"/>
+            <field name="arch" type="xml">
+                <tree position="attributes">
+                    <attribute name="editable">bottom</attribute>
+                </tree>
+                <field name="code" position="after">
+                    <field name="solairua"/>
+                </field>
+                <field name="capacity" position="before">
+                    <field name="irakasgela" widget="boolean_toggle"/>
+                </field>
+                <!-- Eliminar columna Instalazio Lerroak -->
+                <field name="facilities" position="replace"/>
+            </field>
+        </record>
+
+        <!-- Form: añadir campo Irakasgela -->
+        <record id="view_op_classroom_form_hernani" model="ir.ui.view">
+            <field name="name">op.classroom.form.hernani</field>
+            <field name="model">op.classroom</field>
+            <field name="inherit_id" ref="openeducat_classroom.view_op_classroom_form"/>
+            <field name="arch" type="xml">
+                <field name="capacity" position="after">
+                    <field name="irakasgela"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- Search: filtros y agrupación -->
+        <record id="view_op_classroom_search_hernani" model="ir.ui.view">
+            <field name="name">op.classroom.search.hernani</field>
+            <field name="model">op.classroom</field>
+            <field name="inherit_id" ref="openeducat_classroom.view_op_classroom_search"/>
+            <field name="arch" type="xml">
+                <field name="capacity" position="after">
+                    <field name="solairua"/>
+                    <separator/>
+                    <!-- Check: solo gelas docentes (activado por defecto) -->
+                    <filter string="Irakasgelak bakarrik ikusi" name="irakasgelak"
+                            domain="[('irakasgela', '=', True)]"/>
+                    <filter string="Bestelakoak" name="ez_irakasgelak"
+                            domain="[('irakasgela', '=', False)]"/>
+                    <separator/>
+                    <!-- Desplegable Solairua: filtra las gelas por planta -->
+                    <filter string="0. SOLAIRUA" name="solairua_0"
+                            domain="[('solairua', '=', '0')]"/>
+                    <filter string="1. SOLAIRUA" name="solairua_1"
+                            domain="[('solairua', '=', '1')]"/>
+                    <filter string="2. SOLAIRUA" name="solairua_2"
+                            domain="[('solairua', '=', '2')]"/>
+                    <filter string="3. SOLAIRUA" name="solairua_3"
+                            domain="[('solairua', '=', '3')]"/>
+                    <filter string="4. SOLAIRUA" name="solairua_4"
+                            domain="[('solairua', '=', '4')]"/>
+                </field>
+                <filter name="group_by_classroom_capacity" position="after">
+                    <filter string="Irakasgela" name="group_by_irakasgela"
+                            domain="[]" context="{'group_by':'irakasgela'}"/>
+                    <filter string="Solairua" name="group_by_solairua"
+                            domain="[]" context="{'group_by':'solairua'}"/>
+                </filter>
+            </field>
+        </record>
+
+    </data>
+</odoo>

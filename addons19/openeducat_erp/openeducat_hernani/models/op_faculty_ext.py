@@ -38,6 +38,33 @@ def _modulu_is_tuto(code):
     return bool(code) and bool(re.search(r'(^|_)TUTO(_|$)', code.upper()))
 
 
+def _fmt_h(v):
+    """Formatea horas con decimal de coma (estilo eu/es): 7→'7', 3.2→'3,2'."""
+    v = round(float(v or 0), 2)
+    if v == int(v):
+        return str(int(v))
+    return ("%.2f" % v).rstrip('0').rstrip('.').replace('.', ',')
+
+
+def _jardunaldi_mota(total):
+    """Tipo de jornada según el TOTAL de horas RPT de la plaza:
+    osoa(17)→'C', 2/3(12), 1/2(9), 1/3(6). Se usa el bracket más cercano."""
+    t = float(total or 0)
+    if t <= 0:
+        return ''
+    if t >= 14.5:
+        return 'C'
+    if t >= 10.5:
+        return '2/3'
+    if t >= 7.5:
+        return '1/2'
+    return '1/3'
+
+
+# Código TALDEA (especialidad/cuerpo) por distintivo PT/PES de la plaza.
+PLAZA_TALDEA_KODEA = {'PES': '0237', 'PT': '1555'}
+
+
 # Karguak TUTO de estos grupos pueden perfilarse con 0 horas (tutor sin RPT,
 # p.ej. cotutoreak). El resto de TUTO_ y todos los MB requieren ≥1h.
 # 'FG_ESP' (TUTO_FG_ESP) es un cargo de tutor sin RPT (0h) sin grupo propio.
@@ -77,6 +104,14 @@ class OpFaculty(models.Model):
         'op.faculty', string='Ordezko esleitua',
         ondelete='set null', index=True,
         help='Perfilazio impertsonal hau estaliko duen mintegiko ordezkoa.')
+
+    # Tabla de plazas (PLAZAK IKUSI): columnas editables por plaza impersonal.
+    # El resto de columnas se derivan de la perfilación.
+    plaza_bakantea = fields.Char(string='Bakantea')
+    plaza_oharrak = fields.Text(string='Oharrak (plaza)')
+    # Override manual (vacío = valor automático derivado de la perfilación).
+    plaza_hizkuntza_perfila = fields.Char(string='Hizkuntza perfila (plaza)')
+    plaza_jarduna = fields.Char(string='Jarduna (plaza)')
 
     # Cargos (KARGUAK)
     kargu_ids = fields.Many2many(
@@ -1293,6 +1328,147 @@ class OpFaculty(models.Model):
                 'ordezko_esleitua_id': ordezko_eid or False,
             })
         return result
+
+    @api.model
+    def get_perfilazio_plazak(self, dept_id):
+        """Tabla de plazas (impersonalak/vacantes) del mintegi para la vista
+        'PLAZAK IKUSI'. Casi todo se deriva de la perfilación; solo BAKANTEA y
+        OHARRAK son editables y se guardan en op.faculty.
+
+        Columnas: IZENA (<PT/PES>-VAC_n) · PT/PES · TALDEA (código por cuerpo) ·
+        JARDUNALDI_MOTA (según total horas) · HIZKUNTZA_PERFILA (PL de módulos) ·
+        PLAZAREN INFORMAZIOA (módulos+karguak con horas, TOTAL y tutor) ·
+        JARDUNA (M/A según GOIZEZ/ARRATSALDEZ) · BAKANTEA · OHARRAK."""
+        cr = self.env.cr
+        self.env['op.faculty'].flush_model(
+            ['perfilazio_pt_pes', 'plaza_bakantea', 'plaza_oharrak',
+             'plaza_hizkuntza_perfila', 'plaza_jarduna'])
+        cr.execute("""
+            SELECT f.id, rp.name, f.plaza_bakantea, f.plaza_oharrak,
+                   f.plaza_hizkuntza_perfila, f.plaza_jarduna
+            FROM op_faculty f
+            JOIN res_partner rp ON rp.id = f.partner_id
+            JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
+            WHERE rel.op_department_id = %s AND f.active = true
+              AND f.kidergoa = 'impersonala'
+            ORDER BY f.last_name, f.id
+        """, (dept_id,))
+        plazas = cr.fetchall()
+
+        result = []
+        for fid, name, bakantea, oharrak, hizk_ovr, jarduna_ovr in plazas:
+            pt_pes = self._perfilazio_pt_pes(fid)
+
+            # Módulos asignados: nombre + rpt_reala + pl + taldea (para tutor) +
+            # código de ziklo y kurtsoa (para detectar grado C = ARRATSALDEZ)
+            cr.execute("""
+                SELECT s.name, s.code, COALESCE(s.rpt_reala, 0),
+                       UPPER(COALESCE(s.pl, '')), b.code,
+                       UPPER(COALESCE(c.code, '')), UPPER(COALESCE(s.kurtsoa, ''))
+                FROM op_subject s
+                LEFT JOIN op_batch b ON b.id = s.batch_id
+                LEFT JOIN op_course c ON c.id = b.course_id
+                WHERE s.faculty_id = %s
+                ORDER BY s.code
+            """, (fid,))
+            mods = cr.fetchall()
+            # Karguak asignados: código + horas
+            cr.execute("""
+                SELECT k.code, COALESCE(pk.orduak, 0)
+                FROM op_perfilazio_kargu pk
+                JOIN op_kargu k ON k.id = pk.kargu_id
+                WHERE pk.faculty_id = %s
+                ORDER BY k.code
+            """, (fid,))
+            karg = cr.fetchall()
+
+            parts = []
+            total = 0.0
+            has_pl1 = False
+            has_pl2 = False
+            tutor_taldea = ''
+            has_goiz = False
+            has_arrats = False
+            for mname, mcode, rpt, pl, bcode, ccode, kurtsoa in mods:
+                # Mostrar el código del módulo (lleva el grupo, p.ej. 2MSS2_ZERBI)
+                # en vez del nombre descriptivo.
+                label = mcode or mname or ''
+                parts.append("%s %sh" % (label, _fmt_h(rpt)))
+                total += float(rpt or 0)
+                if 'PL2' in pl:
+                    has_pl2 = True
+                if 'PL1' in pl:
+                    has_pl1 = True
+                if _modulu_is_tuto(mcode or '') and not tutor_taldea:
+                    tutor_taldea = bcode or (mcode or '').split('_TUTO')[0]
+                # Grado C (ziklo C_INF/C_MEK o kurtsoa 'C') = ARRATSALDEZ (tarde)
+                if ccode.startswith('C_') or kurtsoa == 'C':
+                    has_arrats = True
+                else:
+                    has_goiz = True
+            for kcode, korduak in karg:
+                parts.append("%s %sh" % (kcode or '', _fmt_h(korduak)))
+                total += float(korduak or 0)
+                if (kcode or '').upper().startswith('TUTO_') and not tutor_taldea:
+                    tutor_taldea = (kcode or '')[5:].strip()
+
+            # JARDUNA: GOIZEZ (mañana) / ARRATSALDEZ (tarde, grado C) / ambos.
+            if has_goiz and has_arrats:
+                jarduna = 'GOIZ eta ARRATSALDEZ'
+            elif has_arrats:
+                jarduna = 'ARRATSALDEZ'
+            else:
+                jarduna = 'GOIZEZ'
+
+            total = round(total, 2)
+            info = jarduna + ": " + (", ".join(parts) if parts else "—")
+            info += ". TOTAL %sh" % _fmt_h(total)
+            if tutor_taldea:
+                info += " (%s Tutorea)" % tutor_taldea
+
+            # IZENA = nombre real de la plaza impersonal (p.ej. INFO_X1).
+            izena = name or ''
+
+            # HIZKUNTZA_PERFILA (dos opciones): PL2 si hay módulos PL2/PL1_PL2,
+            # si no PL1; vacío si ningún módulo tiene perfil.
+            if has_pl2:
+                hizkuntza = 'PL2'
+            elif has_pl1:
+                hizkuntza = 'PL1'
+            else:
+                hizkuntza = ''
+            # Override manual (HIZKUNTZA_PERFILA / JARDUNA): si hay valor guardado,
+            # gana al automático. El prefijo de PLAZAREN INFORMAZIOA mantiene el
+            # turno calculado de los módulos.
+            hizkuntza = (hizk_ovr or '').strip() or hizkuntza
+            jarduna = (jarduna_ovr or '').strip() or jarduna
+
+            result.append({
+                'id': fid,
+                'real_name': name or '',
+                'izena': izena,
+                'pt_pes': pt_pes,
+                'taldea': PLAZA_TALDEA_KODEA.get(pt_pes, ''),
+                'jardunaldi_mota': _jardunaldi_mota(total),
+                'hizkuntza_perfila': hizkuntza,
+                'plazaren_informazioa': info,
+                'jarduna': jarduna,
+                'bakantea': bakantea or '',
+                'oharrak': oharrak or '',
+            })
+        return result
+
+    @api.model
+    def set_perfilazio_plaza(self, faculty_id, field, value):
+        """Guarda una columna editable de la tabla de plazas
+        (BAKANTEA / OHARRAK / HIZKUNTZA_PERFILA / JARDUNA)."""
+        fmap = {'bakantea': 'plaza_bakantea', 'oharrak': 'plaza_oharrak',
+                'hizkuntza_perfila': 'plaza_hizkuntza_perfila',
+                'jarduna': 'plaza_jarduna'}
+        if field not in fmap:
+            return False
+        self.browse(faculty_id).write({fmap[field]: value or False})
+        return True
 
     @api.model
     def get_perfilazio_ordezkoak(self, dept_id):

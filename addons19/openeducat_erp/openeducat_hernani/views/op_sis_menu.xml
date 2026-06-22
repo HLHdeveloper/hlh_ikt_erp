@@ -4,6 +4,7 @@
 
         <!-- Menú raíz del SIS: acción por defecto = dashboard -->
         <record id="openeducat_core.menu_op_school_root" model="ir.ui.menu">
+            <field name="name">HLH_KUDEAKETA</field>
             <field name="action" ref="openeducat_hernani.action_sis_dashboard"/>
         </record>
 
@@ -42,6 +43,14 @@
                   parent="openeducat_core.menu_op_school_root"
                   sequence="50"
                   action="openeducat_hernani.action_perfilazioak"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+        <!-- 6b · Gelak (seq 55) -->
+        <menuitem id="menu_op_classroom_sis"
+                  name="Gelak"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="55"
+                  action="openeducat_classroom.act_open_op_classroom_view"
                   groups="openeducat_core.group_op_back_office_admin"/>
 
         <!-- 7 · Ikasleak (seq 60) -->

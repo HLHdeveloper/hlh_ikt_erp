@@ -584,6 +584,8 @@
 
         <record id="openeducat_classroom.act_open_op_classroom_view" model="ir.actions.act_window">
             <field name="name">Gelak</field>
+            <!-- Por defecto, mostrar solo gelas docentes (Irakasgela = True) -->
+            <field name="context">{'search_default_irakasgelak': 1}</field>
         </record>
 
     </data>

@@ -107,11 +107,15 @@
                     </t>
 
                     <t t-if="state.selectedMintegi">
-                        <t t-if="!state.showLaburpena">
+                        <t t-if="!state.showLaburpena and !state.showPlazak">
                             <div class="ms-auto d-flex gap-1">
                                 <button class="btn btn-sm btn-primary"
                                         t-on-click="() => this.openLaburpena()">
                                     <i class="fa fa-table me-1"/>LABURPENA IKUSI
+                                </button>
+                                <button class="btn btn-sm btn-info text-white"
+                                        t-on-click="() => this.openPlazak()">
+                                    <i class="fa fa-list-alt me-1"/>PLAZAK IKUSI
                                 </button>
                                 <button class="btn btn-sm btn-success"
                                         t-on-click="() => this.saveBertsioa()">
@@ -125,7 +129,7 @@
                         </t>
                         <t t-else="">
                             <button class="btn btn-sm btn-outline-secondary ms-auto"
-                                    t-on-click="() => this.closeLaburpena()">
+                                    t-on-click="() => this.closeViews()">
                                 <i class="fa fa-arrow-left me-1"/>Atzera
                             </button>
                         </t>
@@ -133,7 +137,7 @@
                 </div>
 
                 <!-- Panel de versiones de perfilación del mintegi -->
-                <t t-if="state.selectedMintegi and state.showBertsioak and !state.showLaburpena">
+                <t t-if="state.selectedMintegi and state.showBertsioak and !state.showLaburpena and !state.showPlazak">
                     <div class="pfz-bertsioak border rounded p-2 mb-2">
                         <div class="d-flex align-items-center mb-1">
                             <span class="fw-semibold text-muted small flex-grow-1">
@@ -257,8 +261,86 @@
                     </div>
                 </t>
 
+                <!-- Plazak: tabla de plazas (vacantes) del mintegi -->
+                <t t-if="state.selectedMintegi and state.showPlazak">
+                    <div class="pfz-plazak">
+                        <div class="d-flex align-items-center mb-3">
+                            <h6 class="text-uppercase fw-semibold text-muted mb-0 flex-grow-1">
+                                <t t-esc="state.selectedMintegi.name"/> — Plazak
+                                <span class="text-muted small ms-1">(<t t-esc="state.plazakData.length"/> plaza)</span>
+                            </h6>
+                            <button t-if="state.plazakData.length"
+                                    class="btn btn-sm btn-outline-success"
+                                    t-on-click="() => this.exportPlazakCsv()">
+                                <i class="fa fa-file-excel-o me-1"/>Esportatu CSV
+                            </button>
+                        </div>
+                        <t t-if="!state.plazakData.length">
+                            <div class="text-muted text-center py-5">Plaza inpertsonalik ez mintegi honetan.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered pfz-plazak-table mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>IZENA</th>
+                                            <th>PT/PES</th>
+                                            <th>TALDEA</th>
+                                            <th>JARDUNALDI_MOTA</th>
+                                            <th>HIZKUNTZA_PERFILA</th>
+                                            <th>PLAZAREN INFORMAZIOA</th>
+                                            <th>JARDUNA</th>
+                                            <th>BAKANTEA</th>
+                                            <th>OHARRAK</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="state.plazakData" t-as="p" t-key="p.id">
+                                            <tr>
+                                                <td class="fw-semibold text-nowrap" t-att-title="p.real_name">
+                                                    <t t-esc="p.izena"/>
+                                                </td>
+                                                <td><t t-esc="p.pt_pes"/></td>
+                                                <td><t t-esc="p.taldea"/></td>
+                                                <td class="text-center"><t t-esc="p.jardunaldi_mota"/></td>
+                                                <td>
+                                                    <select class="form-select form-select-sm"
+                                                            t-on-change="(ev) => this.onPlazaFieldChange(p, 'hizkuntza_perfila', ev)">
+                                                        <option value="">—</option>
+                                                        <option value="PL1" t-att-selected="p.hizkuntza_perfila === 'PL1'">PL1</option>
+                                                        <option value="PL2" t-att-selected="p.hizkuntza_perfila === 'PL2'">PL2</option>
+                                                    </select>
+                                                </td>
+                                                <td class="pfz-plaza-info small"><t t-esc="p.plazaren_informazioa"/></td>
+                                                <td>
+                                                    <select class="form-select form-select-sm"
+                                                            t-on-change="(ev) => this.onPlazaFieldChange(p, 'jarduna', ev)">
+                                                        <option value="GOIZEZ" t-att-selected="p.jarduna === 'GOIZEZ'">GOIZEZ</option>
+                                                        <option value="ARRATSALDEZ" t-att-selected="p.jarduna === 'ARRATSALDEZ'">ARRATSALDEZ</option>
+                                                        <option value="GOIZ eta ARRATSALDEZ" t-att-selected="p.jarduna === 'GOIZ eta ARRATSALDEZ'">GOIZ eta ARRATSALDEZ</option>
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           t-att-value="p.bakantea"
+                                                           t-on-change="(ev) => this.onPlazaFieldChange(p, 'bakantea', ev)"/>
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           t-att-value="p.oharrak"
+                                                           t-on-change="(ev) => this.onPlazaFieldChange(p, 'oharrak', ev)"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+
                 <!-- Main panels -->
-                <t t-if="state.selectedMintegi and !state.showLaburpena">
+                <t t-if="state.selectedMintegi and !state.showLaburpena and !state.showPlazak">
                     <div class="pfz-panels d-flex gap-3 align-items-start">
 
                         <!-- Left: Irakasleak + Karguak -->
