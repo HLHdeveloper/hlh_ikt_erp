@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import api, models, fields
+from odoo.osv.expression import AND
 
 
 class OpSubjectExt(models.Model):
@@ -11,11 +12,19 @@ class OpSubjectExt(models.Model):
         'op.apoyo.taldea', 'Apoyo multzoa', ondelete='set null', index=True)
     faculty_id = fields.Many2one('op.faculty', 'Irakaslea', ondelete='set null', index=True)
     talde_kodea = fields.Char(related='batch_id.code', string='Talde Kodea', store=False)
-    # Mintegi propio del módulo (vía taldea → zikloa → departamentua). Solo para
-    # el dominio del campo siguiente (excluir el departamento propio).
+    # Mintegi propio del módulo (vía taldea → zikloa → departamentua). Se usa
+    # para el dominio de 'mintegiko_irakaslea' (excluir el departamento propio)
+    # y como categoría MINTEGIA del searchpanel de la lista de Moduluak; por eso
+    # es store=True + index (el searchpanel con enable_counters usa read_group,
+    # que requiere un campo almacenado).
     own_department_id = fields.Many2one(
         'op.department', string='Moduluaren mintegia',
-        related='batch_id.course_id.department_id', store=False)
+        related='batch_id.course_id.department_id', store=True, index=True)
+    # Zikloa del módulo (vía taldea). store=True + index para usarlo como
+    # categoría intermedia del searchpanel (Mintegia → Zikloa → Taldea).
+    course_id = fields.Many2one(
+        'op.course', string='Zikloa',
+        related='batch_id.course_id', store=True, index=True)
     # Override manual: departamento (distinto del propio) cuyos profesores
     # pueden impartir este módulo en Perfilazioak. Ej: 2INF4_EEE (mintegi
     # INFORMATIKA) impartido por un profesor de ELEKTRIZITATEA.
@@ -72,6 +81,38 @@ class OpSubjectExt(models.Model):
             'view_mode': 'form',
             'target': 'current',
         }
+
+    @api.model
+    def _hernani_fold_category_domain(self, kwargs):
+        """Searchpanel en cascada real (Mintegia → Zikloa → Taldea).
+
+        Por defecto Odoo calcula los valores VISIBLES de cada categoría del
+        searchpanel solo a partir de `search_domain` (la barra de búsqueda) e
+        ignora la selección de las OTRAS categorías: esa selección va a
+        `category_domain`, que únicamente ajusta los contadores (dejando las
+        no coincidentes a 0, pero mostrándolas). Por eso al elegir un mintegi
+        seguían apareciendo TODOS los zikloak/taldeak.
+
+        Plegamos `category_domain` dentro de `search_domain` para que el propio
+        conjunto de valores mostrados quede restringido: así Zikloa solo
+        muestra los del mintegi elegido y Taldea solo los del zikloa elegido.
+        """
+        cat = kwargs.get('category_domain')
+        if cat:
+            kwargs = dict(kwargs)
+            kwargs['search_domain'] = AND([kwargs.get('search_domain') or [], cat])
+            kwargs['category_domain'] = []
+        return kwargs
+
+    @api.model
+    def search_panel_select_range(self, field_name, **kwargs):
+        return super().search_panel_select_range(
+            field_name, **self._hernani_fold_category_domain(kwargs))
+
+    @api.model
+    def search_panel_select_multi_range(self, field_name, **kwargs):
+        return super().search_panel_select_multi_range(
+            field_name, **self._hernani_fold_category_domain(kwargs))
 
     @api.onchange('gela_orduak')
     def _onchange_gela_orduak(self):

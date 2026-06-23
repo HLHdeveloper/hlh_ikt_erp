@@ -645,6 +645,16 @@ def migrate_faculty_batches(mc, pc, faculty_map, dept_map):
 
 # ── 10. Cargos (KARGUAK → op.kargu) ──────────────────────────────────────────
 
+# Cargos cuyo `code` se normalizó en Odoo a formato DRIVE_TALDEAK
+# (MAYUSCULAS_CON_GUION_BAJO) pero cuyo `karguIZ` en MySQL sigue en minúsculas.
+# Sin este alias, la migración no encontraría el registro (busca por code) y
+# crearía un duplicado al re-ejecutarse. Clave = karguIZ MySQL, valor = code Odoo.
+KARGU_CODE_ALIASES = {
+    'mantenuelektrikoa.taldea': 'MANTENU_ELEK_TALDEA',
+    'mantenu-mekaniko.taldea':  'MANTENU_MEKA_TALDEA',
+}
+
+
 def migrate_karguak(mc, pc):
     section("10. Cargos (KARGUAK → op.kargu)")
 
@@ -655,11 +665,12 @@ def migrate_karguak(mc, pc):
     created = skipped = 0
 
     for r in rows:
-        code = r['karguIZ']
+        karguiz = r['karguIZ']
+        code = KARGU_CODE_ALIASES.get(karguiz, karguiz)  # code real en Odoo
         pc.execute("SELECT id FROM op_kargu WHERE code = %s", (code,))
         existing = pc.fetchone()
         if existing:
-            kargu_map[code] = existing['id']
+            kargu_map[karguiz] = existing['id']
             skipped += 1
             continue
 
@@ -669,7 +680,7 @@ def migrate_karguak(mc, pc):
             RETURNING id
         """, (code, r['izena'] or code, r['gsuite_email'],
               ADMIN_UID, ADMIN_UID, now_ts(), now_ts()))
-        kargu_map[code] = pc.fetchone()[0]
+        kargu_map[karguiz] = pc.fetchone()[0]
         created += 1
 
     log(f"Cargos creados: {created} | ya existían: {skipped}")

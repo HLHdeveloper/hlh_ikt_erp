@@ -12,6 +12,13 @@ class OpKargu(models.Model):
         help='Código interno del cargo (karguIZ)'
     )
     name = fields.Char(string='Nombre', required=True)
+    kargu_mota = fields.Selection(
+        selection=[
+            ('perfilazioa', 'Perfilazio Karguak'),
+            ('drive', 'DRIVE Taldeak'),
+        ],
+        string='Kargu mota', required=True, default='perfilazioa',
+        help='Tipo de cargo: Perfilazio_Karguak o DRIVE_TALDEAK.')
     gsuite_email = fields.Char(string='Email GSuite del cargo')
     rpt_total = fields.Float(
         string='RPT Total (h/aste)', default=0.0,
@@ -26,6 +33,17 @@ class OpKargu(models.Model):
     )
     perfilazio_ids = fields.One2many(
         'op.kargu.mintegi', 'kargu_id', string='Perfilazio Irakasleak')
+    department_ids = fields.Many2many(
+        'op.department',
+        'op_kargu_department_rel', 'kargu_id', 'department_id',
+        string='Mintegiak', compute='_compute_department_ids', store=True,
+        help='Mintegis en los que el cargo tiene reparto de horas '
+             '(pestaña Perfilazio Irakasleak).')
+
+    @api.depends('perfilazio_ids.department_id')
+    def _compute_department_ids(self):
+        for rec in self:
+            rec.department_ids = rec.perfilazio_ids.mapped('department_id')
 
     _sql_constraints = [
         ('unique_kargu_code', 'unique(code)', 'El código de cargo debe ser único.'),

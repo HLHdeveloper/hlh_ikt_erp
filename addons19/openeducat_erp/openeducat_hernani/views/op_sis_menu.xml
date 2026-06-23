@@ -30,9 +30,9 @@
                   action="openeducat_core.act_open_op_subject_view"
                   groups="openeducat_core.group_op_back_office_admin,openeducat_core.group_op_faculty"/>
 
-        <!-- 4 · Irakasleak (seq 40) -->
+        <!-- Irakasleak (seq 57): situado entre Gelak (55) e Ikasleak (60) -->
         <record id="openeducat_core.menu_op_faculty_main" model="ir.ui.menu">
-            <field name="sequence">40</field>
+            <field name="sequence">57</field>
         </record>
 
         <!-- 5 · Karguak (seq 45) → ver op_kargu_views.xml (menu_op_kargu) -->

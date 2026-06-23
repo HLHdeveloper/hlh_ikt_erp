@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Acción cliente OWL: gestión de Desdoble / Eleanitza -->
+        <record id="action_desdoble_he" model="ir.actions.client">
+            <field name="name">Desdoble_HE</field>
+            <field name="tag">desdoble_he_action</field>
+        </record>
+
+        <!-- Apartado en el menú principal HLH_KUDEAKETA, tras Moduluak (seq 35) -->
+        <menuitem id="menu_desdoble_he_sis"
+                  name="Desdoble_HE"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="35"
+                  action="action_desdoble_he"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+    </data>
+</odoo>

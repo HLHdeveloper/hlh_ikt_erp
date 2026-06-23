@@ -10,8 +10,10 @@
                 <tree string="Karguak" class="hlh-styled">
                     <field name="code"/>
                     <field name="name"/>
+                    <field name="kargu_mota"/>
                     <field name="gsuite_email"/>
-                    <field name="rpt_total" string="RPT Total (h/aste)" class="text-start"/>
+                    <field name="rpt_total" string="RPT Total (h/aste)" class="text-start"
+                           sum="GUZTIRA"/>
                 </tree>
             </field>
         </record>
@@ -27,6 +29,7 @@
                             <group>
                                 <field name="code"/>
                                 <field name="name"/>
+                                <field name="kargu_mota"/>
                             </group>
                             <group>
                                 <field name="gsuite_email"/>
@@ -73,16 +76,101 @@
                 <search string="Karguak">
                     <field name="code"/>
                     <field name="name"/>
+                    <field name="kargu_mota"/>
+                    <filter name="filter_perfilazioa" string="Perfilazio Karguak"
+                            domain="[('kargu_mota', '=', 'perfilazioa')]"/>
+                    <filter name="filter_drive" string="DRIVE Taldeak"
+                            domain="[('kargu_mota', '=', 'drive')]"/>
+                    <group expand="0" string="Taldekatu">
+                        <filter name="group_kargu_mota" string="Kargu mota"
+                                context="{'group_by': 'kargu_mota'}"/>
+                    </group>
+                    <searchpanel>
+                        <field name="kargu_mota" string="Kargu mota"
+                               enable_counters="1"/>
+                        <field name="department_ids" string="Mintegia"
+                               select="multi" enable_counters="1"/>
+                    </searchpanel>
                 </search>
             </field>
         </record>
 
-        <!-- Action -->
+        <!-- Action: abrir ficha de cargo (op.kargu) en blanco para crear (BERRIA) -->
+        <record model="ir.actions.act_window" id="act_open_op_kargu_new">
+            <field name="name">Kargu berria</field>
+            <field name="res_model">op.kargu</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_op_kargu_form"/>
+            <field name="target">current</field>
+        </record>
+
+        <!-- ===== Karguak mintegika (op.kargu.mintegi): reparto por mintegi ===== -->
+        <!-- Tree con GUZTIRA = suma de Orduak del mintegi seleccionado -->
+        <record id="view_op_kargu_mintegi_tree" model="ir.ui.view">
+            <field name="name">op.kargu.mintegi.all.tree</field>
+            <field name="model">op.kargu.mintegi.all</field>
+            <field name="arch" type="xml">
+                <tree string="Karguak mintegika" class="hlh-styled"
+                      js_class="kargu_mintegi_list"
+                      create="1" edit="0" delete="0">
+                    <field name="kargu_mota" optional="hide"/>
+                    <field name="kargu_id" string="Kargua"/>
+                    <field name="department_id" string="Mintegia"/>
+                    <field name="pt_pes" string="PT/PES"/>
+                    <field name="orduak" string="Orduak (h/aste)" class="text-start"
+                           sum="GUZTIRA"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Form simple de la línea de reparto -->
+        <record id="view_op_kargu_mintegi_form" model="ir.ui.view">
+            <field name="name">op.kargu.mintegi.all.form</field>
+            <field name="model">op.kargu.mintegi.all</field>
+            <field name="arch" type="xml">
+                <form string="Kargua mintegika" class="hlh-styled">
+                    <sheet>
+                        <group>
+                            <field name="kargu_id" string="Kargua"/>
+                            <field name="department_id" string="Mintegia"/>
+                            <field name="pt_pes" string="PT/PES"/>
+                            <field name="orduak" string="Orduak (h/aste)"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Search con searchpanel: Kargu mota + Mintegia (desplegable) -->
+        <record id="view_op_kargu_mintegi_search" model="ir.ui.view">
+            <field name="name">op.kargu.mintegi.all.search</field>
+            <field name="model">op.kargu.mintegi.all</field>
+            <field name="arch" type="xml">
+                <search string="Karguak mintegika">
+                    <field name="kargu_id" string="Kargua"/>
+                    <field name="kargu_code" string="Kodea"/>
+                    <field name="department_id" string="Mintegia"/>
+                    <field name="kargu_mota"/>
+                    <filter name="filter_perfilazioa" string="Perfilazio Karguak"
+                            domain="[('kargu_mota', '=', 'perfilazioa')]"/>
+                    <filter name="filter_drive" string="DRIVE Taldeak"
+                            domain="[('kargu_mota', '=', 'drive')]"/>
+                    <searchpanel>
+                        <field name="kargu_mota" string="Kargu mota"
+                               enable_counters="1"/>
+                        <field name="department_id" string="Mintegia"
+                               enable_counters="1"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+        <!-- Action: Karguak mintegika (líneas de reparto, con GUZTIRA por mintegi) -->
         <record model="ir.actions.act_window" id="act_open_op_kargu_view">
             <field name="name">Irakasleen Karguak</field>
-            <field name="res_model">op.kargu</field>
+            <field name="res_model">op.kargu.mintegi.all</field>
             <field name="view_mode">tree,form</field>
-            <field name="search_view_id" ref="view_op_kargu_search"/>
+            <field name="search_view_id" ref="view_op_kargu_mintegi_search"/>
         </record>
 
         <!-- Menu superior del SIS (entre Irakasleak y Perfilazioak) -->

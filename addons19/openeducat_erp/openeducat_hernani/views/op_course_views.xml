@@ -14,6 +14,13 @@
                     <attribute name="string">Moduluak</attribute>
                 </page>
 
+                <!-- openeducat_fees marca "Tasen Epea" (fees_term_id) como
+                     obligatorio en el form de ziklo. El usuario no lo quiere
+                     obligatorio (ej. crear ziklo LANBIDE_ELEK sin tasa). -->
+                <field name="fees_term_id" position="attributes">
+                    <attribute name="required">0</attribute>
+                </field>
+
             </field>
         </record>
 

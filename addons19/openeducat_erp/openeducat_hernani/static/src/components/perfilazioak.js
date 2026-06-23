@@ -28,19 +28,6 @@ class Perfilazioak extends Component {
             // Candidatos (ORIENTA/LPO/INGELES) para módulos TUTO
             tutoIrakasleak: {},
 
-            // Desdoble / Eleanitza: duplicar módulos del ciclo con prefijo
-            eleanitza: 'EZ',
-            desdoblea: 'EZ',
-            zikloModuluak: [],
-            selectedKopiak: {},
-            // Horas de desdoble por módulo (clave = id del módulo origen).
-            // Solo se usan con Desdoblea: la copia DESDO_ se crea con estas
-            // horas en vez del RPT completo.
-            desdoOrduak: {},
-            // Tope total de horas de desdoble del grupo (taldea) y consumo.
-            desdoInfo: { total: 0, used: 0, remaining: 0 },
-            kopiakMsg: '',
-
             // Apoyo Educativo (solo ciclos OLH*): grupos I/II/III con tope RPT
             apoyoKodea: '',
             apoyoData: { id: null, guztira_orduak: 0, sum_rpt: 0, modules: [] },
@@ -111,7 +98,6 @@ class Perfilazioak extends Component {
         this.state.laburpenaData = [];
         this.state.showPlazak = false;
         this.state.plazakData = [];
-        this._resetKopiak();
         this._resetApoyo();
 
         if (!id) return;
@@ -142,10 +128,13 @@ class Perfilazioak extends Component {
     async _reloadModuluak() {
         if (this.state.ingelesaMode) {
             this.state.moduluak = await this.orm.call("op.faculty", "get_perfilazio_ingelesa_moduluak", []);
+            await this._loadSpecialIrakasleak();
         } else if (this.state.selectedBatch) {
             this.state.moduluak = await this.orm.call("op.faculty", "get_perfilazio_moduluak", [this.state.selectedBatch.id]);
+            await this._loadSpecialIrakasleak();
+        } else if (this.state.selectedZikloa) {
+            await this._loadAllZikloModuluak();
         }
-        await this._loadSpecialIrakasleak();
     }
 
     // Carga los profesores candidatos de los departamentos referenciados por
@@ -188,196 +177,68 @@ class Perfilazioak extends Component {
         this.state.selectedBatch = null;
         this.state.batches = [];
         this.state.moduluak = [];
-        this._resetKopiak();
         this._resetApoyo();
 
         if (!id) return;
         this.state.loading = true;
         this.state.batches = await this.orm.call("op.faculty", "get_perfilazio_batches", [id]);
+        // Sin taldea seleccionada: mostrar los módulos de TODOS los grupos del
+        // zikloa, agrupados por taldea (cards apiladas).
+        await this._loadAllZikloModuluak();
         this.state.loading = false;
     }
 
-    // ── Desdoble / Eleanitza ─────────────────────────────────────────
-    _resetKopiak() {
-        this.state.eleanitza = 'EZ';
-        this.state.desdoblea = 'EZ';
-        this.state.zikloModuluak = [];
-        this.state.selectedKopiak = {};
-        this.state.kopiakMsg = '';
+    // Carga en state.moduluak (lista plana que usan los handlers de
+    // asignación) los módulos de TODOS los grupos del zikloa, etiquetando cada
+    // módulo con _batch_id/_batch_name para poder agruparlos en la vista.
+    async _loadAllZikloModuluak() {
+        const batches = this.state.batches || [];
+        const lists = await Promise.all(
+            batches.map(b => this.orm.call("op.faculty", "get_perfilazio_moduluak", [b.id]))
+        );
+        const all = [];
+        batches.forEach((b, i) => {
+            for (const m of lists[i]) {
+                m._batch_id = b.id;
+                m._batch_name = b.name;
+                all.push(m);
+            }
+        });
+        this.state.moduluak = all;
+        await this._loadSpecialIrakasleak();
     }
 
-    isKopiakActive() {
-        return this.state.eleanitza === 'BAI' || this.state.desdoblea === 'BAI';
-    }
-
-    selectedKopiaCount() {
-        return Object.values(this.state.selectedKopiak).filter(Boolean).length;
-    }
-
-    // Operación activa (mutuamente excluyentes): prefijo y flag de existencia
-    _activeKopiaPrefix() {
-        return this.state.eleanitza === 'BAI' ? 'HE_'
-            : (this.state.desdoblea === 'BAI' ? 'DESDO_' : '');
-    }
-
-    _activeKopiaFlag() {
-        return this.state.eleanitza === 'BAI' ? 'has_he' : 'has_desdo';
-    }
-
-    async _ensureZikloModuluak() {
-        // Solo los módulos de la taldea seleccionada (códigos <taldea>_XXX)
-        if (!this.state.selectedBatch) { this.state.zikloModuluak = []; return; }
-        this.state.loading = true;
-        this.state.zikloModuluak = await this.orm.call(
-            "op.faculty", "get_perfilazio_ziklo_moduluak", [this.state.selectedBatch.id]);
-        this.state.loading = false;
-    }
-
-    // La selección refleja qué módulos YA tienen su copia (HE_/DESDO_) creada
-    _initKopiaSelection() {
-        const flag = this._activeKopiaFlag();
-        const sel = {};
-        const desdo = {};
-        for (const m of this.state.zikloModuluak) {
-            sel[m.id] = !!m[flag];
-            // Horas de desdoble: las de la copia existente, o el RPT completo
-            // como valor por defecto (lo aporta el servidor en desdo_orduak).
-            desdo[m.id] = m.desdo_orduak !== undefined ? m.desdo_orduak : m.rpt_total;
+    // Grupos a renderizar en el panel Moduluak (una card por grupo):
+    //  - Ingelesa o taldea concreta → 1 grupo con state.moduluak.
+    //  - Zikloa sin taldea → un grupo por cada taldea del zikloa.
+    moduluakGroups() {
+        if (this.state.ingelesaMode) {
+            return [{ key: 'ingelesa', batch_name: 'INGELESA — guztiak', items: this.state.moduluak }];
         }
-        this.state.selectedKopiak = sel;
-        this.state.desdoOrduak = desdo;
-    }
-
-    async _refreshKopiaPanel() {
-        if (!this.isKopiakActive()) {
-            this.state.zikloModuluak = [];
-            this.state.selectedKopiak = {};
-            return;
+        if (this.state.selectedBatch) {
+            return [{ key: 'batch', batch_name: this.state.selectedBatch.name, items: this.state.moduluak }];
         }
-        if (!this.state.zikloModuluak.length) await this._ensureZikloModuluak();
-        this._initKopiaSelection();
-        await this._refreshDesdoInfo();
-    }
-
-    // Tope total de horas de desdoble del grupo y horas consumidas.
-    async _refreshDesdoInfo() {
-        if (this.state.desdoblea !== 'BAI' || !this.state.selectedBatch) {
-            this.state.desdoInfo = { total: 0, used: 0, remaining: 0 };
-            return;
+        if (this.state.selectedZikloa) {
+            return this.moduluakByBatch().map(g => ({ key: g.batch_id, ...g }));
         }
-        this.state.desdoInfo = await this.orm.call(
-            "op.faculty", "get_perfilazio_desdoble_info",
-            [this.state.selectedBatch.id]);
+        return [];
     }
 
-    // Cambio del tope total de horas de desdoble del grupo.
-    async onDesdoTotalChange(ev) {
-        if (!this.state.selectedBatch) return;
-        let v = parseFloat(ev.target.value);
-        if (isNaN(v) || v < 0) v = 0;
-        this.state.loading = true;
-        this.state.desdoInfo = await this.orm.call(
-            "op.faculty", "set_perfilazio_desdoble_total",
-            [this.state.selectedBatch.id, v]);
-        ev.target.value = this.state.desdoInfo.total;
-        this.state.loading = false;
-    }
-
-    async toggleEleanitza() {
-        this.state.eleanitza = this.state.eleanitza === 'BAI' ? 'EZ' : 'BAI';
-        if (this.state.eleanitza === 'BAI') this.state.desdoblea = 'EZ';  // excluyentes
-        await this._refreshKopiaPanel();
-    }
-
-    async toggleDesdoblea() {
-        this.state.desdoblea = this.state.desdoblea === 'BAI' ? 'EZ' : 'BAI';
-        if (this.state.desdoblea === 'BAI') this.state.eleanitza = 'EZ';  // excluyentes
-        await this._refreshKopiaPanel();
-    }
-
-    // Clic = crear la copia (si no existe) o eliminarla (si existe).
-    async toggleKopia(modulu) {
-        const prefix = this._activeKopiaPrefix();
-        if (!prefix) return;
-        this.state.loading = true;
-        // Con Desdoblea, la copia DESDO_ se crea con las horas fijadas en la
-        // columna "Desdoble Orduak" (en vez del RPT completo del módulo).
-        const args = [modulu.id, prefix];
-        if (this.state.desdoblea === 'BAI') {
-            args.push(this.state.desdoOrduak[modulu.id]);
+    // Agrupa state.moduluak por taldea (en el orden de state.batches), para
+    // renderizar una card de Moduluak por grupo cuando hay zikloa sin taldea.
+    moduluakByBatch() {
+        const byId = {};
+        const groups = [];
+        for (const b of (this.state.batches || [])) {
+            const g = { batch_id: b.id, batch_name: b.name, items: [] };
+            byId[b.id] = g;
+            groups.push(g);
         }
-        const res = await this.orm.call(
-            "op.faculty", "toggle_perfilazio_kopia", args);
-        const flag = this._activeKopiaFlag();
-        const zm = this.state.zikloModuluak.find(x => x.id === modulu.id);
-        if (zm) zm[flag] = res.exists;
-        this.state.selectedKopiak[modulu.id] = res.exists;
-        // La copia puede haberse creado con menos horas de las pedidas si el
-        // tope del grupo no daba para más: reflejar las realmente aplicadas.
-        if (res.exists && res.orduak !== null && res.orduak !== undefined) {
-            this.state.desdoOrduak[modulu.id] = res.orduak;
-        } else if (!res.exists) {
-            // Al deseleccionar, "Desdoble Orduak" vuelve al RPT del módulo.
-            this.state.desdoOrduak[modulu.id] = modulu.rpt_total || 0;
+        for (const m of this.state.moduluak) {
+            const g = byId[m._batch_id];
+            if (g) g.items.push(m);
         }
-        this._recomputeZikloIndicator();
-        // Al crear/eliminar una copia puede cambiar la perfilación de algún
-        // profesor (si la copia estaba asignada): recargar moduluak, irakasleak
-        // y resumen para recalcular horas.
-        if (this.state.selectedBatch) await this._reloadModuluak();
-        await this._refreshIrakasleak();
-        await this._refreshResumen();
-        await this._refreshDesdoInfo();
-        // Las copias HE_/DESDO_ cambian los totales de "Eleanitza / Desdobleak".
-        await this._refreshTaldeakLaburpena();
-        this.state.loading = false;
-    }
-
-    // Cambio en la columna "Desdoble Orduak": acota a [0, RPT] y, si la copia
-    // DESDO_ ya existe, actualiza sus horas en caliente (recalcula perfilación).
-    async onDesdoOrduakChange(modulu, ev) {
-        let v = parseFloat(ev.target.value);
-        let max = modulu.rpt_total || 0;
-        // Tope del grupo: para una copia aún no creada, lo libre es remaining.
-        if (!modulu.has_desdo && this.state.desdoInfo.total > 0) {
-            max = Math.min(max, this.state.desdoInfo.remaining);
-        }
-        if (isNaN(v) || v < 0) v = 0;
-        if (v > max) v = max;
-        v = Math.round(v * 100) / 100;
-        this.state.desdoOrduak[modulu.id] = v;
-        ev.target.value = v;  // reflejar el valor acotado en el input
-        if (!modulu.has_desdo) return;  // aún no creada: se usará al crearla
-        this.state.loading = true;
-        const res = await this.orm.call(
-            "op.faculty", "set_perfilazio_desdoble_orduak", [modulu.id, v]);
-        // El servidor acota también al tope del grupo: reflejar lo aplicado.
-        if (res && res.orduak !== undefined) {
-            this.state.desdoOrduak[modulu.id] = res.orduak;
-        }
-        if (this.state.selectedBatch) await this._reloadModuluak();
-        await this._refreshIrakasleak();
-        await this._refreshResumen();
-        await this._refreshDesdoInfo();
-        // Refrescar "Eleanitza / Desdobleak": cambian las horas de desdoble.
-        await this._refreshTaldeakLaburpena();
-        this.state.loading = false;
-    }
-
-    // Color de la fila seleccionada: verde (HE/eleanitza) o morado (DESDO/desdoble)
-    kopiaRowClass(modulu) {
-        if (!this.state.selectedKopiak[modulu.id]) return '';
-        return this.state.desdoblea === 'BAI' ? 'pfz-kopia--desdo' : 'pfz-kopia--he';
-    }
-
-    _recomputeZikloIndicator() {
-        if (!this.state.selectedZikloa) return;
-        const he = this.state.zikloModuluak.some(m => m.has_he);
-        const desdo = this.state.zikloModuluak.some(m => m.has_desdo);
-        this.state.selectedZikloa.has_he = he;
-        this.state.selectedZikloa.has_desdo = desdo;
-        const z = this.state.zikloak.find(x => x.id === this.state.selectedZikloa.id);
-        if (z) { z.has_he = he; z.has_desdo = desdo; }
+        return groups.filter(g => g.items.length);
     }
 
     async _refreshIrakasleak() {
@@ -587,14 +448,20 @@ class Perfilazioak extends Component {
         const id = parseInt(ev.target.value) || null;
         this.state.selectedBatch = this.state.batches.find(b => b.id === id) || null;
         this.state.moduluak = [];
-        this.state.zikloModuluak = [];  // kopiatu panela taldez aldatzean birkargatu
         this._resetApoyo();
 
-        if (!id) return;
+        if (!id) {
+            // Sin taldea: volver a mostrar los módulos de todos los grupos.
+            if (this.state.selectedZikloa) {
+                this.state.loading = true;
+                await this._loadAllZikloModuluak();
+                this.state.loading = false;
+            }
+            return;
+        }
         this.state.loading = true;
         this.state.moduluak = await this.orm.call("op.faculty", "get_perfilazio_moduluak", [id]);
         await this._loadSpecialIrakasleak();
-        if (this.isKopiakActive()) await this._refreshKopiaPanel();
         this.state.loading = false;
     }
 

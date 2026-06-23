@@ -97,13 +97,29 @@
                         <field name="code"/>
                         <field name="name"/>
                         <field name="type"/>
-                        <field name="department_id"/>
+                        <field name="own_department_id" string="Mintegia"/>
                         <newline/>
                         <group expand="0" string="Group By...">
                             <filter name="group_by_subject_type" string="Type" domain="[]"
                                     context="{'group_by':'type'}"/>
+                            <filter name="group_by_mintegia" string="Mintegia" domain="[]"
+                                    context="{'group_by':'own_department_id'}"/>
                             <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
                         </group>
+                        <!-- Filtro vertical izquierdo en cascada (igual que los
+                             desplegables de Perfilazioak): MINTEGIA → ZIKLOA →
+                             TALDEA. Al seleccionar un mintegi, el searchpanel
+                             solo muestra sus zikloak (las categorías con 0
+                             registros se ocultan); al elegir un zikloa, solo
+                             sus taldeak. -->
+                        <searchpanel>
+                            <field name="own_department_id" string="Mintegia"
+                                   enable_counters="1"/>
+                            <field name="course_id" string="Zikloa"
+                                   enable_counters="1"/>
+                            <field name="batch_id" string="Taldea"
+                                   enable_counters="1"/>
+                        </searchpanel>
                     </search>
                 </search>
             </field>
