@@ -373,10 +373,40 @@
                                             </t>
                                         </div>
                                     </t>
+                                    <!-- Irakasle Tronkalak: profesores de INGELES/ORIENTA/LPO
+                                         (de otros mintegis) ofrecidos para asignar módulos. -->
+                                    <t t-if="state.tronkalIrakasleak.length">
+                                        <div class="pfz-separator-impersonal d-flex align-items-center gap-2 px-3 py-1">
+                                            <hr class="flex-grow-1 my-0"/>
+                                            <span class="text-muted" style="font-size:.7rem;white-space:nowrap">Irakasle Tronkalak</span>
+                                            <hr class="flex-grow-1 my-0"/>
+                                        </div>
+                                        <t t-foreach="state.tronkalIrakasleak" t-as="f" t-key="'tronkal-' + f.id">
+                                            <div t-attf-class="pfz-faculty-row {{ state.selectedFaculty and state.selectedFaculty.id === f.id ? 'pfz-faculty-row--active' : '' }}"
+                                                 t-on-click="() => this.onFacultyClick(f)">
+                                                <span t-attf-class="pfz-faculty-name {{ f.overload ? 'pfz-overload' : '' }}">
+                                                    <t t-esc="f.name"/>
+                                                </span>
+                                                <span t-if="f.dept" class="badge bg-secondary ms-1" style="font-size:.6rem" t-att-title="f.dept">
+                                                    <t t-esc="f.dept"/>
+                                                </span>
+                                                <span t-attf-class="badge pfz-faculty-ptpes {{ f.pt_pes === 'PT' ? 'pfz-ptpes-pt' : 'pfz-ptpes-pes' }}"
+                                                      title="PT/PES">
+                                                    <t t-esc="f.pt_pes"/>
+                                                </span>
+                                                <span class="badge pfz-faculty-gela bg-info text-dark" title="Gela orduak">
+                                                    <t t-esc="f.gela"/>
+                                                </span>
+                                                <span t-attf-class="badge pfz-faculty-hours {{ f.overload ? 'bg-warning text-dark' : (this.isComplete(f) ? 'pfz-hours-complete' : 'bg-light text-dark') }}" title="RPT orduak">
+                                                    <t t-esc="this.formatH(f.orduak)"/>
+                                                </span>
+                                            </div>
+                                        </t>
+                                    </t>
                                 </div>
 
                                 <!-- Mintegiko laburpena: taldeak + plazak -->
-                                <t t-if="state.selectedMintegi and !state.ingelesaMode">
+                                <t t-if="state.selectedMintegi">
                                     <div class="pfz-mintegi-laburpena border-top px-2 pt-2 pb-2">
                                         <div class="d-flex gap-2 mb-2 align-items-start">
                                           <div class="d-flex flex-column gap-2" style="flex: 1 1 0; min-width: 0;">

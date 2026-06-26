@@ -23,6 +23,14 @@ class DesdobleHe extends Component {
             selectedZikloa: null,
             selectedBatch: null,
 
+            // Resumen Eleanitza / Desdobleak del mintegi (igual que Perfilazioak)
+            eleanitzaLaburpena: {
+                eleanitza: { total: 0, pending: 0 },
+                desdoblea: { total: 0, pending: 0 },
+            },
+            // Listas de módulos copia del mintegi (HE_ y DESDO_)
+            eleanitzaModuluak: { eleanitza: [], desdoblea: [] },
+
             // Desdoble / Eleanitza (mutuamente excluyentes)
             eleanitza: 'EZ',
             desdoblea: 'EZ',
@@ -51,10 +59,81 @@ class DesdobleHe extends Component {
         this.state.zikloak = [];
         this.state.batches = [];
         this._resetKopiak();
+        this._resetEleanitzaLaburpena();
         if (!id) return;
         this.state.loading = true;
-        this.state.zikloak = await this.orm.call("op.faculty", "get_perfilazio_zikloak", [id]);
+        const [zikloak, eleanitza, eleanitzaMod] = await Promise.all([
+            this.orm.call("op.faculty", "get_perfilazio_zikloak", [id]),
+            this.orm.call("op.faculty", "get_perfilazio_eleanitza_laburpena", [id]),
+            this.orm.call("op.faculty", "get_perfilazio_eleanitza_moduluak", [id]),
+        ]);
+        this.state.zikloak = zikloak;
+        this.state.eleanitzaLaburpena = eleanitza;
+        this.state.eleanitzaModuluak = eleanitzaMod;
         this.state.loading = false;
+    }
+
+    _resetEleanitzaLaburpena() {
+        this.state.eleanitzaLaburpena = {
+            eleanitza: { total: 0, pending: 0 },
+            desdoblea: { total: 0, pending: 0 },
+        };
+        this.state.eleanitzaModuluak = { eleanitza: [], desdoblea: [] };
+    }
+
+    // GUZTIRA de la tabla Eleanitza / Desdobleak (suma eleanitza + desdoblea).
+    eleanitzaGuztira(field) {
+        const e = this.state.eleanitzaLaburpena;
+        return Math.round(((e.eleanitza[field] || 0) + (e.desdoblea[field] || 0)) * 100) / 100;
+    }
+
+    _r(n) {
+        return Math.round((n || 0) * 100) / 100;
+    }
+
+    // GUZTIRA: horas (RPT) de eleanitza/desdoblea agrupadas por zikloa → taldea.
+    // Devuelve [{zikloa, eleanitza, desdoblea, guztira, taldeak:[{taldea,...}]}].
+    guztiraByZikloTaldea() {
+        const acc = {};  // zikloa → taldea → {eleanitza, desdoblea}
+        const add = (list, field) => {
+            for (const m of (list || [])) {
+                const z = m.zikloa || '—', t = m.taldea || '—';
+                (acc[z] = acc[z] || {});
+                (acc[z][t] = acc[z][t] || { eleanitza: 0, desdoblea: 0 });
+                acc[z][t][field] += m.rpt || 0;
+            }
+        };
+        add(this.state.eleanitzaModuluak.eleanitza, 'eleanitza');
+        add(this.state.eleanitzaModuluak.desdoblea, 'desdoblea');
+        return Object.keys(acc).sort().map(z => {
+            const taldeak = Object.keys(acc[z]).sort().map(t => {
+                const e = this._r(acc[z][t].eleanitza);
+                const d = this._r(acc[z][t].desdoblea);
+                return { taldea: t, eleanitza: e, desdoblea: d, guztira: this._r(e + d) };
+            });
+            const ze = this._r(taldeak.reduce((s, x) => s + x.eleanitza, 0));
+            const zd = this._r(taldeak.reduce((s, x) => s + x.desdoblea, 0));
+            return { zikloa: z, taldeak, eleanitza: ze, desdoblea: zd, guztira: this._r(ze + zd) };
+        });
+    }
+
+    // Totales generales (suma de todos los zikloak).
+    guztiraTotal(field) {
+        const rows = this.guztiraByZikloTaldea();
+        return this._r(rows.reduce((s, z) => s + (z[field] || 0), 0));
+    }
+
+    // Recarga el resumen y las listas del mintegi tras crear/editar copias.
+    async _refreshEleanitzaLaburpena() {
+        if (!this.state.selectedMintegi) return;
+        const [lab, mod] = await Promise.all([
+            this.orm.call("op.faculty", "get_perfilazio_eleanitza_laburpena",
+                [this.state.selectedMintegi.id]),
+            this.orm.call("op.faculty", "get_perfilazio_eleanitza_moduluak",
+                [this.state.selectedMintegi.id]),
+        ]);
+        this.state.eleanitzaLaburpena = lab;
+        this.state.eleanitzaModuluak = mod;
     }
 
     async onZikloaChange(ev) {
@@ -193,6 +272,7 @@ class DesdobleHe extends Component {
             this.state.desdoOrduak[modulu.id] = modulu.rpt_total || 0;
         }
         await this._refreshDesdoInfo();
+        await this._refreshEleanitzaLaburpena();
         this.state.loading = false;
     }
 
@@ -217,6 +297,7 @@ class DesdobleHe extends Component {
             this.state.desdoOrduak[modulu.id] = res.orduak;
         }
         await this._refreshDesdoInfo();
+        await this._refreshEleanitzaLaburpena();
         this.state.loading = false;
     }
 

@@ -698,8 +698,11 @@ class OpFaculty(models.Model):
 
     @api.model
     def get_perfilazio_irakasleak(self, dept_id):
+        """Lista principal del panel Irakasleak: funtzionarioak + impersonalak
+        miembros del mintegi, EXCLUIDOS los tronkalak (van en su propio
+        apartado vía get_perfilazio_tronkal_irakasleak)."""
         cr = self.env.cr
-        cr.execute("""
+        cr.execute(f"""
             SELECT
                 f.id,
                 rp.name,
@@ -724,14 +727,100 @@ class OpFaculty(models.Model):
             JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
             WHERE rel.op_department_id = %s AND f.active = true
               AND (f.kidergoa = 'funtzionarioa' OR f.kidergoa = 'impersonala')
+              AND NOT {self._TRONKAL_MEMBER_COND}
             ORDER BY
                 CASE WHEN f.kidergoa = 'impersonala' THEN 1 ELSE 0 END,
                 f.last_name
-        """, (dept_id,))
+        """, (dept_id, self.TRONKAL_DEPT_CODES, dept_id))
         return [
             {'id': r[0], 'name': r[1], 'orduak': round(float(r[2]), 2),
              'overload': round(float(r[2]), 2) > 17, 'kidergoa': r[3] or '',
              'gela': float(r[4]), 'pt_pes': r[5] or 'PES'}
+            for r in cr.fetchall()
+        ]
+
+    # Departamentos transversales: sus profesores (funtzionarioak +
+    # impersonalak) se agrupan como "Irakasle Tronkalak" en los mintegis donde
+    # son miembros (pestaña Mintegiak › Irakasleak).
+    TRONKAL_DEPT_CODES = ('INGELES', 'ORIENTA', 'LPO')
+
+    # Condición SQL "el profesor `f` es TRONKAL respecto al mintegi dept_id":
+    # es miembro (op_department_op_faculty_rel) de un departamento transversal
+    # DISTINTO del propio mintegi. Pensada para incrustar con f-string; usa el
+    # alias `f` de la consulta y DOS parámetros en orden: (TRONKAL_DEPT_CODES, dept_id).
+    _TRONKAL_MEMBER_COND = (
+        "EXISTS (SELECT 1 FROM op_department_op_faculty_rel rt "
+        "JOIN op_department dt ON dt.id = rt.op_department_id "
+        "WHERE rt.op_faculty_id = f.id AND dt.code IN %s AND dt.id <> %s)")
+
+    # Condición SQL "el profesor `f` es PROPIO del mintegi dept_id", por ORIGEN
+    # (no por nº de pertenencias, que falla en mintegis transversales como
+    # INGELES, cuyos INGE_X* son miembros de muchos mintegis):
+    #   · funtzionarioa  → su main_department_id es ese mintegi.
+    #   · impersonala    → su nombre es '<CODE[:4]>_X<n>' (creado en ese mintegi).
+    # Excluye tronkalak e impersonalak prestados (p.ej. ELEK_X4 en INFOR).
+    # Usa los alias `f` y `rp` (res_partner); parámetros vía _propio_params():
+    # (dept_id, '^<PREFIX>_X[0-9]+$').
+    _PROPIO_MEMBER_COND = (
+        "((f.kidergoa = 'funtzionarioa' AND f.main_department_id = %s) "
+        "OR (f.kidergoa = 'impersonala' AND UPPER(rp.name) ~ %s))")
+
+    def _propio_params(self, dept_id):
+        """Parámetros de _PROPIO_MEMBER_COND para un mintegi: (dept_id, regex
+        del nombre de sus impersonalak, '<CODE[:4]>_X<n>')."""
+        code = self.env['op.department'].browse(dept_id).code or ''
+        return (dept_id, '^' + code[:4].upper() + '_X[0-9]+$')
+
+    @api.model
+    def get_perfilazio_tronkal_irakasleak(self, dept_id):
+        """Irakasle Tronkalak: funtzionarioak + impersonalak **miembros del
+        mintegi** (pestaña Mintegiak › Irakasleak) que ADEMÁS son miembros de
+        un departamento transversal (INGELES/ORIENTA/LPO) distinto del propio
+        mintegi. Se muestran en un apartado aparte del panel Irakasleak; no se
+        duplican con la lista principal (esta los excluye). Mismas columnas que
+        get_perfilazio_irakasleak + 'dept' (código del dept transversal)."""
+        cr = self.env.cr
+        cr.execute(f"""
+            SELECT
+                f.id,
+                rp.name,
+                COALESCE(
+                    (SELECT SUM(s.rpt_reala) FROM op_subject s WHERE s.faculty_id = f.id), 0
+                ) + COALESCE(
+                    (SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk WHERE pk.faculty_id = f.id), 0
+                ) AS orduak,
+                f.kidergoa,
+                COALESCE(
+                    (SELECT SUM(s.gela_orduak) FROM op_subject s WHERE s.faculty_id = f.id), 0
+                ) AS gela,
+                COALESCE(
+                    NULLIF(UPPER(f.perfilazio_pt_pes), ''),
+                    CASE WHEN EXISTS (
+                        SELECT 1 FROM op_subject s3
+                        WHERE s3.faculty_id = f.id AND UPPER(s3.pt_pes) LIKE 'PT%%'
+                    ) THEN 'PT' ELSE 'PES' END
+                ) AS pt_pes,
+                (SELECT MIN(dt.code)
+                   FROM op_department_op_faculty_rel rt
+                   JOIN op_department dt ON dt.id = rt.op_department_id
+                  WHERE rt.op_faculty_id = f.id AND dt.code IN %s AND dt.id <> %s) AS dept_code
+            FROM op_faculty f
+            JOIN res_partner rp ON rp.id = f.partner_id
+            JOIN op_department_op_faculty_rel rel
+                ON rel.op_faculty_id = f.id AND rel.op_department_id = %s
+            WHERE f.active = true
+              AND (f.kidergoa = 'funtzionarioa' OR f.kidergoa = 'impersonala')
+              AND {self._TRONKAL_MEMBER_COND}
+            ORDER BY
+                dept_code,
+                CASE WHEN f.kidergoa = 'impersonala' THEN 1 ELSE 0 END,
+                f.last_name
+        """, (self.TRONKAL_DEPT_CODES, dept_id, dept_id,
+              self.TRONKAL_DEPT_CODES, dept_id))
+        return [
+            {'id': r[0], 'name': r[1], 'orduak': round(float(r[2]), 2),
+             'overload': round(float(r[2]), 2) > 17, 'kidergoa': r[3] or '',
+             'gela': float(r[4]), 'pt_pes': r[5] or 'PES', 'dept': r[6] or ''}
             for r in cr.fetchall()
         ]
 
@@ -809,6 +898,37 @@ class OpFaculty(models.Model):
         return rows
 
     @api.model
+    def get_perfilazio_eleanitza_moduluak(self, dept_id):
+        """Listas de los módulos copia del mintegi (taldea→zikloa→dept) para el
+        apartado Desdoble_HE: ELEANITZA (code 'HE_…') y DESDOBLEA ('DESDO_…').
+        Por módulo: code (KODEA), rpt_reala (RPT) y el profesor asignado
+        (Irakaslea) si lo hubiera. Devuelve {'eleanitza': [...], 'desdoblea': [...]}."""
+        self.env.cr.execute(r"""
+            SELECT
+                CASE WHEN s.code ~* '^HE_' THEN 'eleanitza' ELSE 'desdoblea' END AS mota,
+                s.id, s.code, s.rpt_reala, rp.name AS faculty_name,
+                b.name AS taldea, c.name AS zikloa
+            FROM op_subject s
+            JOIN op_batch b ON b.id = s.batch_id
+            JOIN op_course c ON c.id = b.course_id
+            LEFT JOIN op_faculty f ON f.id = s.faculty_id
+            LEFT JOIN res_partner rp ON rp.id = f.partner_id
+            WHERE c.department_id = %s
+              AND s.active = true
+              AND (s.code ~* '^HE_' OR s.code ~* '^DESDO_')
+            ORDER BY c.name, b.name, s.code
+        """, (dept_id,))
+        res = {'eleanitza': [], 'desdoblea': []}
+        for mota, sid, code, rpt, fname, taldea, zikloa in self.env.cr.fetchall():
+            res[mota].append({
+                'id': sid, 'code': code or '',
+                'rpt': round(float(rpt or 0), 2),
+                'faculty_name': fname or '',
+                'taldea': taldea or '—', 'zikloa': zikloa or '—',
+            })
+        return res
+
+    @api.model
     def get_perfilazio_eleanitza_laburpena(self, dept_id):
         """Horas de los módulos copia ELEANITZA (code 'HE_…') y DESDOBLE
         ('DESDO_…') del mintegi (taldea→zikloa→dept). 'total' (ordu guztiak) =
@@ -838,8 +958,10 @@ class OpFaculty(models.Model):
     def get_perfilazio_plazak_laburpena(self, dept_id):
         """Por distintivo PT/PES de los profesores del mintegi, desglosa sus
         horas en lektiboak (módulos normales) y ez lektiboak (módulos copia
-        HE_/DESDO_ + karguak). lekt+ez_lekt = total que se convierte a plazas."""
-        fac_ids = self._perfilazio_dept_faculty_ids(dept_id)
+        HE_/DESDO_ + karguak). lekt+ez_lekt = total que se convierte a plazas.
+        Solo PROPIOS: excluye tronkalak e impersonalak prestados (ELEK_X4);
+        sus plazas son de su mintegi de origen."""
+        fac_ids = self._perfilazio_dept_faculty_ids(dept_id, propio_only=True)
         res = {'PT': {'lekt': 0.0, 'ez_lekt': 0.0},
                'PES': {'lekt': 0.0, 'ez_lekt': 0.0}}
         if not fac_ids:
@@ -868,14 +990,23 @@ class OpFaculty(models.Model):
         return res
 
     # ── Versiones de perfilación por mintegi (snapshots) ─────────────
-    def _perfilazio_dept_faculty_ids(self, dept_id):
-        """Profesores del mintegi (mismos que el panel Perfilazioak)."""
-        self.env.cr.execute("""
+    def _perfilazio_dept_faculty_ids(self, dept_id, propio_only=False):
+        """Profesores del mintegi (mismos que el panel Perfilazioak).
+        Con propio_only=True solo los PROPIOS (única pertenencia = este
+        mintegi); omite tronkalak e impersonalak prestados de otro mintegi
+        (sus plazas son de su mintegi de origen → no cuentan en 'Plazen
+        laburpena')."""
+        extra = (" AND " + self._PROPIO_MEMBER_COND) if propio_only else ""
+        params = ((dept_id, *self._propio_params(dept_id))
+                  if propio_only else (dept_id,))
+        self.env.cr.execute(f"""
             SELECT f.id FROM op_faculty f
+            JOIN res_partner rp ON rp.id = f.partner_id
             JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
             WHERE rel.op_department_id = %s AND f.active = true
               AND (f.kidergoa = 'funtzionarioa' OR f.kidergoa = 'impersonala')
-        """, (dept_id,))
+              {extra}
+        """, params)
         return [r[0] for r in self.env.cr.fetchall()]
 
     def _perfilazio_dept_subject_ids(self, dept_id):
@@ -1235,25 +1366,28 @@ class OpFaculty(models.Model):
 
     @api.model
     def get_perfilazio_laburpena(self, dept_id):
-        """Resumen de perfilación de TODOS los profesores del mintegi
-        (funtzionarioak + impersonalak). Para cada profesor devuelve su
-        nombre, los roles (Mintegiburua / Taldeko tutorea) y las filas de su
-        perfilación (módulos + karguak) con columnas Kodea, Gela, RPT."""
+        """Resumen de perfilación de los profesores **propios** del mintegi:
+        funtzionarioak + impersonalak cuya ÚNICA pertenencia
+        (op_department_op_faculty_rel) es este mintegi. Quedan fuera los
+        tronkalak y los impersonalak prestados de otro mintegi (p.ej. ELEK_X4).
+        Para cada profesor devuelve su nombre, los roles (Mintegiburua /
+        Taldeko tutorea) y las filas de su perfilación (módulos + karguak)."""
         cr = self.env.cr
         # Asegurar que las escrituras ORM pendientes (p.ej. ordezko_esleitua_id)
         # están en BD antes de leer con SQL crudo.
         self.env['op.faculty'].flush_model(['ordezko_esleitua_id'])
-        cr.execute("""
+        cr.execute(f"""
             SELECT f.id, rp.name, f.kidergoa, f.ordezko_esleitua_id
             FROM op_faculty f
             JOIN res_partner rp ON rp.id = f.partner_id
             JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
             WHERE rel.op_department_id = %s AND f.active = true
               AND (f.kidergoa = 'funtzionarioa' OR f.kidergoa = 'impersonala')
+              AND {self._PROPIO_MEMBER_COND}
             ORDER BY
                 CASE WHEN f.kidergoa = 'impersonala' THEN 1 ELSE 0 END,
                 f.last_name
-        """, (dept_id,))
+        """, (dept_id, *self._propio_params(dept_id)))
         faculties = cr.fetchall()
 
         result = []
@@ -1343,7 +1477,7 @@ class OpFaculty(models.Model):
         self.env['op.faculty'].flush_model(
             ['perfilazio_pt_pes', 'plaza_bakantea', 'plaza_oharrak',
              'plaza_hizkuntza_perfila', 'plaza_jarduna'])
-        cr.execute("""
+        cr.execute(f"""
             SELECT f.id, rp.name, f.plaza_bakantea, f.plaza_oharrak,
                    f.plaza_hizkuntza_perfila, f.plaza_jarduna
             FROM op_faculty f
@@ -1351,8 +1485,9 @@ class OpFaculty(models.Model):
             JOIN op_department_op_faculty_rel rel ON rel.op_faculty_id = f.id
             WHERE rel.op_department_id = %s AND f.active = true
               AND f.kidergoa = 'impersonala'
+              AND {self._PROPIO_MEMBER_COND}
             ORDER BY f.last_name, f.id
-        """, (dept_id,))
+        """, (dept_id, *self._propio_params(dept_id)))
         plazas = cr.fetchall()
 
         result = []
@@ -1598,13 +1733,15 @@ class OpFaculty(models.Model):
     @api.model
     def get_special_modulu_irakasleak(self, dept_codes):
         """Para cada `code` de departamento, devuelve los profesores candidatos
-        para impartir módulos especiales. Igual que el panel Perfilazioak: solo
-        funtzionarioak e inpertsonalak (X1, X2…), no todos los activos.
+        para impartir módulos especiales: solo los **propios** de ese
+        departamento (funtzionarioak con main_department_id = dept +
+        impersonalak con nombre '<CODE[:4]>_X<n>'). Se excluyen los tronkalak
+        prestados que solo son miembros porque imparten en sus ciclos.
         Devuelve un dict {dept_code: [{'id', 'name'}, ...]}."""
         cr = self.env.cr
         result = {}
         for dcode in set(dept_codes or []):
-            cr.execute("""
+            cr.execute(r"""
                 SELECT f.id, rp.name
                 FROM op_faculty f
                 JOIN res_partner rp ON rp.id = f.partner_id
@@ -1612,7 +1749,11 @@ class OpFaculty(models.Model):
                 JOIN op_department_op_faculty_rel rel
                     ON rel.op_faculty_id = f.id AND rel.op_department_id = d.id
                 WHERE f.active = true
-                  AND (f.kidergoa = 'funtzionarioa' OR f.kidergoa = 'impersonala')
+                  AND (
+                    (f.kidergoa = 'funtzionarioa' AND f.main_department_id = d.id)
+                    OR (f.kidergoa = 'impersonala'
+                        AND UPPER(rp.name) ~ ('^' || UPPER(LEFT(d.code, 4)) || '_X[0-9]+$'))
+                  )
                 ORDER BY
                     CASE WHEN f.kidergoa = 'impersonala' THEN 1 ELSE 0 END,
                     f.last_name

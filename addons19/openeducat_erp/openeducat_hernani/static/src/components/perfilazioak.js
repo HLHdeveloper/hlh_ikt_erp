@@ -22,6 +22,9 @@ class Perfilazioak extends Component {
             selectedBatch: null,
 
             irakasleak: [],
+            // Profesores de departamentos transversales (INGELES/ORIENTA/LPO)
+            // ofrecidos en cualquier mintegi bajo "Irakasle Tronkalak".
+            tronkalIrakasleak: [],
             moduluak: [],
             // Candidatos por departamento para módulos especiales (no técnicos)
             specialIrakasleak: {},
@@ -90,6 +93,7 @@ class Perfilazioak extends Component {
         this.state.moduluak = [];
         this.state.specialIrakasleak = {};
         this.state.irakasleak = [];
+        this.state.tronkalIrakasleak = [];
         this.state.selectedFaculty = null;
         this.state.karguak = [];
         this.state.addingKargu = false;
@@ -121,8 +125,29 @@ class Perfilazioak extends Component {
             this.state.zikloak = zikloak;
             this.state.irakasleak = irakasleak;
         }
+        await this._loadTronkalIrakasleak();
         await this._refreshTaldeakLaburpena();
         this.state.loading = false;
+    }
+
+    // Carga los profesores tronkales (INGELES/ORIENTA/LPO) del mintegi actual,
+    // excluidos los que ya pertenecen a él (los devuelve el servidor filtrados).
+    async _loadTronkalIrakasleak() {
+        if (!this.state.selectedMintegi) {
+            this.state.tronkalIrakasleak = [];
+            return;
+        }
+        this.state.tronkalIrakasleak = await this.orm.call(
+            "op.faculty", "get_perfilazio_tronkal_irakasleak",
+            [this.state.selectedMintegi.id]);
+    }
+
+    // Busca un profesor por id en la lista del mintegi o en la de tronkalak,
+    // para reflejar en vivo los cambios de horas/gela/overload en ambas.
+    _findIrakasle(id) {
+        return this.state.irakasleak.find(f => f.id === id)
+            || this.state.tronkalIrakasleak.find(f => f.id === id)
+            || null;
     }
 
     async _reloadModuluak() {
@@ -258,7 +283,7 @@ class Perfilazioak extends Component {
 
     // Mintegiko taldeak: módulos sin asignar / total (consulta servidor)
     async _refreshTaldeakLaburpena() {
-        if (!this.state.selectedMintegi || this.state.ingelesaMode) {
+        if (!this.state.selectedMintegi) {
             this.state.taldeakLaburpena = [];
             this.state.mintegiKarguak = [];
             this.state.eleanitzaLaburpena = {
@@ -510,12 +535,12 @@ class Perfilazioak extends Component {
         }
 
         for (const upd of affected) {
-            const fidx = this.state.irakasleak.findIndex(f => f.id === upd.id);
-            if (fidx >= 0) {
-                this.state.irakasleak[fidx].orduak = upd.orduak;
-                this.state.irakasleak[fidx].overload = upd.overload;
-                this.state.irakasleak[fidx].gela = upd.gela;
-                if (upd.pt_pes !== undefined) this.state.irakasleak[fidx].pt_pes = upd.pt_pes;
+            const f = this._findIrakasle(upd.id);
+            if (f) {
+                f.orduak = upd.orduak;
+                f.overload = upd.overload;
+                f.gela = upd.gela;
+                if (upd.pt_pes !== undefined) f.pt_pes = upd.pt_pes;
             }
             if (this.state.selectedFaculty && this.state.selectedFaculty.id === upd.id) {
                 this.state.selectedFaculty.orduak = upd.orduak;
@@ -547,12 +572,12 @@ class Perfilazioak extends Component {
         // El profesor asignado puede estar o no en el panel izquierdo;
         // si está, actualizamos sus horas y resumen.
         for (const upd of affected) {
-            const fidx = this.state.irakasleak.findIndex(f => f.id === upd.id);
-            if (fidx >= 0) {
-                this.state.irakasleak[fidx].orduak = upd.orduak;
-                this.state.irakasleak[fidx].overload = upd.overload;
-                this.state.irakasleak[fidx].gela = upd.gela;
-                if (upd.pt_pes !== undefined) this.state.irakasleak[fidx].pt_pes = upd.pt_pes;
+            const f = this._findIrakasle(upd.id);
+            if (f) {
+                f.orduak = upd.orduak;
+                f.overload = upd.overload;
+                f.gela = upd.gela;
+                if (upd.pt_pes !== undefined) f.pt_pes = upd.pt_pes;
             }
             if (this.state.selectedFaculty && this.state.selectedFaculty.id === upd.id) {
                 this.state.selectedFaculty.orduak = upd.orduak;
@@ -713,12 +738,12 @@ class Perfilazioak extends Component {
     }
 
     _updateFacultyHours(facultyId, result) {
-        const fidx = this.state.irakasleak.findIndex(f => f.id === facultyId);
-        if (fidx >= 0) {
-            this.state.irakasleak[fidx].orduak = result.orduak;
-            this.state.irakasleak[fidx].overload = result.overload;
+        const f = this._findIrakasle(facultyId);
+        if (f) {
+            f.orduak = result.orduak;
+            f.overload = result.overload;
             if (result.gela !== undefined) {
-                this.state.irakasleak[fidx].gela = result.gela;
+                f.gela = result.gela;
             }
         }
         if (this.state.selectedFaculty && this.state.selectedFaculty.id === facultyId) {
@@ -857,6 +882,7 @@ class Perfilazioak extends Component {
         const res = await this.orm.call("op.faculty", "load_perfilazio_bertsioa", [v.id]);
         // Recargar toda la vista del mintegi
         await this._refreshIrakasleak();
+        await this._loadTronkalIrakasleak();
         if (this.state.selectedBatch) await this._reloadModuluak();
         if (this.state.selectedFaculty) {
             this.state.karguak = await this.orm.call(
