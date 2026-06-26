@@ -2,6 +2,22 @@
 
 Gestión del centro educativo CIFP Gizarte Berrikuntza LHII (Hernani) con Odoo 17 + OpenEducat.
 
+## Integración FET (generación de horarios) — EN CURSO
+
+Integración con FET (servicio en la 104) para generar horarios. **Lado Odoo
+documentado en detalle en [`FET/PROGRESO_ODOO.md`](FET/PROGRESO_ODOO.md)**; contrato
+de la API FET en `FET/INTEGRACION_ODOO.md`. Resumen de lo construido:
+- **Aste Saioak** (`op.timing`): rejilla Lun–Vie, 6 sesiones 8:00–14:30, recreo
+  11:00–11:30 (menú SIS seq 56). Carga: `load_timings.py`.
+- **`gela_mota`** (`op.classroom`): gela / tailerra.
+- **Ordutegi murrizpenak** (menú SIS seq 57): restricciones FET en
+  `models/op_fet_constraints.py` (`op.fet.*`): #1 Irakasleen erabilgarritasuna
+  (OWL grid), #3 Gelen erabilgarritasuna (OWL grid), #4 Saio simultaneoak
+  (desdoble/eleanitza auto + agrupaciones manuales con aforo), #5 Saio finkoak,
+  #6 Murrizpen orokorrak (config única). #2 y #7 sin pantalla (automático/no aplica).
+- **Pendiente**: `banaketa_id` (232 módulos), `capacity` (59 aulas), generador
+  `.fet`, cliente HTTP y parseo a `op.session`.
+
 ## Stack
 
 - **Odoo 17.0** en Docker (`odoo19`), puerto 8069

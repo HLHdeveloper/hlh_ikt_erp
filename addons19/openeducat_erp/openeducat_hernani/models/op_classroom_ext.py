@@ -10,6 +10,13 @@ class OpClassroomExt(models.Model):
              'Desmarkatuta: bestelako espazioa (biltegia, komuna, bulegoa, '
              'aldagela...).')
 
+    gela_mota = fields.Selection(
+        [('gela', 'Gela'),
+         ('tailerra', 'Tailerra')],
+        string='Gela mota', default='gela', index=True,
+        help='Gela mota FET ordutegirako: gela arrunta (modulu teorikoak) '
+             'edo tailerra (modulu praktikoak).')
+
     solairua = fields.Selection(
         [('0', '0. SOLAIRUA'),
          ('1', '1. SOLAIRUA'),

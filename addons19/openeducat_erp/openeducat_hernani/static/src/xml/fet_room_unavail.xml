@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="openeducat_hernani.FetRoomUnavail">
+        <div class="o_fet_unavail o_action">
+            <div class="o_content p-3">
+
+                <!-- Cabecera + selector de solairua -->
+                <div class="d-flex align-items-end gap-3 flex-wrap mb-3">
+                    <h5 class="mb-0 text-uppercase fw-semibold text-muted me-2">
+                        Gelen erabilgarritasuna
+                    </h5>
+                    <div>
+                        <label class="form-label mb-0 small fw-semibold">Solairua</label>
+                        <select class="form-select form-select-sm"
+                                t-on-change="onSolairuaChange">
+                            <option value="">— Solairu guztiak —</option>
+                            <t t-foreach="state.solairuak" t-as="s" t-key="s.key">
+                                <option t-att-value="s.key" t-esc="s.label"/>
+                            </t>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3 align-items-start">
+
+                    <!-- Panel izquierdo: lista de gelas -->
+                    <div class="feu-left border rounded p-2"
+                         style="min-width: 280px; max-width: 320px; max-height: 70vh; overflow-y: auto;">
+                        <div class="small fw-semibold text-muted mb-2">
+                            Gelak
+                            <span t-if="state.gelak.length"
+                                  class="badge bg-secondary ms-1"
+                                  t-esc="state.gelak.length"/>
+                        </div>
+                        <!-- Cabecera de columnas -->
+                        <div class="d-flex px-2 pb-1 mb-1 border-bottom small fw-semibold text-muted">
+                            <span class="flex-grow-1">Izena</span>
+                            <span class="feu-room-code text-end">Kodea</span>
+                        </div>
+                        <div t-foreach="state.gelak" t-as="r" t-key="r.id"
+                             class="feu-faculty px-2 py-1 rounded mb-1 d-flex align-items-center"
+                             t-att-class="state.selectedRoom and state.selectedRoom.id === r.id ? 'bg-primary text-white' : 'feu-faculty-hover'"
+                             style="cursor: pointer;"
+                             t-on-click="() => this.selectRoom(r)">
+                            <span class="flex-grow-1 text-truncate">
+                                <t t-esc="r.name"/>
+                                <span t-if="r.gela_mota === 'tailerra'"
+                                      class="badge bg-warning text-dark ms-1">T</span>
+                            </span>
+                            <span class="feu-room-code text-end small"
+                                  t-att-class="state.selectedRoom and state.selectedRoom.id === r.id ? '' : 'text-muted'"
+                                  t-esc="r.code"/>
+                        </div>
+                        <div t-if="!state.gelak.length"
+                             class="text-muted small fst-italic">
+                            Ez dago gela dozenterik.
+                        </div>
+                    </div>
+
+                    <!-- Panel derecho: rejilla 5 días × Aste Saioak -->
+                    <div class="feu-grid-wrap flex-grow-1">
+                        <t t-if="!state.selectedRoom">
+                            <div class="text-muted fst-italic p-3">
+                                Aukeratu gela bat ezkerrean, eta markatu hemen
+                                EZ dagoen erabilgarri franja.
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="mb-2">
+                                <span class="fw-semibold" t-esc="state.selectedRoom.name"/>
+                                <span class="text-muted ms-2 small">
+                                    (Markatuta: <t t-esc="unavailCount()"/> franja ez-erabilgarri)
+                                </span>
+                            </div>
+                            <table class="table table-bordered feu-grid text-center mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="feu-corner"></th>
+                                        <th t-foreach="state.days" t-as="d" t-key="d.key"
+                                            t-esc="d.label"/>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="state.timings" t-as="t" t-key="t.id">
+                                        <th class="feu-rowhead text-start" t-esc="t.name"/>
+                                        <td t-foreach="state.days" t-as="d" t-key="d.key"
+                                            class="feu-cell"
+                                            t-att-class="isUnavail(d.key, t.id) ? 'feu-off' : 'feu-on'"
+                                            style="cursor: pointer;"
+                                            t-on-click="() => this.toggleCell(d.key, t.id)">
+                                            <t t-if="isUnavail(d.key, t.id)">✕</t>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="small text-muted mt-2">
+                                Klik egin franja batean markatzeko/kentzeko.
+                                <span class="feu-legend feu-off ms-2"></span> = ez-erabilgarri ·
+                                <span class="feu-legend feu-on ms-1"></span> = erabilgarri
+                            </div>
+                        </t>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

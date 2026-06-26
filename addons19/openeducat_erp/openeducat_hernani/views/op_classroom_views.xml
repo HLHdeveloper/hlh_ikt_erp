@@ -13,6 +13,7 @@
                 </tree>
                 <field name="code" position="after">
                     <field name="solairua"/>
+                    <field name="gela_mota"/>
                 </field>
                 <field name="capacity" position="before">
                     <field name="irakasgela" widget="boolean_toggle"/>
@@ -30,6 +31,7 @@
             <field name="arch" type="xml">
                 <field name="capacity" position="after">
                     <field name="irakasgela"/>
+                    <field name="gela_mota"/>
                 </field>
             </field>
         </record>
@@ -49,6 +51,12 @@
                     <filter string="Bestelakoak" name="ez_irakasgelak"
                             domain="[('irakasgela', '=', False)]"/>
                     <separator/>
+                    <!-- Gela mota: gela arrunta / tailerra -->
+                    <filter string="Gelak" name="mota_gela"
+                            domain="[('gela_mota', '=', 'gela')]"/>
+                    <filter string="Tailerrak" name="mota_tailerra"
+                            domain="[('gela_mota', '=', 'tailerra')]"/>
+                    <separator/>
                     <!-- Desplegable Solairua: filtra las gelas por planta -->
                     <filter string="0. SOLAIRUA" name="solairua_0"
                             domain="[('solairua', '=', '0')]"/>
@@ -66,6 +74,8 @@
                             domain="[]" context="{'group_by':'irakasgela'}"/>
                     <filter string="Solairua" name="group_by_solairua"
                             domain="[]" context="{'group_by':'solairua'}"/>
+                    <filter string="Gela mota" name="group_by_gela_mota"
+                            domain="[]" context="{'group_by':'gela_mota'}"/>
                 </filter>
             </field>
         </record>

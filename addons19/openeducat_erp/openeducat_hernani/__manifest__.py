@@ -7,7 +7,7 @@
     'summary': 'Extensión de OpenEduCat para el CIFP Gizarte Berrikuntza LHII (Hernani)',
     'author': 'CIFP Gizarte Berrikuntza',
     'depends': ['openeducat_core', 'openeducat_parent', 'openeducat_classroom',
-                'openeducat_fees'],
+                'openeducat_fees', 'openeducat_timetable'],
     'assets': {
         'web.assets_backend': [
             'openeducat_hernani/static/src/css/hernani.css',
@@ -22,6 +22,10 @@
             'openeducat_hernani/static/src/components/desdoble_he.js',
             'openeducat_hernani/static/src/xml/desdoble_he.xml',
             'openeducat_hernani/static/src/components/navbar_active.js',
+            'openeducat_hernani/static/src/components/fet_teacher_unavail.js',
+            'openeducat_hernani/static/src/xml/fet_teacher_unavail.xml',
+            'openeducat_hernani/static/src/components/fet_room_unavail.js',
+            'openeducat_hernani/static/src/xml/fet_room_unavail.xml',
         ],
     },
     'data': [
@@ -41,6 +45,7 @@
         'views/op_desdoble_he_views.xml',
         'views/op_report_views.xml',
         'views/op_sis_menu.xml',
+        'views/op_fet_constraints_views.xml',
         'views/op_sis_translations.xml',
     ],
     'installable': True,

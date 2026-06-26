@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Registro único de Murrizpen orokorrak (#6). noupdate para que las
+         ediciones del usuario NO se pisen al actualizar el módulo. -->
+    <data noupdate="1">
+        <record id="fet_config_singleton" model="op.fet.config">
+            <field name="name">Ordutegi murrizpen orokorrak</field>
+        </record>
+    </data>
+
+    <data>
+
+        <!-- ============================================================= -->
+        <!-- Menú padre: Ordutegi murrizpenak (seq 57, entre Aste Saioak   -->
+        <!-- (56) e Irakasleak (bajado a 58))                              -->
+        <!-- ============================================================= -->
+        <!-- Irakasleak se baja a 58 en op_sis_menu.xml para hacer sitio. -->
+        <menuitem id="menu_fet_constraints_root"
+                  name="Ordutegi murrizpenak"
+                  parent="openeducat_core.menu_op_school_root"
+                  sequence="57"
+                  groups="openeducat_core.group_op_back_office_admin"/>
+
+        <!-- ============================================================= -->
+        <!-- #1 · Irakasleen erabilgarritasuna                             -->
+        <!--      (op.fet.teacher.unavailability)                          -->
+        <!-- ============================================================= -->
+        <record id="view_fet_teacher_unavail_tree" model="ir.ui.view">
+            <field name="name">op.fet.teacher.unavailability.tree</field>
+            <field name="model">op.fet.teacher.unavailability</field>
+            <field name="arch" type="xml">
+                <tree string="Irakasleen ez-erabilgarritasuna"
+                      editable="bottom" multi_edit="1">
+                    <field name="faculty_id"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="day"/>
+                    <field name="timing_id"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="reason"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_fet_teacher_unavail_search" model="ir.ui.view">
+            <field name="name">op.fet.teacher.unavailability.search</field>
+            <field name="model">op.fet.teacher.unavailability</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="faculty_id"/>
+                    <field name="timing_id"/>
+                    <filter string="Astelehena" name="d_mon"
+                            domain="[('day','=','monday')]"/>
+                    <filter string="Asteartea" name="d_tue"
+                            domain="[('day','=','tuesday')]"/>
+                    <filter string="Asteazkena" name="d_wed"
+                            domain="[('day','=','wednesday')]"/>
+                    <filter string="Osteguna" name="d_thu"
+                            domain="[('day','=','thursday')]"/>
+                    <filter string="Ostirala" name="d_fri"
+                            domain="[('day','=','friday')]"/>
+                    <separator/>
+                    <group expand="0" string="Taldekatu">
+                        <filter string="Irakaslea" name="gb_faculty"
+                                domain="[]" context="{'group_by':'faculty_id'}"/>
+                        <filter string="Eguna" name="gb_day"
+                                domain="[]" context="{'group_by':'day'}"/>
+                    </group>
+                    <searchpanel>
+                        <field name="faculty_id" icon="fa-user"
+                               enable_counters="1"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+        <record id="act_fet_teacher_unavail" model="ir.actions.act_window">
+            <field name="name">Irakasleen erabilgarritasuna</field>
+            <field name="res_model">op.fet.teacher.unavailability</field>
+            <field name="view_mode">tree</field>
+            <field name="search_view_id" ref="view_fet_teacher_unavail_search"/>
+            <field name="context">{'search_default_gb_faculty': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Markatu irakasle bakoitzak klaserik EZIN duen franja (egun ×
+                    Aste Saioa). Hutsik dauden irakasleak guztiz erabilgarri daude.
+                </p>
+            </field>
+        </record>
+
+        <!-- Acción cliente OWL: rejilla 5 días × Aste Saioak + profes por mintegi -->
+        <record id="action_fet_teacher_unavail" model="ir.actions.client">
+            <field name="name">Irakasleen erabilgarritasuna</field>
+            <field name="tag">fet_teacher_unavail_action</field>
+        </record>
+
+        <menuitem id="menu_fet_teacher_unavail"
+                  name="Irakasleen erabilgarritasuna"
+                  parent="menu_fet_constraints_root"
+                  sequence="10"
+                  action="action_fet_teacher_unavail"/>
+
+        <!-- ============================================================= -->
+        <!-- #3 · Gelen erabilgarritasuna (op.fet.room.unavailability)      -->
+        <!-- ============================================================= -->
+        <record id="view_fet_room_unavail_tree" model="ir.ui.view">
+            <field name="name">op.fet.room.unavailability.tree</field>
+            <field name="model">op.fet.room.unavailability</field>
+            <field name="arch" type="xml">
+                <tree string="Gelen ez-erabilgarritasuna"
+                      editable="bottom" multi_edit="1">
+                    <field name="classroom_id"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="day"/>
+                    <field name="timing_id"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="reason"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_fet_room_unavail_search" model="ir.ui.view">
+            <field name="name">op.fet.room.unavailability.search</field>
+            <field name="model">op.fet.room.unavailability</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="classroom_id"/>
+                    <field name="timing_id"/>
+                    <filter string="Astelehena" name="d_mon"
+                            domain="[('day','=','monday')]"/>
+                    <filter string="Asteartea" name="d_tue"
+                            domain="[('day','=','tuesday')]"/>
+                    <filter string="Asteazkena" name="d_wed"
+                            domain="[('day','=','wednesday')]"/>
+                    <filter string="Osteguna" name="d_thu"
+                            domain="[('day','=','thursday')]"/>
+                    <filter string="Ostirala" name="d_fri"
+                            domain="[('day','=','friday')]"/>
+                    <separator/>
+                    <group expand="0" string="Taldekatu">
+                        <filter string="Gela" name="gb_room"
+                                domain="[]" context="{'group_by':'classroom_id'}"/>
+                        <filter string="Eguna" name="gb_day"
+                                domain="[]" context="{'group_by':'day'}"/>
+                    </group>
+                    <searchpanel>
+                        <field name="classroom_id" icon="fa-building"
+                               enable_counters="1"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+        <record id="act_fet_room_unavail" model="ir.actions.act_window">
+            <field name="name">Gelen erabilgarritasuna</field>
+            <field name="res_model">op.fet.room.unavailability</field>
+            <field name="view_mode">tree</field>
+            <field name="search_view_id" ref="view_fet_room_unavail_search"/>
+            <field name="context">{'search_default_gb_room': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Markatu gela bakoitza zein franjatan EZ dagoen erabilgarri
+                    (egun × Aste Saioa). Hutsik dauden gelak beti erabilgarri daude.
+                </p>
+            </field>
+        </record>
+
+        <!-- Acción cliente OWL: rejilla 5 días × Aste Saioak + gelas por solairua -->
+        <record id="action_fet_room_unavail" model="ir.actions.client">
+            <field name="name">Gelen erabilgarritasuna</field>
+            <field name="tag">fet_room_unavail_action</field>
+        </record>
+
+        <menuitem id="menu_fet_room_unavail"
+                  name="Gelen erabilgarritasuna"
+                  parent="menu_fet_constraints_root"
+                  sequence="30"
+                  action="action_fet_room_unavail"/>
+
+        <!-- ============================================================= -->
+        <!-- #4 · Saio simultaneoak (op.fet.simultaneity)                  -->
+        <!-- ============================================================= -->
+        <record id="view_fet_simultaneity_tree" model="ir.ui.view">
+            <field name="name">op.fet.simultaneity.tree</field>
+            <field name="model">op.fet.simultaneity</field>
+            <field name="arch" type="xml">
+                <tree string="Saio simultaneoak" editable="bottom"
+                      decoration-muted="not enabled">
+                    <header>
+                        <button name="generate_pairs" type="object"
+                                string="Sortu automatikoki" display="always"
+                                class="btn-secondary"/>
+                        <button name="%(act_fet_grouping)d" type="action"
+                                string="Desdoble/agrupazio berria"
+                                display="always" class="btn-primary"/>
+                    </header>
+                    <field name="batch_id" readonly="1"/>
+                    <field name="subject_id" options="{'no_create': True}"/>
+                    <field name="copy_id" options="{'no_create': True}"/>
+                    <field name="mota"/>
+                    <field name="desdoble_mota"
+                           readonly="mota != 'desdoblea'"
+                           placeholder="—"/>
+                    <field name="eleanitza_mota"
+                           readonly="mota != 'eleanitza'"
+                           placeholder="—"/>
+                    <field name="enabled" widget="boolean_toggle"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_fet_simultaneity_search" model="ir.ui.view">
+            <field name="name">op.fet.simultaneity.search</field>
+            <field name="model">op.fet.simultaneity</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="subject_id"/>
+                    <field name="copy_id"/>
+                    <field name="department_id"/>
+                    <field name="batch_id"/>
+                    <filter string="Desdobleak" name="m_desdo"
+                            domain="[('mota','=','desdoblea')]"/>
+                    <filter string="Eleanitzak" name="m_ele"
+                            domain="[('mota','=','eleanitza')]"/>
+                    <separator/>
+                    <filter string="Gaituta" name="f_enabled"
+                            domain="[('enabled','=',True)]"/>
+                    <filter string="Desgaituta" name="f_disabled"
+                            domain="[('enabled','=',False)]"/>
+                    <group expand="0" string="Taldekatu">
+                        <filter string="Mintegia" name="gb_dept"
+                                domain="[]" context="{'group_by':'department_id'}"/>
+                        <filter string="Taldea" name="gb_batch"
+                                domain="[]" context="{'group_by':'batch_id'}"/>
+                        <filter string="Mota" name="gb_mota"
+                                domain="[]" context="{'group_by':'mota'}"/>
+                    </group>
+                    <searchpanel>
+                        <field name="department_id" icon="fa-sitemap"
+                               enable_counters="1"/>
+                        <field name="mota" icon="fa-clone" select="multi"
+                               enable_counters="1"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+        <!-- Server action: auto-generar pares desde DESDO_/HE_ (cog menu) -->
+        <record id="act_server_fet_simul_gen" model="ir.actions.server">
+            <field name="name">Sortu automatikoki (desdoble/eleanitza)</field>
+            <field name="model_id" ref="model_op_fet_simultaneity"/>
+            <field name="binding_model_id" ref="model_op_fet_simultaneity"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">action = model.generate_pairs()</field>
+        </record>
+
+        <record id="act_fet_simultaneity" model="ir.actions.act_window">
+            <field name="name">Saio simultaneoak</field>
+            <field name="res_model">op.fet.simultaneity</field>
+            <field name="view_mode">tree</field>
+            <field name="search_view_id" ref="view_fet_simultaneity_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Desdoble eta eleanitzen saio simultaneoak. Erabili
+                    Ekintzak › "Sortu automatikoki" botoia DESDO_/HE_ moduluetatik
+                    bikoteak sortzeko, eta doitu hemen modua eta gaitzea.
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_fet_simultaneity"
+                  name="Saio simultaneoak"
+                  parent="menu_fet_constraints_root"
+                  sequence="40"
+                  action="act_fet_simultaneity"/>
+
+        <!-- ............ Desdoble/Agrupación manual (op.fet.grouping) ........ -->
+        <record id="view_fet_grouping_tree" model="ir.ui.view">
+            <field name="name">op.fet.grouping.tree</field>
+            <field name="model">op.fet.grouping</field>
+            <field name="arch" type="xml">
+                <tree string="Desdobleak / Agrupazioak"
+                      decoration-danger="overflow" decoration-muted="not enabled">
+                    <field name="name"/>
+                    <field name="department_id"/>
+                    <field name="mota"/>
+                    <field name="batch_ids" widget="many2many_tags"/>
+                    <field name="classroom_ids" widget="many2many_tags"/>
+                    <field name="student_total"/>
+                    <field name="capacity_total"/>
+                    <field name="overflow" string="Aforoa gainditua"/>
+                    <field name="enabled" widget="boolean_toggle"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_fet_grouping_form" model="ir.ui.view">
+            <field name="name">op.fet.grouping.form</field>
+            <field name="model">op.fet.grouping</field>
+            <field name="arch" type="xml">
+                <form string="Desdoblea / Agrupazioa">
+                    <sheet>
+                        <field name="overflow" invisible="1"/>
+                        <div class="alert alert-danger" role="alert"
+                             invisible="not overflow">
+                            <field name="overflow_msg"/>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="mota" widget="radio"/>
+                                <field name="batch_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"/>
+                                <field name="classroom_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"/>
+                                <field name="enabled"/>
+                            </group>
+                            <group>
+                                <field name="student_total"/>
+                                <field name="capacity_total"/>
+                                <field name="department_id" readonly="1"/>
+                            </group>
+                        </group>
+                        <!-- banatu: reparto de alumnos por aula -->
+                        <notebook invisible="mota != 'banatu'">
+                            <page string="Banaketa (ikasleak gelaka)">
+                                <field name="line_ids">
+                                    <tree editable="bottom"
+                                          decoration-danger="over_capacity">
+                                        <field name="batch_id"
+                                               domain="[('id','in',parent.batch_ids)]"
+                                               options="{'no_create': True}"/>
+                                        <field name="classroom_id"
+                                               domain="[('id','in',parent.classroom_ids)]"
+                                               options="{'no_create': True}"/>
+                                        <field name="students"/>
+                                        <field name="capacity" readonly="1"/>
+                                        <field name="over_capacity"
+                                               column_invisible="1"/>
+                                    </tree>
+                                </field>
+                                <p class="text-muted small mt-1">
+                                    Afororik gabeko gelek ezin dute aforo-abisua
+                                    eman; bete 'Capacity' Gelak fitxan.
+                                </p>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="act_fet_grouping" model="ir.actions.act_window">
+            <field name="name">Desdobleak / Agrupazioak</field>
+            <field name="res_model">op.fet.grouping</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Sortu desdoble (banatu) edo agrupazio (bateratu) bat: aukeratu
+                    taldeak eta gelak, eta banatu kasuan zehaztu ikasleak gelaka.
+                </p>
+            </field>
+        </record>
+
+        <!-- Botón en el cog de Saio simultaneoak: crear/definir desdoble o agrup. -->
+        <record id="act_server_fet_grouping_new" model="ir.actions.server">
+            <field name="name">Desdoble/agrupazioa sortu edo definitu (eskuz)</field>
+            <field name="model_id" ref="model_op_fet_simultaneity"/>
+            <field name="binding_model_id" ref="model_op_fet_simultaneity"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">action = {
+    'type': 'ir.actions.act_window',
+    'name': 'Desdobleak / Agrupazioak',
+    'res_model': 'op.fet.grouping',
+    'view_mode': 'tree,form',
+    'target': 'current',
+}</field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- #5 · Saio finkoak (op.fet.fixed.session)                      -->
+        <!-- ============================================================= -->
+        <record id="view_fet_fixed_session_tree" model="ir.ui.view">
+            <field name="name">op.fet.fixed.session.tree</field>
+            <field name="model">op.fet.fixed.session</field>
+            <field name="arch" type="xml">
+                <tree string="Saio finkoak" editable="bottom">
+                    <field name="subject_id"
+                           options="{'no_create': True}"/>
+                    <field name="batch_id"/>
+                    <field name="day"/>
+                    <field name="timing_id"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="note"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_fet_fixed_session_search" model="ir.ui.view">
+            <field name="name">op.fet.fixed.session.search</field>
+            <field name="model">op.fet.fixed.session</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="subject_id"/>
+                    <field name="batch_id"/>
+                    <field name="timing_id"/>
+                    <group expand="0" string="Taldekatu">
+                        <filter string="Taldea" name="gb_batch"
+                                domain="[]" context="{'group_by':'batch_id'}"/>
+                        <filter string="Eguna" name="gb_day"
+                                domain="[]" context="{'group_by':'day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="act_fet_fixed_session" model="ir.actions.act_window">
+            <field name="name">Saio finkoak</field>
+            <field name="res_model">op.fet.fixed.session</field>
+            <field name="view_mode">tree</field>
+            <field name="search_view_id" ref="view_fet_fixed_session_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Ordu finkoa behar duten saioak (adib. tutoretzak): aukeratu
+                    modulua eta finkatu egun × Aste Saioa.
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_fet_fixed_session"
+                  name="Saio finkoak"
+                  parent="menu_fet_constraints_root"
+                  sequence="50"
+                  action="act_fet_fixed_session"/>
+
+        <!-- ============================================================= -->
+        <!-- #6 · Murrizpen orokorrak (op.fet.config, registro único)      -->
+        <!-- ============================================================= -->
+        <record id="view_fet_config_form" model="ir.ui.view">
+            <field name="name">op.fet.config.form</field>
+            <field name="model">op.fet.config</field>
+            <field name="arch" type="xml">
+                <form string="Murrizpen orokorrak">
+                    <sheet>
+                        <group>
+                            <group string="Ikasleak">
+                                <field name="students_no_gaps"/>
+                                <field name="same_subject_once_per_day"/>
+                            </group>
+                            <group string="Irakasleak">
+                                <field name="teacher_max_gaps_day"/>
+                                <field name="teacher_max_hours_day"/>
+                                <field name="max_hours_continuously"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="act_fet_config" model="ir.actions.act_window">
+            <field name="name">Murrizpen orokorrak</field>
+            <field name="res_model">op.fet.config</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_fet_config_form"/>
+            <field name="res_id" ref="fet_config_singleton"/>
+            <field name="target">current</field>
+        </record>
+
+        <menuitem id="menu_fet_config"
+                  name="Murrizpen orokorrak"
+                  parent="menu_fet_constraints_root"
+                  sequence="60"
+                  action="act_fet_config"/>
+
+    </data>
+</odoo>
