@@ -430,11 +430,15 @@ class OpFaculty(models.Model):
                        WHERE d.code = 'DESDO_' || s.code) AS has_desdo,
                 (SELECT d.rpt_total FROM op_subject d
                  WHERE d.code = 'DESDO_' || s.code LIMIT 1) AS desdo_orduak,
-                s.pl
+                s.pl,
+                EXISTS(SELECT 1 FROM op_subject e
+                       WHERE e.code = 'ERREF_' || s.code) AS has_erref,
+                (SELECT e.rpt_total FROM op_subject e
+                 WHERE e.code = 'ERREF_' || s.code LIMIT 1) AS erref_orduak
             FROM op_subject s
             WHERE s.batch_id = %s
               AND s.active = true
-              AND s.code !~* '^(DESDO_|HE_)'
+              AND s.code !~* '^(DESDO_|HE_|ERREF_)'
             ORDER BY s.code
         """, (batch_id,))
         return [
@@ -449,6 +453,10 @@ class OpFaculty(models.Model):
                 # defecto el RPT total del módulo origen (comportamiento previo).
                 'desdo_orduak': float(r[12]) if r[12] is not None else float(r[8] or 0),
                 'pl': (r[13] or '').replace('_', '/'),
+                'has_erref': r[14],
+                # Horas de errefortzu: las de la copia ERREF_ existente, o por
+                # defecto el RPT total del módulo origen (igual que desdoble).
+                'erref_orduak': float(r[15]) if r[15] is not None else float(r[8] or 0),
             }
             for r in cr.fetchall()
         ]
@@ -485,22 +493,26 @@ class OpFaculty(models.Model):
             defaults.update(overrides)
         return src.copy(defaults)
 
-    def _desdo_used_orduak(self, batch_id, exclude_code=None):
-        """Suma de horas de desdoble (rpt_total de las copias DESDO_ activas)
-        de una taldea, opcionalmente excluyendo una copia por su code."""
+    # Campo de op.batch con el reparto de horas del grupo según el prefijo.
+    _KOPIA_BATCH_FIELD = {'DESDO_': 'desdoble_orduak', 'ERREF_': 'errefortzu_orduak'}
+
+    def _desdo_used_orduak(self, batch_id, prefix='DESDO_', exclude_code=None):
+        """Suma de horas (rpt_total de las copias DESDO_/ERREF_ activas) de una
+        taldea para el prefijo dado, opcionalmente excluyendo una por su code."""
         cr = self.env.cr
         cr.execute("""
             SELECT COALESCE(SUM(rpt_total), 0)
             FROM op_subject
             WHERE batch_id = %s AND active = true
-              AND code ~* '^DESDO_' AND code <> %s
-        """, (batch_id, exclude_code or ''))
+              AND code ~* %s AND code <> %s
+        """, (batch_id, '^' + prefix, exclude_code or ''))
         return float(cr.fetchone()[0] or 0)
 
-    def _clamp_desdo_orduak(self, src, desdo_orduak):
-        """Acota las horas de desdoble: al RPT total del módulo origen y al tope
-        de horas de desdoble del grupo (batch.desdoble_orduak; 0 = sin tope).
-        La suma de desdoble del grupo no puede superar ese tope."""
+    def _clamp_desdo_orduak(self, src, desdo_orduak, prefix='DESDO_'):
+        """Acota las horas de la copia con horas (DESDO_/ERREF_): siempre al RPT
+        total del módulo origen y al reparto de horas del grupo
+        (op.batch.desdoble_orduak / errefortzu_orduak; 0 = sin tope). La suma de
+        las copias del grupo no puede superar ese reparto."""
         try:
             v = float(desdo_orduak)
         except (TypeError, ValueError):
@@ -510,22 +522,26 @@ class OpFaculty(models.Model):
         cap = float(src.rpt_total or 0)
         if v > cap:
             v = cap
-        total = float(src.batch_id.desdoble_orduak or 0)
+        field = self._KOPIA_BATCH_FIELD.get(prefix)
+        total = float(src.batch_id[field] or 0) if field else 0.0
         if total > 0:
             used_others = self._desdo_used_orduak(
-                src.batch_id.id, exclude_code='DESDO_' + (src.code or ''))
+                src.batch_id.id, prefix, exclude_code=prefix + (src.code or ''))
             group_cap = max(total - used_others, 0.0)
             if v > group_cap:
                 v = group_cap
         return round(v, 2)
 
     @api.model
-    def get_perfilazio_desdoble_info(self, batch_id):
-        """Tope de horas de desdoble del grupo y horas ya consumidas (suma de
-        rpt_total de las copias DESDO_ de la taldea)."""
+    def get_perfilazio_desdoble_info(self, batch_id, mota='desdoblea'):
+        """Reparto de horas del grupo (op.batch.desdoble_orduak/errefortzu_orduak)
+        y horas ya consumidas (suma de rpt_total de las copias DESDO_/ERREF_ de
+        la taldea). Informativo para la cabecera (solo lectura)."""
+        prefix = 'ERREF_' if mota == 'errefortzuak' else 'DESDO_'
+        field = self._KOPIA_BATCH_FIELD[prefix]
         batch = self.env['op.batch'].browse(batch_id)
-        total = float(batch.desdoble_orduak or 0) if batch.exists() else 0.0
-        used = self._desdo_used_orduak(batch_id)
+        total = float(batch[field] or 0) if batch.exists() else 0.0
+        used = self._desdo_used_orduak(batch_id, prefix)
         return {'total': round(total, 2), 'used': round(used, 2),
                 'remaining': round(max(total - used, 0.0), 2)}
 
@@ -566,8 +582,8 @@ class OpFaculty(models.Model):
             return {'exists': False}
         overrides = None
         applied = None
-        if prefix == 'DESDO_' and desdo_orduak is not None:
-            v = self._clamp_desdo_orduak(src, desdo_orduak)
+        if prefix in ('DESDO_', 'ERREF_') and desdo_orduak is not None:
+            v = self._clamp_desdo_orduak(src, desdo_orduak, prefix=prefix)
             if v is not None:
                 overrides = {'rpt_total': v, 'rpt_reala': v}
                 applied = v
@@ -576,21 +592,22 @@ class OpFaculty(models.Model):
         return {'exists': True, 'orduak': applied}
 
     @api.model
-    def set_perfilazio_desdoble_orduak(self, subject_id, desdo_orduak):
-        """Actualiza las horas (RPT) de la copia DESDO_ ya existente de un
-        módulo origen. Las acota a [0, rpt_total del origen] y fija tanto
-        rpt_total como rpt_reala (RPT = rpt_reala en la perfilación). Si la
-        copia está asignada a un profesor, sus horas se recalcularán al
-        recargar. Devuelve {'orduak': horas_aplicadas} o False si no existe."""
+    def set_perfilazio_desdoble_orduak(self, subject_id, desdo_orduak, prefix='DESDO_'):
+        """Actualiza las horas (RPT) de la copia con horas (DESDO_/ERREF_) ya
+        existente de un módulo origen. Las acota a [0, rpt_total del origen] (y
+        para DESDO_ al tope del grupo) y fija tanto rpt_total como rpt_reala
+        (RPT = rpt_reala en la perfilación). Si la copia está asignada a un
+        profesor, sus horas se recalcularán al recargar. Devuelve
+        {'orduak': horas_aplicadas} o False si no existe."""
         Subject = self.env['op.subject']
         src = Subject.browse(subject_id)
         if not src.exists() or not src.code:
             return False
         copy = Subject.with_context(active_test=False).search(
-            [('code', '=', 'DESDO_' + src.code)], limit=1)
+            [('code', '=', (prefix or 'DESDO_') + src.code)], limit=1)
         if not copy:
             return False
-        v = self._clamp_desdo_orduak(src, desdo_orduak)
+        v = self._clamp_desdo_orduak(src, desdo_orduak, prefix=prefix or 'DESDO_')
         if v is None:
             return False
         copy.write({'rpt_total': v, 'rpt_reala': v})
@@ -870,31 +887,90 @@ class OpFaculty(models.Model):
         mintegi (suma de sus líneas del dept); 'pending' (esleitzeke) = horas
         aún sin repartir a profesores (total − horas en op.perfilazio.kargu)."""
         self.env.cr.execute("""
-            SELECT k.code, k.name,
+            SELECT k.code, k.name, k.kargu_mota,
                    COALESCE(SUM(km.orduak), 0) AS total_mintegi,
                    COALESCE((SELECT SUM(pk.orduak)
                              FROM op_perfilazio_kargu pk
                              JOIN op_department_op_faculty_rel dfr
                                   ON dfr.op_faculty_id = pk.faculty_id
                              WHERE pk.kargu_id = k.id
-                               AND dfr.op_department_id = %s), 0) AS esleituak
+                               AND dfr.op_department_id = %s), 0) AS esleituak,
+                   EXISTS(SELECT 1
+                          FROM op_perfilazio_kargu pk
+                          JOIN op_department_op_faculty_rel dfr
+                               ON dfr.op_faculty_id = pk.faculty_id
+                          WHERE pk.kargu_id = k.id
+                            AND dfr.op_department_id = %s) AS assigned
             FROM op_kargu_mintegi km
             JOIN op_kargu k ON k.id = km.kargu_id
             WHERE km.department_id = %s
-            GROUP BY k.id, k.code, k.name
+            GROUP BY k.id, k.code, k.name, k.kargu_mota
             ORDER BY k.code
-        """, (dept_id, dept_id))
+        """, (dept_id, dept_id, dept_id))
         rows = []
         for r in self.env.cr.fetchall():
-            total = round(float(r[2] or 0), 2)
-            esleituak = float(r[3] or 0)
+            total = round(float(r[3] or 0), 2)
+            esleituak = float(r[4] or 0)
             rows.append({
                 'code': r[0] or r[1] or '',
+                # 'kudeaketa' = KUDEAKETA_KARGUAK; 'ardurak' = ARDURAK. Permite
+                # dividir la tabla "Mintegiko karguak" en dos secciones.
+                'kargu_mota': r[2] or 'ardurak',
                 'total': total,
                 # 'esleitzeke' = horas aún sin repartir a profesores; nunca
                 # negativo (un kargu sobre-asignado muestra 0 por asignar).
                 'pending': round(max(total - esleituak, 0.0), 2),
+                # ¿el kargu está asignado a algún profesor del mintegi? Las
+                # TUTO_ (0 h) deben asignarse obligatoriamente: si no lo están
+                # no se resaltan en verde aunque su pending sea 0.
+                'assigned': bool(r[5]),
             })
+        # Tutoretzak (TUTO_) sin reparto por mintegi: no tienen línea en
+        # op.kargu.mintegi, pero la vista op.kargu.mintegi.all las mapea a su
+        # mintegi (grupo embebido en el código / TUTO_FG_ESP->MEKANIKA). Se
+        # añaden con 0 h para que aparezcan en el apartado KARGUAK.
+        existing = {r['code'] for r in rows}
+        self.env.cr.execute(r"""
+            SELECT v.kargu_code, k.kargu_mota,
+                   -- Una TUTO_ está asignada (verde) si lo está por cualquiera
+                   -- de las dos vías:
+                   --  a) el módulo de tutoría del taldea (op.subject
+                   --     '<taldea>_TUTO_…', batch 'TUTO_'||b.code = el código
+                   --     del kargu) tiene profesor, o
+                   --  b) el kargu está asignado a un profesor del mintegi por el
+                   --     desplegable del pie de las tablas (op.perfilazio.kargu).
+                   (EXISTS(SELECT 1
+                           FROM op_subject s
+                           JOIN op_batch b ON b.id = s.batch_id
+                           WHERE s.active = true
+                             AND s.faculty_id IS NOT NULL
+                             AND s.code ILIKE '%%TUTO%%'
+                             AND 'TUTO_' || b.code = v.kargu_code)
+                    OR EXISTS(SELECT 1
+                              FROM op_perfilazio_kargu pk
+                              JOIN op_department_op_faculty_rel dfr
+                                   ON dfr.op_faculty_id = pk.faculty_id
+                              WHERE pk.kargu_id = k.id
+                                AND dfr.op_department_id = v.department_id)
+                   ) AS assigned
+            FROM op_kargu_mintegi_all v
+            JOIN op_kargu k ON k.id = v.kargu_id
+            WHERE v.department_id = %s
+              AND v.id >= 1000000000
+              AND v.kargu_code LIKE 'TUTO\_%%'
+            ORDER BY v.kargu_code
+        """, (dept_id,))
+        for code, mota, assigned in self.env.cr.fetchall():
+            if code in existing:
+                continue
+            rows.append({
+                'code': code or '',
+                'kargu_mota': mota or 'kudeaketa',
+                'total': 0.0,
+                'pending': 0.0,
+                'assigned': bool(assigned),
+            })
+        rows.sort(key=lambda r: r['code'])
         return rows
 
     @api.model
@@ -905,7 +981,9 @@ class OpFaculty(models.Model):
         (Irakaslea) si lo hubiera. Devuelve {'eleanitza': [...], 'desdoblea': [...]}."""
         self.env.cr.execute(r"""
             SELECT
-                CASE WHEN s.code ~* '^HE_' THEN 'eleanitza' ELSE 'desdoblea' END AS mota,
+                CASE WHEN s.code ~* '^HE_' THEN 'eleanitza'
+                     WHEN s.code ~* '^ERREF_' THEN 'errefortzuak'
+                     ELSE 'desdoblea' END AS mota,
                 s.id, s.code, s.rpt_reala, rp.name AS faculty_name,
                 b.name AS taldea, c.name AS zikloa
             FROM op_subject s
@@ -915,10 +993,10 @@ class OpFaculty(models.Model):
             LEFT JOIN res_partner rp ON rp.id = f.partner_id
             WHERE c.department_id = %s
               AND s.active = true
-              AND (s.code ~* '^HE_' OR s.code ~* '^DESDO_')
+              AND (s.code ~* '^HE_' OR s.code ~* '^DESDO_' OR s.code ~* '^ERREF_')
             ORDER BY c.name, b.name, s.code
         """, (dept_id,))
-        res = {'eleanitza': [], 'desdoblea': []}
+        res = {'eleanitza': [], 'desdoblea': [], 'errefortzuak': []}
         for mota, sid, code, rpt, fname, taldea, zikloa in self.env.cr.fetchall():
             res[mota].append({
                 'id': sid, 'code': code or '',
@@ -930,29 +1008,244 @@ class OpFaculty(models.Model):
 
     @api.model
     def get_perfilazio_eleanitza_laburpena(self, dept_id):
-        """Horas de los módulos copia ELEANITZA (code 'HE_…') y DESDOBLE
-        ('DESDO_…') del mintegi (taldea→zikloa→dept). 'total' (ordu guztiak) =
-        suma de rpt_reala de esas copias; 'pending' (esleitzeke) = suma de
-        rpt_reala de las que aún no tienen profesor asignado."""
-        self.env.cr.execute(r"""
-            SELECT
-                CASE WHEN s.code ~* '^HE_' THEN 'eleanitza' ELSE 'desdoblea' END AS mota,
-                COALESCE(SUM(s.rpt_reala), 0) AS total,
-                COALESCE(SUM(s.rpt_reala) FILTER (WHERE s.faculty_id IS NULL), 0) AS pending
+        """Tabla "Eleanitza / Desdobleak / Errefortzuak (ordu erabilgarriak)".
+        - ELEANITZA: 'total' (ordu guztiak) = suma rpt_reala de las copias HE_;
+          'pending' (esleitzeke) = la parte aún sin profesor. (Informativo,
+          calculado de la perfilación — no editable.)
+        - DESDOBLEA / ERREFORTZUAK: 'total' = tope del mintegi (ordu erabilgarriak,
+          op.department.desdoble_orduak / errefortzu_orduak, EDITABLE); 'pending'
+          (esleitzeke) = tope − repartido a los grupos (op.batch.*). Verde a 0."""
+        cr = self.env.cr
+        # Eleanitza: calculado de las copias HE_ (sin cambios).
+        cr.execute(r"""
+            SELECT COALESCE(SUM(s.rpt_reala), 0),
+                   COALESCE(SUM(s.rpt_reala) FILTER (WHERE s.faculty_id IS NULL), 0)
             FROM op_subject s
             JOIN op_batch b ON b.id = s.batch_id
             JOIN op_course c ON c.id = b.course_id
-            WHERE c.department_id = %s
-              AND s.active = true
-              AND (s.code ~* '^HE_' OR s.code ~* '^DESDO_')
-            GROUP BY mota
+            WHERE c.department_id = %s AND s.active = true AND s.code ~* '^HE_'
         """, (dept_id,))
-        res = {'eleanitza': {'total': 0.0, 'pending': 0.0},
-               'desdoblea': {'total': 0.0, 'pending': 0.0}}
-        for r in self.env.cr.fetchall():
-            res[r[0]] = {'total': round(float(r[1]), 2),
-                         'pending': round(float(r[2]), 2)}
+        e_total, e_pending = cr.fetchone()
+        res = {'eleanitza': {'total': round(float(e_total or 0), 2),
+                             'pending': round(float(e_pending or 0), 2)}}
+        # Desdoblea: tope MANUAL del mintegi vs repartido a los grupos.
+        dept = self.env['op.department'].browse(dept_id)
+        cr.execute("""
+            SELECT COALESCE(SUM(b.desdoble_orduak), 0) FROM op_batch b
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s AND b.active = true
+        """, (dept_id,))
+        d_distributed = round(float(cr.fetchone()[0] or 0), 2)
+        d_stored = round(float(dept.desdoble_orduak or 0), 2)
+        # Auto-inicializa el tope al reparto ya existente la primera vez.
+        if not d_stored and d_distributed:
+            dept.desdoble_orduak = d_distributed
+            self.env.flush_all()
+            d_stored = d_distributed
+        res['desdoblea'] = {'total': d_stored,
+                            'pending': round(max(d_stored - d_distributed, 0.0), 2)}
+        # Errefortzuak: ordu erabilgarriak = horas de los karguak ERREFORTZU del
+        # mintegi (op.kargu.mintegi); esleitzeke = total − repartido a profesores
+        # (op.perfilazio.kargu). Misma lógica que la tabla "Mintegiko karguak".
+        cr.execute("""
+            SELECT COALESCE(SUM(km.orduak), 0),
+                   COALESCE((SELECT SUM(pk.orduak)
+                             FROM op_perfilazio_kargu pk
+                             JOIN op_department_op_faculty_rel dfr
+                                  ON dfr.op_faculty_id = pk.faculty_id
+                             WHERE dfr.op_department_id = %s
+                               AND pk.kargu_id IN (
+                                   SELECT km2.kargu_id FROM op_kargu_mintegi km2
+                                   JOIN op_kargu k2 ON k2.id = km2.kargu_id
+                                   WHERE km2.department_id = %s
+                                     AND k2.code ILIKE '%%ERREFORTZU%%')), 0)
+            FROM op_kargu_mintegi km
+            JOIN op_kargu k ON k.id = km.kargu_id
+            WHERE km.department_id = %s AND k.code ILIKE '%%ERREFORTZU%%'
+        """, (dept_id, dept_id, dept_id))
+        _seed, r_assigned = cr.fetchone()
+        r_assigned = float(r_assigned or 0)
+        # Total (ordu guztiak) = valor MANUAL editable (op.department), igual que
+        # desdoblea. Se pre-rellena una vez con el total del kargu (seed), pero a
+        # partir de ahí lo fija el usuario y NO toca las perfilaciones.
+        e_total = self._errefortzu_total(dept)
+        # Repartido a grupos (módulos) = Σ op.batch.errefortzu_orduak.
+        cr.execute("""
+            SELECT COALESCE(SUM(b.errefortzu_orduak), 0) FROM op_batch b
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s AND b.active = true
+        """, (dept_id,))
+        group_distributed = float(cr.fetchone()[0] or 0)
+        mota = dept.errefortzu_mota or 'poltsan'
+        if mota == 'taldean':
+            # Todo en módulos → esleitzeke = total − repartido a grupos.
+            poltsan_h, modulu_h = 0.0, e_total
+            pending = max(e_total - group_distributed, 0.0)
+        elif mota == 'mix':
+            # Parte POLTSAN (como kargu) + parte en módulos (como desdoble).
+            poltsan_h = min(max(float(dept.errefortzu_poltsan_orduak or 0), 0.0), e_total)
+            modulu_h = max(e_total - poltsan_h, 0.0)
+            pending = (max(poltsan_h - r_assigned, 0.0)
+                       + max(modulu_h - group_distributed, 0.0))
+        else:  # poltsan
+            # Todo como kargu → esleitzeke = total − repartido a profesores.
+            poltsan_h, modulu_h = e_total, 0.0
+            pending = max(e_total - r_assigned, 0.0)
+        res['errefortzuak'] = {'total': e_total, 'pending': round(pending, 2)}
+        res['errefortzu_mota'] = mota
+        res['errefortzu_poltsan'] = round(poltsan_h, 2)
+        res['errefortzu_modulu'] = round(modulu_h, 2)
         return res
+
+    def _errefortzu_total(self, dept):
+        """Total (ordu guztiak) de errefortzu del mintegi = valor MANUAL editable
+        (op.department.errefortzu_orduak)."""
+        return round(float(dept.errefortzu_orduak or 0), 2)
+
+    def _errefortzu_modulu_limit(self, dept):
+        """Horas de errefortzu disponibles para módulos según el modo:
+        poltsan → 0; taldean → total manual; mix → total manual − tramo POLTSAN."""
+        total = self._errefortzu_total(dept)
+        if dept.errefortzu_mota == 'taldean':
+            return total
+        if dept.errefortzu_mota == 'mix':
+            return round(max(total - float(dept.errefortzu_poltsan_orduak or 0), 0.0), 2)
+        return 0.0
+
+    @api.model
+    def set_perfilazio_errefortzu_mota(self, dept_id, mota):
+        """Cambia el modo de perfilado de las horas de errefortzu del mintegi
+        (POLTSAN / TALDEAN / MIX). Devuelve la tabla resumen recalculada."""
+        dept = self.env['op.department'].browse(dept_id)
+        if dept.exists() and mota in ('poltsan', 'taldean', 'mix'):
+            dept.errefortzu_mota = mota
+            self.env.flush_all()
+        return self.get_perfilazio_eleanitza_laburpena(dept_id)
+
+    @api.model
+    def set_perfilazio_errefortzu_poltsan(self, dept_id, orduak):
+        """Modo MIX: fija las horas de errefortzu que van a POLTSAN (el resto van
+        a módulos). Acota a [0, total del kargu]. Devuelve el resumen."""
+        dept = self.env['op.department'].browse(dept_id)
+        if dept.exists():
+            total = self._errefortzu_total(dept)
+            try:
+                v = float(orduak)
+            except (TypeError, ValueError):
+                v = 0.0
+            dept.errefortzu_poltsan_orduak = round(min(max(v, 0.0), total), 2)
+            self.env.flush_all()
+        return self.get_perfilazio_eleanitza_laburpena(dept_id)
+
+    def _errefortzu_kargu_total(self, dept_id):
+        """Horas disponibles de errefortzu del mintegi = suma de las líneas
+        op.kargu.mintegi de los karguak cuyo code contiene 'ERREFORTZU'."""
+        cr = self.env.cr
+        cr.execute("""
+            SELECT COALESCE(SUM(km.orduak), 0)
+            FROM op_kargu_mintegi km JOIN op_kargu k ON k.id = km.kargu_id
+            WHERE km.department_id = %s AND k.code ILIKE '%%ERREFORTZU%%'
+        """, (dept_id,))
+        return round(float(cr.fetchone()[0] or 0), 2)
+
+    @api.model
+    def get_perfilazio_kopia_banaketa(self, dept_id):
+        """Reparto por zikloa→taldea para las tablas de gestión de Desdoble_HE.
+        Por grupo: eleanitza = suma rpt_reala de sus copias HE_ (informativo);
+        desdoblea/errefortzuak = reparto editable (op.batch.*_orduak)."""
+        cr = self.env.cr
+        cr.execute(r"""
+            SELECT c.name AS zikloa, b.id, b.name,
+                COALESCE((SELECT SUM(s.rpt_reala) FROM op_subject s
+                          WHERE s.batch_id = b.id AND s.active = true
+                            AND s.code ~* '^HE_'), 0) AS eleanitza,
+                COALESCE(b.desdoble_orduak, 0) AS desdoblea,
+                COALESCE(b.errefortzu_orduak, 0) AS errefortzuak
+            FROM op_batch b
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s AND b.active = true
+            ORDER BY c.name, b.name
+        """, (dept_id,))
+        rnd = lambda x: round(float(x or 0), 2)
+        zikloak = {}
+        for zikloa, bid, bname, ele, desdo, erref in cr.fetchall():
+            z = zikloak.setdefault(zikloa or '—', [])
+            ele, desdo, erref = rnd(ele), rnd(desdo), rnd(erref)
+            z.append({'batch_id': bid, 'taldea': bname or '—',
+                      'eleanitza': ele, 'desdoblea': desdo, 'errefortzuak': erref,
+                      'guztira': rnd(ele + desdo + erref)})
+        out = []
+        for zikloa in sorted(zikloak):
+            taldeak = zikloak[zikloa]
+            ze = rnd(sum(t['eleanitza'] for t in taldeak))
+            zd = rnd(sum(t['desdoblea'] for t in taldeak))
+            zr = rnd(sum(t['errefortzuak'] for t in taldeak))
+            out.append({'zikloa': zikloa, 'taldeak': taldeak,
+                        'eleanitza': ze, 'desdoblea': zd, 'errefortzuak': zr,
+                        'guztira': rnd(ze + zd + zr)})
+        return out
+
+    @api.model
+    def set_perfilazio_kopia_limit(self, dept_id, mota, orduak):
+        """Fija el tope (ordu erabilgarriak) de desdoble/errefortzu del mintegi
+        (op.department). No puede quedar por debajo de lo ya repartido a los
+        grupos. Devuelve la tabla resumen recalculada."""
+        field = {'desdoblea': 'desdoble_orduak',
+                 'errefortzuak': 'errefortzu_orduak'}.get(mota)
+        dept = self.env['op.department'].browse(dept_id)
+        if not field or not dept.exists():
+            return self.get_perfilazio_eleanitza_laburpena(dept_id)
+        try:
+            v = max(float(orduak), 0.0)
+        except (TypeError, ValueError):
+            v = 0.0
+        cr = self.env.cr
+        cr.execute("""
+            SELECT COALESCE(SUM(b.{field}), 0) FROM op_batch b
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s AND b.active = true
+        """.format(field=field), (dept_id,))
+        distributed = float(cr.fetchone()[0] or 0)
+        if v < distributed:
+            v = distributed  # no por debajo de lo repartido
+        dept[field] = round(v, 2)
+        self.env.flush_all()
+        return self.get_perfilazio_eleanitza_laburpena(dept_id)
+
+    @api.model
+    def set_perfilazio_kopia_group_orduak(self, batch_id, mota, orduak):
+        """Fija el reparto de horas de desdoble/errefortzu de un grupo
+        (op.batch). La suma de los grupos del mintegi no puede superar el tope
+        del mintegi (op.department). Devuelve {'orduak': aplicado}."""
+        field = {'desdoblea': 'desdoble_orduak',
+                 'errefortzuak': 'errefortzu_orduak'}.get(mota)
+        batch = self.env['op.batch'].browse(batch_id)
+        if not field or not batch.exists():
+            return False
+        dept = batch.course_id.department_id
+        try:
+            v = max(float(orduak), 0.0)
+        except (TypeError, ValueError):
+            v = 0.0
+        cr = self.env.cr
+        cr.execute("""
+            SELECT COALESCE(SUM(b.{field}), 0) FROM op_batch b
+            JOIN op_course c ON c.id = b.course_id
+            WHERE c.department_id = %s AND b.active = true AND b.id <> %s
+        """.format(field=field), (dept.id, batch_id))
+        others = float(cr.fetchone()[0] or 0)
+        # Errefortzuak: el tope para módulos depende del modo (taldean = total
+        # del kargu; mix = total − tramo POLTSAN; poltsan = 0). Desdoblea: tope
+        # manual del mintegi (op.department.desdoble_orduak).
+        limit = (self._errefortzu_modulu_limit(dept) if mota == 'errefortzuak'
+                 else float(dept[field] or 0))
+        # El tope del mintegi acota; lo que quede libre para este grupo.
+        free = max(limit - others, 0.0)
+        if v > free:
+            v = free
+        batch[field] = round(v, 2)
+        self.env.flush_all()
+        return {'orduak': round(v, 2)}
 
     @api.model
     def get_perfilazio_plazak_laburpena(self, dept_id):
@@ -969,8 +1262,8 @@ class OpFaculty(models.Model):
         cr = self.env.cr
         cr.execute(r"""
             SELECT faculty_id,
-                   COALESCE(SUM(rpt_reala) FILTER (WHERE code !~* '^(HE_|DESDO_)'), 0),
-                   COALESCE(SUM(rpt_reala) FILTER (WHERE code ~* '^(HE_|DESDO_)'), 0)
+                   COALESCE(SUM(rpt_reala) FILTER (WHERE code !~* '^(HE_|DESDO_|ERREF_)'), 0),
+                   COALESCE(SUM(rpt_reala) FILTER (WHERE code ~* '^(HE_|DESDO_|ERREF_)'), 0)
             FROM op_subject WHERE faculty_id = ANY(%s) GROUP BY faculty_id
         """, (fac_ids,))
         mod = {r[0]: (float(r[1]), float(r[2])) for r in cr.fetchall()}
@@ -1339,7 +1632,7 @@ class OpFaculty(models.Model):
         cr.execute("""
             SELECT s.code, s.name, s.rpt_reala, b.name AS batch_name,
                    s.kurtsoa, s.pt_pes, s.orduak, s.gela_orduak,
-                   s.aste_banaketa, s.orduak_zorretan, s.pl
+                   s.aste_banaketa, s.orduak_zorretan, s.pl, s.id
             FROM op_subject s
             LEFT JOIN op_batch b ON b.id = s.batch_id
             WHERE s.faculty_id = %s
@@ -1347,6 +1640,7 @@ class OpFaculty(models.Model):
         """, (faculty_id,))
         return [
             {
+                'id': r[11],
                 'code': r[0] or '', 'name': r[1] or '',
                 # 'rpt_total' gakoak rpt_reala balioa darama (Laburpenak RPT reala erakusten du)
                 'rpt_total': float(r[2] or 0), 'batch': r[3] or '',
@@ -1356,7 +1650,7 @@ class OpFaculty(models.Model):
                 # no las horas de gela del módulo completo (p.ej. DESDO_ de 2h
                 # RPT muestra Gela 2h, no las 5h del módulo original).
                 'gela_orduak': (float(r[2] or 0)
-                                if (r[0] or '').upper().startswith('DESDO_')
+                                if (r[0] or '').upper().startswith(('DESDO_', 'ERREF_'))
                                 else float(r[7] or 0)),
                 'aste_banaketa': r[8] or '', 'orduak_zorretan': float(r[9] or 0),
                 'pl': (r[10] or '').replace('_', '/'),
@@ -1433,7 +1727,7 @@ class OpFaculty(models.Model):
                 # Módulos desdoble (DESDO_): Gela = RPT (rpt_reala), no el
                 # gela_orduak del módulo completo (mismo criterio que el
                 # resumen del profesor, get_perfilazio_resumen).
-                gela = (float(r[2] or 0) if code.upper().startswith('DESDO_')
+                gela = (float(r[2] or 0) if code.upper().startswith(('DESDO_', 'ERREF_'))
                         else float(r[1] or 0))
                 rows.append({'code': code, 'gela': gela,
                              'rpt': float(r[2] or 0), 'is_kargu': False})
@@ -1863,8 +2157,8 @@ class OpFaculty(models.Model):
             #      único mintegi). Se excluyen los que ya tengan línea de ESTE
             #      mintegi para no duplicar con (1).
             cr.execute(r"""
-                SELECT id, code, name, total, others FROM (
-                    SELECT k.id, k.code, k.name,
+                SELECT id, code, name, kargu_mota, total, others FROM (
+                    SELECT k.id, k.code, k.name, k.kargu_mota,
                            COALESCE(SUM(km.orduak), 0) AS total,
                            COALESCE((
                                SELECT SUM(pk.orduak)
@@ -1878,12 +2172,12 @@ class OpFaculty(models.Model):
                     FROM op_kargu_mintegi km
                     JOIN op_kargu k ON k.id = km.kargu_id
                     WHERE km.department_id = %(dept)s
-                    GROUP BY k.id, k.code, k.name
+                    GROUP BY k.id, k.code, k.name, k.kargu_mota
                     HAVING COALESCE(SUM(km.orduak), 0) > 0
 
                     UNION ALL
 
-                    SELECT k.id, k.code, k.name,
+                    SELECT k.id, k.code, k.name, k.kargu_mota,
                            COALESCE(k.rpt_total, 0) AS total,
                            COALESCE((
                                SELECT SUM(pk.orduak) FROM op_perfilazio_kargu pk
@@ -1929,9 +2223,10 @@ class OpFaculty(models.Model):
             """, {'dept': dept_id, 'fac': faculty_id or 0})
             return [
                 {'id': r[0], 'code': r[1] or '', 'name': r[2] or '',
-                 'rpt_total': round(float(r[3] or 0), 2),
-                 'assigned': round(float(r[4] or 0), 2),
-                 'remaining': round(max(float(r[3] or 0) - float(r[4] or 0), 0.0), 2),
+                 'kargu_mota': r[3] or 'ardurak',
+                 'rpt_total': round(float(r[4] or 0), 2),
+                 'assigned': round(float(r[5] or 0), 2),
+                 'remaining': round(max(float(r[4] or 0) - float(r[5] or 0), 0.0), 2),
                  'allow_zero': _kargu_allows_zero(r[1]),
                  'allow_decimal': _kargu_allows_decimal(r[1])}
                 for r in cr.fetchall()
@@ -1939,16 +2234,18 @@ class OpFaculty(models.Model):
         cr.execute("""
             SELECT k.id, k.code, k.name, k.rpt_total,
                    COALESCE(SUM(pk.orduak), 0) AS assigned,
-                   COALESCE(SUM(pk.orduak) FILTER (WHERE pk.faculty_id <> %s), 0) AS assigned_others
+                   COALESCE(SUM(pk.orduak) FILTER (WHERE pk.faculty_id <> %s), 0) AS assigned_others,
+                   k.kargu_mota
             FROM op_kargu k
             LEFT JOIN op_perfilazio_kargu pk ON pk.kargu_id = k.id
-            GROUP BY k.id, k.code, k.name, k.rpt_total
+            GROUP BY k.id, k.code, k.name, k.rpt_total, k.kargu_mota
             ORDER BY k.name
         """, (faculty_id or 0,))
         return [
             {'id': r[0], 'code': r[1] or '', 'name': r[2] or '',
              'rpt_total': float(r[3] or 0), 'assigned': float(r[4]),
              'remaining': max(float(r[3] or 0) - float(r[5] or 0), 0.0),
+             'kargu_mota': r[6] or 'ardurak',
              'allow_zero': _kargu_allows_zero(r[1]),
              'allow_decimal': _kargu_allows_decimal(r[1])}
             for r in cr.fetchall()

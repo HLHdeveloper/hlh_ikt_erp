@@ -9,14 +9,44 @@ documentado en detalle en [`FET/PROGRESO_ODOO.md`](FET/PROGRESO_ODOO.md)**; cont
 de la API FET en `FET/INTEGRACION_ODOO.md`. Resumen de lo construido:
 - **Aste Saioak** (`op.timing`): rejilla Lun–Vie, 6 sesiones 8:00–14:30, recreo
   11:00–11:30 (menú SIS seq 56). Carga: `load_timings.py`.
-- **`gela_mota`** (`op.classroom`): gela / tailerra.
+- **`gela_mota`** (`op.classroom`): gela / tailerra / gela_tailerra.
+- **Gela-esleipena (aulas ↔ mintegi ↔ módulo)** — EN CURSO (reemplaza el Excel):
+  - `op.department.gela_ids` ↔ `op.classroom.department_ids` (M2M, tabla
+    `op_department_op_classroom_rel`): gelak/tailerrak disponibles por mintegi.
+    UI: pestaña "Gelak erabilgarriak" en ficha mintegi + columna/filtro Mintegia
+    en lista Gelak.
+  - `op.subject.gela_teoria_ids` (M2M `op_subject_gela_teoria_rel`, aulas
+    gela/gela_tailerra) = opciones de aula teórica (FET elige una);
+    `op.subject.tailerra_ids` (M2M `op_subject_tailerra_rel`, aulas
+    tailerra/gela_tailerra) = taller(es) de prácticas. M2M para admitir 1 o varias.
+  - Import del Excel HECHO 2026-06-30 (`FET/import_aulak.py`, 209 módulos;
+    `FET/fill_mintegi_gelak.py` rellena `gela_ids`). Detalle y reglas de alias en
+    `FET/AULAK_IMPORT.md`. Pendiente: `2IEA2A/2IEA2D_PROG` (módulo "PROG" sin casar)
+    y `3OLHMEK3_EAE` (inexistente).
+  - **Fase 3 HECHA**: pantalla OWL **Gela esleipena** (menú Ordutegi murrizpenak,
+    `aula_esleipena_action`; `static/src/components/aula_esleipena.js` + xml; CSS
+    `.pae-*`). **Filtros en cascada estilo Perfilazioak** (Mintegia → Zikloa →
+    Taldea): reutiliza `op.faculty.get_perfilazio_mintegiak/_zikloak/_batches`; al
+    elegir zikloa muestra los módulos de todos sus grupos (una card por taldea),
+    al elegir taldea solo esa. Cada card = rejilla módulos × aulas del mintegi
+    (bloque TEORIA + TAILERRA); clic asigna/quita. RPC aula en `op.subject`:
+    `get_aula_columns(dept)`, `get_aula_moduluak(batch)`, `toggle_aula`,
+    `set_aula_column` (clic en cabecera de aula → asigna/quita a TODOS los módulos
+    de esa taldea). Cards **2 por línea** (`.pae-cards` flex), tabla a ancho 100%
+    de la card. Colores **TEORIA turquesa / TAILERRA morado** (homogéneo con
+    Perfilazioak). `get_aula_moduluak` devuelve **todos** los módulos del batch
+    (incluidas copias HE_/DESDO_/ERREF), igual que `get_perfilazio_moduluak`.
 - **Ordutegi murrizpenak** (menú SIS seq 57): restricciones FET en
   `models/op_fet_constraints.py` (`op.fet.*`): #1 Irakasleen erabilgarritasuna
   (OWL grid), #3 Gelen erabilgarritasuna (OWL grid), #4 Saio simultaneoak
   (desdoble/eleanitza auto + agrupaciones manuales con aforo), #5 Saio finkoak,
   #6 Murrizpen orokorrak (config única). #2 y #7 sin pantalla (automático/no aplica).
-- **Pendiente**: `banaketa_id` (232 módulos), `capacity` (59 aulas), generador
-  `.fet`, cliente HTTP y parseo a `op.session`.
+- **Pendiente** (recontado 2026-06-29): `banaketa_id` **224/257** módulos origen
+  (faltan 4 origen + 29 copias DESDO_/HE_/ERREF aplazadas) y `teoria_praktika_id`
+  214 — import en curso desde Excel del usuario, ver
+  `FET/banaketa_import/PROGRESO_BANAKETA.md`; `capacity` (faltan **35** de 63
+  aulas); y el módulo generador `openeducat_fet` (aún no existe): generador
+  `.fet`, cliente HTTP a la 104 y parseo del resultado a `op.session` (hoy = 0).
 
 ## Stack
 
@@ -88,7 +118,9 @@ Ruta: `addons19/openeducat_erp/openeducat_hernani/`
 | `op.faculty` | `kargu_ids`, `greba_ids`, `batch_ids`, `titular_ordezkapen_ids`, `ordezko_ordezkapen_ids` |
 | `op.batch` | `faculty_ids`, `student_course_ids` |
 | `op.department` | `course_ids`, `faculty_ids` |
-| `op.subject` | `kode_jima`, `batch_id`, `apoyo_taldea_id`, `faculty_id`, `pt_pes`, `hizkuntza`, `pl` (PL1/PL2/PL1_PL2), `orduak`, `kurtsoa`, `gela_orduak`, `banaketa_id`, `aste_banaketa`, `rpt_total`, `rpt_reala`, `rpt_zorretan`, `emandako_orduak`, `orduak_zorretan` |
+| `op.subject` | `kode_jima`, `batch_id`, `apoyo_taldea_id`, `faculty_id`, `pt_pes`, `hizkuntza`, `pl` (PL1/PL2/PL1_PL2), `orduak`, `kurtsoa`, `gela_orduak`, `banaketa_id`, `aste_banaketa`, `rpt_total`, `rpt_reala`, `rpt_zorretan`, `emandako_orduak`, `orduak_zorretan`, `gela_teoria_ids`, `tailerra_ids` |
+| `op.department` | `course_ids`, `faculty_ids`, `desdoble_orduak`, `errefortzu_orduak`, `errefortzu_mota`, `errefortzu_poltsan_orduak`, `gela_ids` |
+| `op.classroom` | `irakasgela`, `gela_mota` (gela/tailerra/gela_tailerra), `solairua`, `department_ids` |
 
 **Campo `pl`** (`op.subject`): Selection `PL1` / `PL2` / `PL1_PL2` (etiqueta "PL1/PL2" = cualquier perfil lingüístico válido).
 

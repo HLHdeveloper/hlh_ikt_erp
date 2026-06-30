@@ -420,6 +420,12 @@
 .pfz-toggle {
     min-width: 64px;
 }
+/* Botón de modo de errefortzu activo (POLTSAN / MODULUTAN), naranja */
+.pfz-btn-erref {
+    background-color: #fd7e14 !important;
+    border-color: #fd7e14 !important;
+    color: #fff !important;
+}
 
 /* Selección en la tabla MODULUAK KOPIATU: verde (HE) / morado (DESDO) */
 .pfz-kopia--he {
@@ -434,6 +440,17 @@
 .pfz-kopia--desdo:hover {
     background: #e1d5f0 !important;
 }
+.pfz-kopia--erref {
+    background: #fff3e0 !important;
+}
+.pfz-kopia--erref:hover {
+    background: #ffe6c7 !important;
+}
+/* Insignia naranja para módulos/operaciones de errefortzu (ERREF) */
+.pfz-badge-erref {
+    background-color: #fd7e14 !important;
+    color: #fff !important;
+}
 /* Columna "Desdoble Orduak": input numérico compacto */
 .pfz-desdo-input {
     width: 5rem;
@@ -443,6 +460,14 @@
 .pfz-desdo-total {
     width: 5rem;
     text-align: right;
+}
+/* Inputs editables de las tablas de gestión (ordu erabilgarriak / reparto) */
+.pfz-erabilg-input,
+.pfz-banaketa-input {
+    width: 4.5rem;
+    display: inline-block;
+    padding: 0.1rem 0.3rem;
+    height: auto;
 }
 
 /* Apoyo Educativo: inputs compactos en la fila de creación */
@@ -610,3 +635,87 @@
 .o_fet_unavail .feu-legend.feu-off { background: #f8d7da; }
 .o_fet_unavail .feu-legend.feu-on { background: #e9f9ee; }
 .o_fet_unavail .feu-room-code { width: 88px; flex: 0 0 88px; white-space: nowrap; }
+
+/* ===== Gela esleipena (Fase 3: aulas por módulo) — estilo Perfilazioak ===== */
+/* dos grupos por línea */
+.o_aula_esleipena .pae-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-start;
+}
+.o_aula_esleipena .pae-card {
+    flex: 0 1 calc(50% - .5rem);
+    min-width: 0;
+    max-width: calc(50% - .5rem);
+    border: 2px solid var(--hlh-pistacho-mid);
+    border-radius: .5rem;
+    box-shadow: var(--hlh-card-shadow);
+    overflow: hidden;
+}
+.o_aula_esleipena .pae-card-title {
+    font-size: .8125rem;
+    color: var(--hlh-green-text);
+    background: var(--hlh-head-grad);
+    border-bottom: 2px solid var(--hlh-pistacho-mid);
+    padding: .35rem .6rem;
+    margin: 0;
+}
+.o_aula_esleipena .pae-grid-wrap {
+    max-height: 75vh;
+    overflow: auto;
+}
+.o_aula_esleipena table.pae-grid {
+    width: 100%;                          /* llena la card (aprovecha el espacio) */
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+    margin: 0;
+}
+.o_aula_esleipena .pae-grid th,
+.o_aula_esleipena .pae-grid td {
+    border: 1px solid var(--hlh-pistacho-mid);
+    vertical-align: middle;
+}
+.o_aula_esleipena .pae-grid thead th {
+    position: sticky; top: 0; z-index: 3;
+    background: var(--hlh-head-grad);
+    color: var(--hlh-green-text);
+}
+.o_aula_esleipena .pae-grid thead tr:nth-child(2) th { top: 28px; }
+.o_aula_esleipena .pae-rowhead,
+.o_aula_esleipena .pae-corner {
+    position: sticky; left: 0; z-index: 2;
+    background: var(--hlh-blanco);
+    white-space: nowrap; font-weight: 600;
+}
+.o_aula_esleipena .pae-corner {
+    z-index: 4; background: var(--hlh-head-grad); color: var(--hlh-green-text);
+}
+.o_aula_esleipena .pae-aulah {
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    white-space: nowrap; height: 84px; font-size: 11px; text-align: left;
+}
+.o_aula_esleipena .pae-grp { font-weight: 700; letter-spacing: .03em; }
+/* bloques: TEORIA turquesa · TAILERRA morado (estilo Perfilazioak).
+   Columna del cuerpo con tinte muy suave; cabecera con tono fuerte. */
+.o_aula_esleipena td.pae-grp-teoria { background: #f0fcff; }
+.o_aula_esleipena td.pae-grp-tailer { background: #f7f2fb; }
+.o_aula_esleipena .pae-grid thead th.pae-grp-teoria { background: #cff4fc; color: #055160; }
+.o_aula_esleipena .pae-grid thead th.pae-grp-tailer { background: #e7d6f7; color: #4a148c; }
+.o_aula_esleipena .pae-cell {
+    text-align: center; cursor: pointer; min-width: 24px;
+    color: #6c757d; font-size: 14px; line-height: 1;
+}
+.o_aula_esleipena .pae-cell:hover { background: #e9ecef !important; }
+/* aula asignada: turquesa (teoría) / morado (taller) */
+.o_aula_esleipena .pae-on-t { background: #9eeaf9 !important; color: #055160; }
+.o_aula_esleipena .pae-on-l { background: #d8c4ec !important; color: #4a148c; }
+.o_aula_esleipena .pae-batch-sep > * { border-top: 2px solid var(--hlh-pistacho) !important; }
+.o_aula_esleipena .pae-noaula { color: #dc3545; }
+.o_aula_esleipena .pae-h, .o_aula_esleipena .pae-tp { color: #6c757d; }
+/* cabecera de aula clicable (asignar a toda la taldea) */
+.o_aula_esleipena .pae-colhead { cursor: pointer; }
+.o_aula_esleipena .pae-colhead:hover { outline: 2px solid var(--hlh-pistacho); outline-offset: -2px; }
+.o_aula_esleipena .pae-col-all { box-shadow: inset 0 -3px 0 var(--hlh-pistacho-dark); }
+.o_aula_esleipena .pae-col-some { box-shadow: inset 0 -3px 0 var(--hlh-pistacho-mid); }

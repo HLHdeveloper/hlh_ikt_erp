@@ -1,8 +1,9 @@
 # Integración FET ↔ Odoo — Progreso (lado Odoo, máquina 108)
 
-> Estado a **2026-06-25**. Complementa `INTEGRACION_ODOO.md` (contrato de la API
-> FET en la 104). Aquí se documenta TODO lo construido en Odoo para alimentar el
-> futuro generador del `.fet`.
+> Estado a **2026-06-29** (cifras de datos re-contrastadas contra la BD
+> `kudeaketa` viva). Complementa `INTEGRACION_ODOO.md` (contrato de la API FET en
+> la 104). Aquí se documenta TODO lo construido en Odoo para alimentar el futuro
+> generador del `.fet`.
 
 Módulo: `addons19/openeducat_erp/openeducat_hernani` (Odoo 17, BD `kudeaketa`).
 
@@ -99,8 +100,8 @@ Resuelto automáticamente por `gela_mota` + `op.subject.type` en la generación 
   - bateratu → aviso si `student_total > capacity_total`.
   - banatu → líneas (taldea, gela, ikasleak); si una aula supera su aforo, **fila
     en rojo** + **banner "Aforoa gainditua!"**.
-- ⚠️ **El aviso de aforo solo funciona donde haya `capacity`**: ahora mismo solo
-  **4 de 63 aulas** tienen aforo. Falta rellenar `capacity` en Gelak.
+- ⚠️ **El aviso de aforo solo funciona donde haya `capacity`**: a 2026-06-29 hay
+  **28 de 63 aulas** con aforo (faltan 35). Falta rellenar `capacity` en Gelak.
 
 ### #5 · Saio finkoak  ✅
 - Modelo `op.fet.fixed.session` (`subject_id`, `batch_id` related, `day`,
@@ -119,19 +120,33 @@ Los karguak NO entran al `.fet` (solo informativos para plazas/perfilación).
 
 ---
 
-## 4. Datos pendientes (bloquean parte del `.fet`)
+## 4. Datos pendientes (bloquean parte del `.fet`)  — recontado 2026-06-29
 
-1. **`banaketa_id`** en `op.subject`: solo **27 de 259** módulos con gela>0 tienen
-   distribución semanal. Determina nº de sesiones/semana y duración de cada una
-   (`Duration` de cada actividad FET). → Asignación masiva pendiente.
-2. **`capacity`** (aforo) en `op.classroom`: solo **4 de 63**. Necesario para el
-   aviso de aforo de #4b.
+1. **`banaketa_id`** en `op.subject`: **224 de 257** módulos origen con gela>0
+   tienen distribución semanal; **solo faltan 4 origen** (no venían en las hojas)
+   + 29 copias DESDO_/HE_/ERREF (aplazadas). También se está rellenando
+   `teoria_praktika_id` (214). Import en curso desde el Excel del usuario (una
+   pestaña por mintegi) — ver `FET/banaketa_import/PROGRESO_BANAKETA.md` (scripts
+   por mintegi + pendientes). Mintegiak hechos: ELE, MEK, AST, ORIENTAZIO,
+   INGELESA, LPO/FOL. Falta INFORMATIKA y algún suelto.
+2. **`capacity`** (aforo) en `op.classroom`: **28 de 63** (faltan **35**).
+   Necesario para el aviso de aforo de #4b.
+
+> Otros prerequisitos del generador (verificados 2026-06-29, ya OK): `faculty_id`
+> en **272** módulos, `batch_id` en **286**, `op.timing` = **6** franjas,
+> `op.faculty` activos = **165**, `op.batch` activos = **35**. Datos de
+> restricciones ya cargados: #1 teacher_unavail = 4, #4 simultaneity = 32, #6
+> config singleton = 1; #3 room_unavail y #5 fixed_session = 0 (a rellenar por el
+> usuario cuando proceda). **`op.session` = 0** (destino del volcado, aún vacío).
 
 ---
 
 ## 5. Próximos pasos (módulo `openeducat_fet` / generador)
 
-1. Rellenar `banaketa_id` (232 módulos) y `capacity` (59 aulas).
+> El módulo/generador `openeducat_fet` **aún no existe** (verificado 2026-06-29);
+> todo lo construido vive dentro de `openeducat_hernani`.
+
+1. Rellenar `banaketa_id` (**196** módulos) y `capacity` (**35** aulas).
 2. **Generador del `.fet`** (FET v5.41):
    - Days (Lun–Vie) + Hours (`op.timing.name`).
    - Teachers (`op.faculty`), Subjects (`op.subject`), Students/Years/Groups

@@ -177,6 +177,18 @@
                   sequence="30"
                   action="action_fet_room_unavail"/>
 
+        <!-- Gela esleipena: asignar aulas (teoría/taller) a cada módulo por mintegi -->
+        <record id="action_aula_esleipena" model="ir.actions.client">
+            <field name="name">Gela esleipena</field>
+            <field name="tag">aula_esleipena_action</field>
+        </record>
+
+        <menuitem id="menu_aula_esleipena"
+                  name="Gela esleipena"
+                  parent="menu_fet_constraints_root"
+                  sequence="35"
+                  action="action_aula_esleipena"/>
+
         <!-- ============================================================= -->
         <!-- #4 · Saio simultaneoak (op.fet.simultaneity)                  -->
         <!-- ============================================================= -->

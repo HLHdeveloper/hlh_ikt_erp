@@ -59,8 +59,12 @@ class OpKarguMintegiAll(models.Model):
     Une las líneas de reparto reales (op.kargu.mintegi) con una fila sintética
     por cada cargo SIN reparto, para que esos cargos (p.ej. LCAMP) también se
     vean cuando el searchpanel Mintegia está en "todos". Las filas sintéticas
-    tienen department_id NULL y 0 horas, así no aparecen al filtrar por un
-    mintegi concreto ni alteran el GUZTIRA por mintegi.
+    tienen 0 horas (no alteran el GUZTIRA por mintegi). Mintegi de la fila:
+      - Tutorías `TUTO_<grupo>` (p.ej. TUTO_1MSS2): se deriva el mintegi del
+        grupo embebido en el código (op.batch -> op.course -> department_id),
+        para que aparezcan al filtrar por SU mintegi (INFORMATIKA muestra
+        TUTO_1MSS2, TUTO_2MSS2, TUTO_1INF4...).
+      - Resto de cargos sin reparto: department_id NULL (solo en "todos").
     """
     _name = 'op.kargu.mintegi.all'
     _description = 'Karguak mintegika (guztiak)'
@@ -71,8 +75,8 @@ class OpKarguMintegiAll(models.Model):
     kargu_id = fields.Many2one('op.kargu', string='Kargua', readonly=True)
     kargu_code = fields.Char(string='Kodea', readonly=True)
     kargu_mota = fields.Selection([
-        ('perfilazioa', 'Perfilazio Karguak'),
-        ('drive', 'DRIVE Taldeak'),
+        ('ardurak', 'ARDURAK'),
+        ('kudeaketa', 'KUDEAKETA_KARGUAK'),
     ], string='Kargu mota', readonly=True)
     department_id = fields.Many2one('op.department', string='Mintegia', readonly=True)
     pt_pes = fields.Selection([
@@ -100,12 +104,27 @@ class OpKarguMintegiAll(models.Model):
                 SELECT
                     1000000000 + k.id AS id,
                     k.id AS kargu_id,
-                    NULL::integer AS department_id,
+                    COALESCE(tuto.department_id, esp.department_id) AS department_id,
                     NULL::varchar AS pt_pes,
                     0.0 AS orduak,
                     k.code AS kargu_code,
                     k.kargu_mota AS kargu_mota
                 FROM op_kargu k
+                LEFT JOIN LATERAL (
+                    SELECT c.department_id
+                    FROM op_batch b
+                    JOIN op_course c ON c.id = b.course_id
+                    WHERE k.code = 'TUTO_' || b.code
+                      AND c.department_id IS NOT NULL
+                    LIMIT 1
+                ) tuto ON true
+                LEFT JOIN LATERAL (
+                    -- Tutorías sin grupo casable: mapeo explícito por código
+                    SELECT d.id AS department_id
+                    FROM op_department d
+                    WHERE k.code = 'TUTO_FG_ESP' AND d.name = 'MEKANIKA'
+                    LIMIT 1
+                ) esp ON true
                 WHERE NOT EXISTS (
                     SELECT 1 FROM op_kargu_mintegi km2 WHERE km2.kargu_id = k.id
                 )

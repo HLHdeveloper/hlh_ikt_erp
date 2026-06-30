@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="openeducat_hernani.AulaEsleipena">
+        <div class="o_aula_esleipena o_action">
+            <div class="o_content p-3">
+
+                <!-- Header + selectores (estilo Perfilazioak) -->
+                <div class="pfz-header d-flex align-items-end gap-3 flex-wrap mb-3">
+                    <h5 class="mb-0 text-uppercase fw-semibold text-muted me-2">Gela esleipena</h5>
+
+                    <div class="pfz-selector">
+                        <label class="form-label mb-0 small fw-semibold">Mintegia</label>
+                        <select class="form-select form-select-sm" t-on-change="onMintegiChange">
+                            <option value="">—</option>
+                            <t t-foreach="state.mintegiak" t-as="m" t-key="m.id">
+                                <option t-att-value="m.id"
+                                        t-att-selected="state.selectedMintegi and state.selectedMintegi.id === m.id ? 'selected' : ''">
+                                    <t t-esc="m.name"/>
+                                </option>
+                            </t>
+                        </select>
+                    </div>
+
+                    <t t-if="state.zikloak.length">
+                        <div class="pfz-selector">
+                            <label class="form-label mb-0 small fw-semibold">Zikloa</label>
+                            <select class="form-select form-select-sm" t-on-change="onZikloaChange">
+                                <option value="">—</option>
+                                <t t-foreach="state.zikloak" t-as="z" t-key="z.id">
+                                    <option t-att-value="z.id"><t t-esc="z.name"/></option>
+                                </t>
+                            </select>
+                        </div>
+                    </t>
+
+                    <t t-if="state.batches.length">
+                        <div class="pfz-selector">
+                            <label class="form-label mb-0 small fw-semibold">Taldea</label>
+                            <select class="form-select form-select-sm" t-on-change="onBatchChange">
+                                <option value="">—</option>
+                                <t t-foreach="state.batches" t-as="b" t-key="b.id">
+                                    <option t-att-value="b.id"
+                                            t-att-selected="state.selectedBatch and state.selectedBatch.id === b.id ? 'selected' : ''">
+                                        <t t-esc="b.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+                    </t>
+
+                    <span t-if="state.selectedMintegi" class="text-muted small">
+                        <t t-esc="state.gelak.length"/> gela · <t t-esc="state.tailerrak.length"/> tailer
+                    </span>
+                </div>
+
+                <!-- Contenido -->
+                <t t-if="!state.selectedMintegi">
+                    <div class="text-muted fst-italic p-3">Aukeratu mintegi bat hasteko.</div>
+                </t>
+                <t t-elif="state.loading">
+                    <div class="text-muted fst-italic p-3">Kargatzen…</div>
+                </t>
+                <t t-elif="!state.selectedZikloa">
+                    <div class="text-muted fst-italic p-3">Aukeratu zikloa bat moduluak ikusteko.</div>
+                </t>
+                <t t-elif="!moduluakGroups().length">
+                    <div class="text-muted fst-italic p-3">Ez dago modulurik.</div>
+                </t>
+                <t t-else="">
+                  <div class="pae-cards">
+                    <t t-foreach="moduluakGroups()" t-as="grp" t-key="grp.key">
+                        <div class="pae-card">
+                            <div class="pae-card-title fw-semibold mb-1">
+                                <t t-esc="grp.batch_name"/>
+                                <span class="text-muted small ms-1">(<t t-esc="grp.items.length"/>)</span>
+                            </div>
+                            <div class="pae-grid-wrap">
+                                <table class="table table-bordered table-sm pae-grid mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="pae-corner text-start">Modulua</th>
+                                            <th class="pae-h text-center">h</th>
+                                            <th class="pae-tp text-center">T/P</th>
+                                            <th t-att-colspan="state.gelak.length"
+                                                class="pae-grp pae-grp-teoria text-center">TEORIA</th>
+                                            <th t-att-colspan="state.tailerrak.length"
+                                                class="pae-grp pae-grp-tailer text-center">TAILERRA</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="pae-corner"></th>
+                                            <th class="pae-h"></th>
+                                            <th class="pae-tp"></th>
+                                            <th t-foreach="state.gelak" t-as="g" t-key="'gt'+g.id"
+                                                class="pae-aulah pae-grp-teoria pae-colhead"
+                                                t-att-class="'pae-col-'+colState(grp,'teoria',g.id)"
+                                                t-att-title="g.name + ' — denei esleitu/kendu'"
+                                                t-on-click="() => this.toggleColumn(grp,'teoria',g.id)">
+                                                <span t-esc="g.code"/>
+                                            </th>
+                                            <th t-foreach="state.tailerrak" t-as="tl" t-key="'tt'+tl.id"
+                                                class="pae-aulah pae-grp-tailer pae-colhead"
+                                                t-att-class="'pae-col-'+colState(grp,'tailerra',tl.id)"
+                                                t-att-title="tl.name + ' — denei esleitu/kendu'"
+                                                t-on-click="() => this.toggleColumn(grp,'tailerra',tl.id)">
+                                                <span t-esc="tl.code"/>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="grp.items" t-as="mod" t-key="mod.id">
+                                            <th class="pae-rowhead text-start"
+                                                t-att-class="noAula(mod) ? 'pae-noaula' : ''">
+                                                <t t-esc="mod.code"/>
+                                            </th>
+                                            <td class="pae-h text-center text-muted" t-esc="mod.gela_orduak"/>
+                                            <td class="pae-tp text-center text-muted small" t-esc="mod.tp"/>
+                                            <td t-foreach="state.gelak" t-as="g" t-key="'ct'+g.id"
+                                                class="pae-cell pae-grp-teoria"
+                                                t-att-class="has(mod,'teoria',g.id) ? 'pae-on-t' : ''"
+                                                t-on-click="() => this.toggle(mod,'teoria',g.id)">
+                                                <t t-if="has(mod,'teoria',g.id)">●</t>
+                                            </td>
+                                            <td t-foreach="state.tailerrak" t-as="tl" t-key="'cl'+tl.id"
+                                                class="pae-cell pae-grp-tailer"
+                                                t-att-class="has(mod,'tailerra',tl.id) ? 'pae-on-l' : ''"
+                                                t-on-click="() => this.toggle(mod,'tailerra',tl.id)">
+                                                <t t-if="has(mod,'tailerra',tl.id)">●</t>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </t>
+                  </div>
+                    <div class="small text-muted mt-1">
+                        Klik gelaxka batean aula esleitzeko/kentzeko. Kode gorria = aularik gabe.
+                    </div>
+                </t>
+
+            </div>
+        </div>
+    </t>
+</templates>

@@ -35,7 +35,14 @@
                             <field name="pt_pes" string="PT_PES"/>
                             <field name="pl" string="PL"/>
                             <field name="orduak"/>
+                            <field name="banaketa_orduak" invisible="1"/>
                             <field name="banaketa_id" string="Aste Banaketa"
+                                   domain="[('guztira', '=', banaketa_orduak)]"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                            <field name="teoria_praktika_gabe" invisible="1"/>
+                            <field name="teoria_praktika_id" string="Teoria/Praktika Orduak"
+                                   domain="[('guztira', '=', gela_orduak)]"
+                                   readonly="teoria_praktika_gabe"
                                    options="{'no_create': True, 'no_open': True}"/>
                             <field name="rpt_total" string="RPT Total"/>
                             <field name="rpt_reala" string="RPT Reala"/>
@@ -73,8 +80,14 @@
                         <field name="orduak" string="Orduak" class="text-start" readonly="1"/>
                         <field name="kurtsoa" string="Kurtsoa" readonly="1"/>
                         <field name="gela_orduak" string="Gela" class="text-start" readonly="1"/>
+                        <field name="banaketa_orduak" column_invisible="1"/>
                         <field name="banaketa_id" string="Aste Banaketa"
+                               domain="[('guztira', '=', banaketa_orduak)]"
+                               options="{'no_create': True, 'no_open': True}"/>
+                        <field name="teoria_praktika_gabe" column_invisible="1"/>
+                        <field name="teoria_praktika_id" string="Teoria/Praktika Orduak"
                                domain="[('guztira', '=', gela_orduak)]"
+                               readonly="teoria_praktika_gabe"
                                options="{'no_create': True, 'no_open': True}"/>
                         <field name="rpt_total" string="RPT Total" class="text-start" readonly="1"/>
                         <field name="rpt_reala" string="RPT Reala" class="text-start" readonly="1"/>

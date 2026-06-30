@@ -47,32 +47,21 @@
 
                     <t t-if="state.selectedBatch">
                         <div class="pfz-selector">
-                            <label class="form-label mb-0 small fw-semibold">Eleanitza</label>
-                            <button type="button"
-                                    t-attf-class="btn btn-sm pfz-toggle {{ state.eleanitza === 'BAI' ? 'btn-success' : 'btn-outline-secondary' }}"
-                                    t-on-click="toggleEleanitza">
-                                <i t-attf-class="fa {{ state.eleanitza === 'BAI' ? 'fa-check-square-o' : 'fa-square-o' }} me-1"/>
-                                <t t-esc="state.eleanitza === 'BAI' ? 'BAI' : 'EZ'"/>
-                            </button>
+                            <label class="form-label mb-0 small fw-semibold">Desdoble_HE_ERREF</label>
+                            <select class="form-select form-select-sm" t-on-change="onMotaChange">
+                                <option value="" t-att-selected="state.mota === '' ? 'selected' : ''">---</option>
+                                <option value="eleanitza" t-att-selected="state.mota === 'eleanitza' ? 'selected' : ''">Eleanitza</option>
+                                <option value="desdoblea" t-att-selected="state.mota === 'desdoblea' ? 'selected' : ''">Desdoblea</option>
+                                <option t-if="this.isErrefModuluak()" value="errefortzuak" t-att-selected="state.mota === 'errefortzuak' ? 'selected' : ''">Errefortzuak</option>
+                            </select>
                         </div>
-                        <div class="pfz-selector">
-                            <label class="form-label mb-0 small fw-semibold">Desdoblea</label>
-                            <button type="button"
-                                    t-attf-class="btn btn-sm pfz-toggle {{ state.desdoblea === 'BAI' ? 'pfz-btn-desdo' : 'btn-outline-secondary' }}"
-                                    t-on-click="toggleDesdoblea">
-                                <i t-attf-class="fa {{ state.desdoblea === 'BAI' ? 'fa-check-square-o' : 'fa-square-o' }} me-1"/>
-                                <t t-esc="state.desdoblea === 'BAI' ? 'BAI' : 'EZ'"/>
-                            </button>
-                        </div>
-                        <t t-if="state.desdoblea === 'BAI'">
+                        <t t-if="this.usesOrduak()">
                             <div class="pfz-selector">
-                                <label class="form-label mb-0 small fw-semibold">Desdoble orduak guztira</label>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="number" step="0.1" min="0"
-                                           class="form-control form-control-sm pfz-desdo-total"
-                                           t-att-value="state.desdoInfo.total"
-                                           t-on-change="(ev) => this.onDesdoTotalChange(ev)"/>
-                                    <span class="small text-muted">
+                                <label class="form-label mb-0 small fw-semibold">
+                                    <t t-esc="state.mota === 'errefortzuak' ? 'Errefortzu orduak guztira' : 'Desdoble orduak guztira'"/>
+                                </label>
+                                <div class="d-flex align-items-center gap-2" style="height: 31px;">
+                                    <span class="small fw-semibold text-muted">
                                         Erabilita: <t t-esc="state.desdoInfo.used"/> / <t t-esc="state.desdoInfo.total"/>h
                                     </span>
                                 </div>
@@ -85,7 +74,33 @@
                 <t t-if="state.selectedMintegi">
                   <div class="d-flex gap-3 flex-wrap mb-3 align-items-start">
                     <div class="pfz-taldeak-box border rounded p-2" style="max-width: 360px;">
-                        <div class="small fw-semibold text-uppercase text-success mb-1">Eleanitza / Desdobleak</div>
+                        <div class="small fw-semibold text-uppercase text-success mb-1">Eleanitza / Desdobleak / Errefortzuak (ordu erabilgarriak)</div>
+                        <div class="d-flex align-items-center gap-2 mb-1 small flex-wrap">
+                            <span class="fw-semibold text-muted">Errefortzu orduak:</span>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm py-0 px-2 {{ state.errefortzuMota === 'poltsan' ? 'pfz-btn-erref' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.onErrefortzuMotaChange('poltsan')">POLTSAN</button>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm py-0 px-2 {{ state.errefortzuMota === 'taldean' ? 'pfz-btn-erref' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.onErrefortzuMotaChange('taldean')">TALDEAN</button>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm py-0 px-2 {{ state.errefortzuMota === 'mix' ? 'pfz-btn-erref' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.onErrefortzuMotaChange('mix')">MIX</button>
+                            <span class="text-muted fst-italic">
+                                (<t t-esc="{poltsan:'POLTSAN', taldean:'TALDEAN', mix:'MIX'}[state.errefortzuMota]"/> definituak)
+                            </span>
+                        </div>
+                        <t t-if="state.errefortzuMota === 'mix'">
+                            <div class="d-flex align-items-center gap-2 mb-2 small flex-wrap">
+                                <span class="text-muted">POLTSAN:</span>
+                                <input type="number" step="0.5" min="0"
+                                       class="form-control form-control-sm text-end pfz-erabilg-input"
+                                       t-att-value="state.errefortzuPoltsan"
+                                       t-on-change="(ev) => this.onErrefortzuPoltsanChange(ev)"/>
+                                <span class="text-muted">h · MODULUTAN:</span>
+                                <span class="fw-semibold"><t t-esc="state.errefortzuModulu"/>h</span>
+                            </div>
+                        </t>
                         <table class="table table-sm table-borderless mb-0 pfz-taldeak-table">
                             <thead>
                                 <tr>
@@ -103,7 +118,22 @@
                                 <tr t-attf-class="{{ state.eleanitzaLaburpena.desdoblea.pending === 0 and state.eleanitzaLaburpena.desdoblea.total > 0 ? 'pfz-taldea-full' : '' }}">
                                     <td class="small fw-semibold">desdoblea</td>
                                     <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.desdoblea.pending"/></td>
-                                    <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.desdoblea.total"/></td>
+                                    <td class="small text-end p-1">
+                                        <input type="number" step="0.5" min="0"
+                                               class="form-control form-control-sm text-end pfz-erabilg-input"
+                                               t-att-value="state.eleanitzaLaburpena.desdoblea.total"
+                                               t-on-change="(ev) => this.onKopiaLimitChange('desdoblea', ev)"/>
+                                    </td>
+                                </tr>
+                                <tr t-attf-class="{{ state.eleanitzaLaburpena.errefortzuak.pending === 0 and state.eleanitzaLaburpena.errefortzuak.total > 0 ? 'pfz-taldea-full' : '' }}">
+                                    <td class="small fw-semibold">errefortzuak</td>
+                                    <td class="small text-end"><t t-esc="state.eleanitzaLaburpena.errefortzuak.pending"/></td>
+                                    <td class="small text-end p-1">
+                                        <input type="number" step="0.5" min="0"
+                                               class="form-control form-control-sm text-end pfz-erabilg-input"
+                                               t-att-value="state.eleanitzaLaburpena.errefortzuak.total"
+                                               t-on-change="(ev) => this.onKopiaLimitChange('errefortzuak', ev)"/>
+                                    </td>
                                 </tr>
                                 <tr class="pfz-karguak-guztira fw-bold">
                                     <td class="small">GUZTIRA</td>
@@ -124,15 +154,28 @@
                                         <th class="small">Taldea</th>
                                         <th class="small text-end">Eleanitza</th>
                                         <th class="small text-end">Desdoblea</th>
+                                        <th class="small text-end">Errefortz.</th>
                                         <th class="small text-end">Guztira</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <t t-foreach="z.taldeak" t-as="t" t-key="t.taldea">
+                                    <t t-foreach="z.taldeak" t-as="t" t-key="t.batch_id">
                                         <tr>
                                             <td class="small fw-semibold"><t t-esc="t.taldea"/></td>
                                             <td class="small text-end"><t t-esc="t.eleanitza"/></td>
-                                            <td class="small text-end"><t t-esc="t.desdoblea"/></td>
+                                            <td class="small text-end p-1">
+                                                <input type="number" step="0.5" min="0"
+                                                       class="form-control form-control-sm text-end pfz-banaketa-input"
+                                                       t-att-value="t.desdoblea"
+                                                       t-on-change="(ev) => this.onKopiaGroupChange(t.batch_id, 'desdoblea', ev)"/>
+                                            </td>
+                                            <td class="small text-end p-1" t-if="this.isErrefModuluak()">
+                                                <input type="number" step="0.5" min="0"
+                                                       class="form-control form-control-sm text-end pfz-banaketa-input"
+                                                       t-att-value="t.errefortzuak"
+                                                       t-on-change="(ev) => this.onKopiaGroupChange(t.batch_id, 'errefortzuak', ev)"/>
+                                            </td>
+                                            <td class="small text-end" t-else=""><t t-esc="t.errefortzuak"/></td>
                                             <td class="small text-end"><t t-esc="t.guztira"/></td>
                                         </tr>
                                     </t>
@@ -140,6 +183,7 @@
                                         <td class="small">GUZTIRA</td>
                                         <td class="small text-end"><t t-esc="z.eleanitza"/></td>
                                         <td class="small text-end"><t t-esc="z.desdoblea"/></td>
+                                        <td class="small text-end"><t t-esc="z.errefortzuak"/></td>
                                         <td class="small text-end"><t t-esc="z.guztira"/></td>
                                     </tr>
                                 </tbody>
@@ -224,6 +268,39 @@
                                 </table>
                             </div>
                         </div>
+
+                        <div class="pfz-moduluak card">
+                            <div class="card-header py-2 px-3">
+                                <span class="fw-semibold small text-uppercase" style="color:#fd7e14;">Errefortzuak</span>
+                                <span class="ms-1 small text-muted">(<t t-esc="state.eleanitzaModuluak.errefortzuak.length"/>)</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm pfz-table mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Kodea</th>
+                                            <th class="text-end">RPT</th>
+                                            <th>Irakaslea</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="state.eleanitzaModuluak.errefortzuak" t-as="m" t-key="m.id">
+                                            <tr>
+                                                <td class="fw-semibold"><t t-esc="m.code"/></td>
+                                                <td class="text-end"><t t-esc="m.rpt"/></td>
+                                                <td>
+                                                    <t t-if="m.faculty_name"><t t-esc="m.faculty_name"/></t>
+                                                    <t t-else=""><span class="text-muted fst-italic">—</span></t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="!state.eleanitzaModuluak.errefortzuak.length">
+                                            <tr><td colspan="3" class="text-center text-muted py-3 small">Modulurik ez.</td></tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                       </div>
 
                       <!-- DERECHA (1/2): Moduluak kopiatu (todas las columnas) -->
@@ -234,11 +311,14 @@
                             <t t-if="state.selectedBatch">
                                 <span class="badge bg-secondary"><t t-esc="state.selectedBatch.name"/></span>
                             </t>
-                            <t t-if="state.desdoblea === 'BAI'">
+                            <t t-if="state.mota === 'desdoblea'">
                                 <span class="badge pfz-badge-morado">DESDOBLEA</span>
                             </t>
-                            <t t-if="state.eleanitza === 'BAI'">
+                            <t t-if="state.mota === 'eleanitza'">
                                 <span class="badge bg-success">ELEANITZA</span>
+                            </t>
+                            <t t-if="state.mota === 'errefortzuak'">
+                                <span class="badge pfz-badge-erref">ERREFORTZUAK</span>
                             </t>
                             <span class="ms-auto small text-muted">
                                 Klik = sortu/ezabatu · Hautatuta: <t t-esc="this.selectedKopiaCount()"/>
@@ -257,7 +337,9 @@
                                         <th>Gela</th>
                                         <th>RPT</th>
                                         <th>Zorretan</th>
-                                        <th t-if="state.desdoblea === 'BAI'">Desdoble Orduak</th>
+                                        <th t-if="this.usesOrduak()">
+                                            <t t-esc="state.mota === 'errefortzuak' ? 'Errefortzu Orduak' : 'Desdoble Orduak'"/>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -273,7 +355,7 @@
                                             <td><t t-esc="zm.gela_orduak"/></td>
                                             <td class="fw-semibold"><t t-esc="zm.rpt_total"/></td>
                                             <td><t t-esc="zm.orduak_zorretan"/></td>
-                                            <td t-if="state.desdoblea === 'BAI'" t-on-click.stop="">
+                                            <td t-if="this.usesOrduak()" t-on-click.stop="">
                                                 <input type="number" step="0.1" min="0"
                                                        t-att-max="zm.rpt_total"
                                                        class="form-control form-control-sm pfz-desdo-input"
@@ -285,7 +367,7 @@
                                     </t>
                                     <t t-if="!state.zikloModuluak.length">
                                         <tr>
-                                            <td t-att-colspan="state.desdoblea === 'BAI' ? 10 : 9" class="text-center text-muted py-3 small">
+                                            <td t-att-colspan="this.usesOrduak() ? 10 : 9" class="text-center text-muted py-3 small">
                                                 Modulurik ez taldea honetan.
                                             </td>
                                         </tr>

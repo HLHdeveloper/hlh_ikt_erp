@@ -47,3 +47,44 @@ class OpSubjectBanaketa(models.Model):
         if vals:
             self.create(vals)
         return True
+
+
+class OpSubjectTeoriaPraktika(models.Model):
+    """Aukera-taula: gela orduak Teoria (gela) / Praktika (tailer) artean
+    banatzeko konbinazioak. Aste banaketa bezala, desplegable batean
+    eskaintzen dira `guztira` orduak berdintzen dituztenak."""
+    _name = 'op.subject.teoria.praktika'
+    _description = 'Teoria/Praktika ordu banaketa aukerak'
+    _rec_name = 'name'
+    _order = 'guztira, teoria desc'
+
+    name = fields.Char('Teoria/Praktika', required=True, index=True)
+    guztira = fields.Integer('Guztira (h)', required=True, index=True)
+    teoria = fields.Integer('Teoria orduak (gela)')
+    praktika = fields.Integer('Praktika orduak (tailer)')
+
+    _sql_constraints = [
+        ('unique_name', 'unique(name)', 'Konbinazioa errepikatua.'),
+    ]
+
+    @api.model
+    def _populate_options(self, max_total=15):
+        """Genera idempotentemente todas las combinaciones T/P (T+P=total)
+        para totales de 1 a max_total. Ej. total 7 → 7T/0P, 6T/1P … 0T/7P."""
+        existing = set(self.with_context(active_test=False).search([]).mapped('name'))
+        vals = []
+        for total in range(1, max_total + 1):
+            for teoria in range(total, -1, -1):
+                praktika = total - teoria
+                name = '%dT/%dP' % (teoria, praktika)
+                if name in existing:
+                    continue
+                vals.append({
+                    'name': name,
+                    'guztira': total,
+                    'teoria': teoria,
+                    'praktika': praktika,
+                })
+        if vals:
+            self.create(vals)
+        return True

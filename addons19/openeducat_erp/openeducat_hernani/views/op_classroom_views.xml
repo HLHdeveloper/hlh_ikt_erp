@@ -18,6 +18,10 @@
                 <field name="capacity" position="before">
                     <field name="irakasgela" widget="boolean_toggle"/>
                 </field>
+                <field name="capacity" position="after">
+                    <field name="department_ids" widget="many2many_tags"
+                           options="{'no_create': True}" optional="show"/>
+                </field>
                 <!-- Eliminar columna Instalazio Lerroak -->
                 <field name="facilities" position="replace"/>
             </field>
@@ -32,6 +36,8 @@
                 <field name="capacity" position="after">
                     <field name="irakasgela"/>
                     <field name="gela_mota"/>
+                    <field name="department_ids" widget="many2many_tags"
+                           options="{'no_create': True}"/>
                 </field>
             </field>
         </record>
@@ -44,6 +50,7 @@
             <field name="arch" type="xml">
                 <field name="capacity" position="after">
                     <field name="solairua"/>
+                    <field name="department_ids" string="Mintegia"/>
                     <separator/>
                     <!-- Check: solo gelas docentes (activado por defecto) -->
                     <filter string="Irakasgelak bakarrik ikusi" name="irakasgelak"
@@ -56,6 +63,8 @@
                             domain="[('gela_mota', '=', 'gela')]"/>
                     <filter string="Tailerrak" name="mota_tailerra"
                             domain="[('gela_mota', '=', 'tailerra')]"/>
+                    <filter string="Gela+Tailerra" name="mota_gela_tailerra"
+                            domain="[('gela_mota', '=', 'gela_tailerra')]"/>
                     <separator/>
                     <!-- Desplegable Solairua: filtra las gelas por planta -->
                     <filter string="0. SOLAIRUA" name="solairua_0"
@@ -76,6 +85,8 @@
                             domain="[]" context="{'group_by':'solairua'}"/>
                     <filter string="Gela mota" name="group_by_gela_mota"
                             domain="[]" context="{'group_by':'gela_mota'}"/>
+                    <filter string="Mintegia" name="group_by_mintegia"
+                            domain="[]" context="{'group_by':'department_ids'}"/>
                 </filter>
             </field>
         </record>

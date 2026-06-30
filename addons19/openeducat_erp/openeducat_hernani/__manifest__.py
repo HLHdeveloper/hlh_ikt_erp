@@ -26,6 +26,8 @@
             'openeducat_hernani/static/src/xml/fet_teacher_unavail.xml',
             'openeducat_hernani/static/src/components/fet_room_unavail.js',
             'openeducat_hernani/static/src/xml/fet_room_unavail.xml',
+            'openeducat_hernani/static/src/components/aula_esleipena.js',
+            'openeducat_hernani/static/src/xml/aula_esleipena.xml',
         ],
     },
     'data': [
@@ -44,6 +46,7 @@
         'views/op_perfilazioak_views.xml',
         'views/op_desdoble_he_views.xml',
         'views/op_report_views.xml',
+        'reports/op_perfilazio_laburpena_report.xml',
         'views/op_sis_menu.xml',
         'views/op_fet_constraints_views.xml',
         'views/op_sis_translations.xml',

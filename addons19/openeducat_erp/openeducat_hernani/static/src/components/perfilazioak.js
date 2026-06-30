@@ -10,6 +10,7 @@ class Perfilazioak extends Component {
     setup() {
         this.orm = useService("orm");
         this.notification = useService("notification");
+        this.action = useService("action");
         // Departamentos a los que se puede asignar un módulo TUTO (3 desplegables)
         this.TUTO_DEPTS = ['ORIENTA', 'LPO', 'INGELES'];
         this.TUTO_LABELS = { ORIENTA: 'ORI', LPO: 'LPO', INGELES: 'ING' };
@@ -42,6 +43,9 @@ class Perfilazioak extends Component {
             karguak: [],
 
             addingKargu: false,
+            // Selector de añadir kargu activo: 'kudeaketa' (KARGUAK) o
+            // 'ardurak' (ARDURAK). Hay un selector separado para cada mota.
+            addingKarguMota: null,
             allKarguak: [],
             newKarguId: null,
             newKarguOrduak: 0,
@@ -331,6 +335,22 @@ class Perfilazioak extends Component {
         return Math.round(t * 100) / 100;
     }
 
+    // "Mintegiko karguak" dividido por kargu_mota: KARGUAK (kudeaketa) y
+    // ARDURAK (ardurak). La tabla se muestra en dos secciones separadas.
+    get mintegiKudeaketak() {
+        return this.state.mintegiKarguak.filter((mk) => mk.kargu_mota === 'kudeaketa');
+    }
+
+    get mintegiArdurak() {
+        return this.state.mintegiKarguak.filter((mk) => mk.kargu_mota !== 'kudeaketa');
+    }
+
+    // GUZTIRA de una lista concreta de karguak (una sección).
+    karguakZerrendaGuztira(list, field = 'total') {
+        const t = (list || []).reduce((s, mk) => s + (mk[field] || 0), 0);
+        return Math.round(t * 100) / 100;
+    }
+
     // Plazen laburpena: por distintivo PT/PES de los profesores, suma sus
     // horas y las convierte a plazas (17h = 1; 6h=1/3, 9h=1/2, 12h=2/3).
     plazakLaburpena() {
@@ -591,6 +611,39 @@ class Perfilazioak extends Component {
         this.state.loading = false;
     }
 
+    // Desasignar un módulo desde la tabla "Perfilazio Laburpena": lo libera
+    // (faculty_id = null) para que quede disponible para otro profesor.
+    async unassignResumenModulu(rm) {
+        if (!rm || !rm.id) return;
+        this.state.loading = true;
+        const affected = await this.orm.call(
+            "op.faculty", "assign_perfilazio_modulu", [rm.id, false]);
+        // Reflejar en la lista de módulos de la derecha si está cargado allí.
+        const idx = this.state.moduluak.findIndex(m => m.id === rm.id);
+        if (idx >= 0) {
+            this.state.moduluak[idx].faculty_id = null;
+            this.state.moduluak[idx].faculty_name = null;
+        }
+        for (const upd of affected) {
+            const f = this._findIrakasle(upd.id);
+            if (f) {
+                f.orduak = upd.orduak;
+                f.overload = upd.overload;
+                f.gela = upd.gela;
+                if (upd.pt_pes !== undefined) f.pt_pes = upd.pt_pes;
+            }
+            if (this.state.selectedFaculty && this.state.selectedFaculty.id === upd.id) {
+                this.state.selectedFaculty.orduak = upd.orduak;
+                this.state.selectedFaculty.overload = upd.overload;
+                this.state.selectedFaculty.gela = upd.gela;
+                if (upd.pt_pes !== undefined) this.state.selectedFaculty.pt_pes = upd.pt_pes;
+            }
+        }
+        await this._refreshResumen();
+        await this._refreshTaldeakLaburpena();
+        this.state.loading = false;
+    }
+
     async onSpecialIrakasleChange(ev, modulu) {
         const facultyId = parseInt(ev.target.value) || null;
         const cand = this.specialOptions(modulu).find(x => x.id === facultyId);
@@ -645,7 +698,7 @@ class Perfilazioak extends Component {
         this.state.loading = false;
     }
 
-    async openAddKargu() {
+    async openAddKargu(mota) {
         this.state.allKarguak = await this.orm.call(
             "op.faculty", "get_all_karguak",
             [this.state.selectedFaculty.id, this.state.selectedMintegi?.id]);
@@ -654,7 +707,17 @@ class Perfilazioak extends Component {
         this.state.newKarguRemaining = 0;
         this.state.newKarguAllowZero = false;
         this.state.newKarguAllowDecimal = false;
+        this.state.addingKarguMota = mota || 'ardurak';
         this.state.addingKargu = true;
+    }
+
+    // Karguak disponibles para añadir, filtrados por mota: KARGUAK
+    // (kudeaketa) o ARDURAK (ardurak). Cada selector usa su propia lista.
+    allKarguakByMota(mota) {
+        if (mota === 'kudeaketa') {
+            return this.state.allKarguak.filter((k) => k.kargu_mota === 'kudeaketa');
+        }
+        return this.state.allKarguak.filter((k) => k.kargu_mota !== 'kudeaketa');
     }
 
     onNewKarguSelect(ev) {
@@ -692,6 +755,7 @@ class Perfilazioak extends Component {
 
     cancelAddKargu() {
         this.state.addingKargu = false;
+        this.state.addingKarguMota = null;
     }
 
     async saveKargu() {
@@ -708,6 +772,7 @@ class Perfilazioak extends Component {
             [this.state.selectedFaculty.id, this.state.selectedMintegi?.id]);
         this._updateFacultyHours(this.state.selectedFaculty.id, result);
         this.state.addingKargu = false;
+        this.state.addingKarguMota = null;
         // Refrescar "Mintegiko karguak": las horas esleitzeke decrementan.
         await this._refreshTaldeakLaburpena();
     }
@@ -770,6 +835,18 @@ class Perfilazioak extends Component {
 
     closeLaburpena() {
         this.state.showLaburpena = false;
+    }
+
+    // Descarga la "Perfilazio laburpena" del mintegi en PDF (informe QWeb
+    // server-side; el mintegi va en active_ids del contexto).
+    async downloadLaburpenaPdf() {
+        if (!this.state.selectedMintegi) return;
+        await this.action.doAction(
+            "openeducat_hernani.action_report_perfilazio_laburpena",
+            { additionalContext: {
+                active_ids: [this.state.selectedMintegi.id],
+                active_model: "op.department",
+            } });
     }
 
     // ── Plazak (tabla de plazas/vacantes del mintegi) ────────────────

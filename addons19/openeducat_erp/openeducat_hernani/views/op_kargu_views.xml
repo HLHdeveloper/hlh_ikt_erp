@@ -77,10 +77,10 @@
                     <field name="code"/>
                     <field name="name"/>
                     <field name="kargu_mota"/>
-                    <filter name="filter_perfilazioa" string="Perfilazio Karguak"
-                            domain="[('kargu_mota', '=', 'perfilazioa')]"/>
-                    <filter name="filter_drive" string="DRIVE Taldeak"
-                            domain="[('kargu_mota', '=', 'drive')]"/>
+                    <filter name="filter_ardurak" string="ARDURAK"
+                            domain="[('kargu_mota', '=', 'ardurak')]"/>
+                    <filter name="filter_kudeaketa" string="KUDEAKETA_KARGUAK"
+                            domain="[('kargu_mota', '=', 'kudeaketa')]"/>
                     <group expand="0" string="Taldekatu">
                         <filter name="group_kargu_mota" string="Kargu mota"
                                 context="{'group_by': 'kargu_mota'}"/>
@@ -151,10 +151,10 @@
                     <field name="kargu_code" string="Kodea"/>
                     <field name="department_id" string="Mintegia"/>
                     <field name="kargu_mota"/>
-                    <filter name="filter_perfilazioa" string="Perfilazio Karguak"
-                            domain="[('kargu_mota', '=', 'perfilazioa')]"/>
-                    <filter name="filter_drive" string="DRIVE Taldeak"
-                            domain="[('kargu_mota', '=', 'drive')]"/>
+                    <filter name="filter_ardurak" string="ARDURAK"
+                            domain="[('kargu_mota', '=', 'ardurak')]"/>
+                    <filter name="filter_kudeaketa" string="KUDEAKETA_KARGUAK"
+                            domain="[('kargu_mota', '=', 'kudeaketa')]"/>
                     <searchpanel>
                         <field name="kargu_mota" string="Kargu mota"
                                enable_counters="1"/>

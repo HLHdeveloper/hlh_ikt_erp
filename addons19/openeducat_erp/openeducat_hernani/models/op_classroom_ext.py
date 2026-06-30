@@ -12,10 +12,11 @@ class OpClassroomExt(models.Model):
 
     gela_mota = fields.Selection(
         [('gela', 'Gela'),
-         ('tailerra', 'Tailerra')],
+         ('tailerra', 'Tailerra'),
+         ('gela_tailerra', 'Gela+Tailerra')],
         string='Gela mota', default='gela', index=True,
-        help='Gela mota FET ordutegirako: gela arrunta (modulu teorikoak) '
-             'edo tailerra (modulu praktikoak).')
+        help='Gela mota FET ordutegirako: gela arrunta (modulu teorikoak), '
+             'tailerra (modulu praktikoak) edo biak (gela+tailerra).')
 
     solairua = fields.Selection(
         [('0', '0. SOLAIRUA'),
@@ -25,6 +26,14 @@ class OpClassroomExt(models.Model):
          ('4', '4. SOLAIRUA')],
         string='Solairua', compute='_compute_solairua', store=True, index=True,
         help='Gelaren kodearen arabera automatikoki kalkulatzen den solairua.')
+
+    # Mintegiak non gela hau erabilgarri dagoen (op.department.gela_ids alderantzizkoa).
+    department_ids = fields.Many2many(
+        'op.department',
+        'op_department_op_classroom_rel',
+        'classroom_id', 'department_id',
+        string='Mintegiak',
+    )
 
     @api.depends('code')
     def _compute_solairua(self):

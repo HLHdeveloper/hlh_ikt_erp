@@ -14,11 +14,15 @@ class OpKargu(models.Model):
     name = fields.Char(string='Nombre', required=True)
     kargu_mota = fields.Selection(
         selection=[
-            ('perfilazioa', 'Perfilazio Karguak'),
-            ('drive', 'DRIVE Taldeak'),
+            ('ardurak', 'ARDURAK'),
+            ('kudeaketa', 'KUDEAKETA_KARGUAK'),
         ],
-        string='Kargu mota', required=True, default='perfilazioa',
-        help='Tipo de cargo: Perfilazio_Karguak o DRIVE_TALDEAK.')
+        string='Kargu mota', required=True, default='ardurak',
+        help='Tipo de cargo:\n'
+             ' - ARDURAK: cargos perfilables (responsabilidades).\n'
+             ' - KUDEAKETA_KARGUAK: cargos de gestión/gobernanza '
+             '(tutoretzak TUTO_, mintegiburuak MB-, zuzendaritza, '
+             'orientatzailea, ikasketaburutza, administrazioa, idazkaritza).')
     gsuite_email = fields.Char(string='Email GSuite del cargo')
     rpt_total = fields.Float(
         string='RPT Total (h/aste)', default=0.0,

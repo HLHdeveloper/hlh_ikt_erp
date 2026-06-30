@@ -4,5 +4,8 @@
         <!-- Genera todas las particiones (máx 5 días) para totales 1..15.
              Idempotente: solo crea las que falten. Se ejecuta en cada update. -->
         <function model="op.subject.banaketa" name="_populate_options"/>
+        <!-- Combinaciones Teoria/Praktika (T+P=total) para totales 1..15.
+             Idempotente: solo crea las que falten. -->
+        <function model="op.subject.teoria.praktika" name="_populate_options"/>
     </data>
 </odoo>

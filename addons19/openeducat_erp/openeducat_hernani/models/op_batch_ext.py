@@ -36,7 +36,12 @@ class OpBatch(models.Model):
         string='Alumnos matriculados',
     )
 
-    # Tope total de horas de desdoble del grupo (Perfilazioak / Desdoblea).
-    # La suma de las horas de desdoble de los módulos DESDO_ del grupo no puede
-    # superar este valor. 0 = sin tope (comportamiento previo).
+    # Reparto de horas de desdoble del grupo (Desdoble_HE / Desdoblea).
+    # Se edita en las tablas por zikloa del apartado Desdoble_HE; la suma de los
+    # grupos del mintegi no puede superar el tope del mintegi
+    # (op.department.desdoble_orduak). Acota también las horas de los DESDO_.
     desdoble_orduak = fields.Float(string='Desdoble orduak guztira')
+
+    # Reparto de horas de errefortzu del grupo (Desdoble_HE / Errefortzuak).
+    # Mismo mecanismo que desdoble: límite = op.department.errefortzu_orduak.
+    errefortzu_orduak = fields.Float(string='Errefortzu orduak guztira')

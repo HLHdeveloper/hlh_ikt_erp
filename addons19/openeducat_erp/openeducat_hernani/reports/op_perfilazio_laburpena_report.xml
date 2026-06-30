@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Informe PDF de la "Perfilazio laburpena" de un mintegi (op.department).
+         Se lanza desde el botón PDF de la vista LABURPENA IKUSI, pasando el
+         mintegi seleccionado en active_ids del contexto. -->
+    <record id="action_report_perfilazio_laburpena" model="ir.actions.report">
+        <field name="name">Perfilazio laburpena</field>
+        <field name="model">op.department</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">openeducat_hernani.report_perfilazio_laburpena_doc</field>
+        <field name="report_file">openeducat_hernani.report_perfilazio_laburpena_doc</field>
+        <field name="print_report_name">'Perfilazio laburpena - %s' % (object.name or '')</field>
+    </record>
+
+    <template id="report_perfilazio_laburpena_doc">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.basic_layout">
+                    <div class="page">
+                        <t t-set="laburpena"
+                           t-value="doc.env['op.faculty'].get_perfilazio_laburpena(doc.id)"/>
+                        <h2 class="mb-1" style="text-transform:uppercase;">
+                            <span t-field="doc.name"/> — Perfilazio laburpena
+                        </h2>
+                        <p class="text-muted mb-3">
+                            <span t-esc="len(laburpena)"/> irakasle
+                        </p>
+                        <t t-if="not laburpena">
+                            <p class="text-muted">Irakaslerik ez mintegi honetan.</p>
+                        </t>
+                        <div style="width:100%; overflow:hidden;">
+                            <t t-foreach="laburpena" t-as="lf">
+                                <div style="float:left; width:50%; box-sizing:border-box;
+                                            padding:0 5px; page-break-inside:avoid;">
+                                    <div style="border:1px solid #ccc; border-radius:4px;
+                                                padding:6px 8px; margin-bottom:10px;">
+                                        <div style="border-bottom:1px solid #eee; margin-bottom:4px;
+                                                    padding-bottom:3px;">
+                                            <strong t-att-style="lf['overload'] and 'color:#b8860b;' or ''"
+                                                    t-esc="lf['name']"/>
+                                            <t t-foreach="lf['roles']" t-as="role">
+                                                <span class="badge"
+                                                      style="background:#e9ecef; color:#333;
+                                                             border:1px solid #ced4da; margin-left:4px;
+                                                             font-size:8px;"
+                                                      t-esc="role['label']"/>
+                                            </t>
+                                        </div>
+                                        <table class="table table-sm mb-0"
+                                               style="font-size:9px;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Kodea</th>
+                                                    <th class="text-end">Gela</th>
+                                                    <th class="text-end">RPT</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="lf['rows']" t-as="row">
+                                                    <tr t-att-style="row['is_kargu'] and 'font-style:italic;' or ''">
+                                                        <td t-esc="row['code']"/>
+                                                        <td class="text-end">
+                                                            <span t-if="row['gela'] is not None"
+                                                                  t-esc="row['gela']"/>
+                                                            <span t-if="row['gela'] is None">—</span>
+                                                        </td>
+                                                        <td class="text-end" t-esc="row['rpt']"/>
+                                                    </tr>
+                                                </t>
+                                                <tr style="font-weight:bold; background:#f5f5f5;">
+                                                    <td>GUZTIRA</td>
+                                                    <td class="text-end" t-esc="lf['gela_total']"/>
+                                                    <td class="text-end" t-esc="lf['rpt_total']"/>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <!-- Cada 2 tarjetas, limpiar el float para evitar
+                                     que una tarjeta alta encaje la siguiente. -->
+                                <t t-if="lf_index % 2 == 1">
+                                    <div style="clear:both;"/>
+                                </t>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -35,6 +35,20 @@
                             </field>
                         </page>
 
+                        <!-- Mintegiarentzat erabilgarri dauden gelak/tailerrak -->
+                        <page name="gelak" string="Gelak erabilgarriak">
+                            <field name="gela_ids" nolabel="1"
+                                   domain="[('irakasgela', '=', True)]">
+                                <tree>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="gela_mota"/>
+                                    <field name="solairua"/>
+                                    <field name="capacity"/>
+                                </tree>
+                            </field>
+                        </page>
+
                     </notebook>
                 </xpath>
             </field>
