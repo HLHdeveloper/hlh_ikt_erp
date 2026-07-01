@@ -33,6 +33,7 @@
     'data': [
         'security/ir.model.access.csv',
         'data/op_subject_banaketa_data.xml',
+        'data/fet_irakasle_kop_data.xml',
         'views/op_kargu_views.xml',
         'views/op_greba_views.xml',
         'views/op_ordezkapen_views.xml',

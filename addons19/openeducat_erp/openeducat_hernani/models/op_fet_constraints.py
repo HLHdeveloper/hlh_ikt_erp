@@ -14,6 +14,26 @@ FET_WEEKDAYS = [
 ]
 
 
+class OpFetIrakasleKop(models.Model):
+    """Opciones del desplegable "Irakasle kop." de un desdoble.
+
+    Es un Many2one (no Selection) para poder FILTRAR las opciones por fila con
+    un dominio (`value <= irakasle_max`): un Selection estático no permite
+    recortar sus opciones por registro. Registros 2..8 sembrados en
+    data/fet_irakasle_kop_data.xml.
+    """
+    _name = 'op.fet.irakasle.kop'
+    _description = 'FET desdoble: irakasle kopurua (aukera)'
+    _order = 'value'
+
+    value = fields.Integer('Balioa', required=True, index=True)
+    name = fields.Char('Izena', required=True)
+
+    _sql_constraints = [
+        ('uniq_value', 'unique(value)', 'Balio bakoitza behin bakarrik.'),
+    ]
+
+
 class OpFetTeacherUnavailability(models.Model):
     """Apartado #1: Irakasleen erabilgarritasuna.
 
@@ -298,9 +318,42 @@ class OpFetSimultaneity(models.Model):
     copy_id = fields.Many2one(
         'op.subject', string='Kopia (DESDO_/HE_)', required=True,
         index=True, ondelete='cascade')
+    copy_code = fields.Char(
+        string='Desdoble modulua', related='copy_id.code', readonly=True)
+    copy_desdoble_orduak = fields.Float(
+        string='Desdoble orduak', related='copy_id.rpt_total', readonly=True,
+        help='Kopiari (DESDO_) esleitutako orduak (RPT), ez jatorrizko gela '
+             'orduak. Perfilazioetako "Moduluak Kopiatu" taulakoak.')
+    # Jatorrizko modulua(k): DESDO_ malguetan, taldeko modulu bat baino
+    # gehiago hauta daitezke (talde txikiak gela berean saioa partekatzeko).
+    # HE_ moduluetan bakarra eta finkoa (jatorri kodearena). `edozein` markatuz
+    # gero, desdoblea librea da (jatorririk gabe).
+    jatorri_ids = fields.Many2many(
+        'op.subject', 'op_fet_simult_jatorri_rel', 'simult_id', 'subject_id',
+        string='Jatorrizko modulua(k)',
+        domain="[('gela_orduak', '>', 0), ('da_kopia', '=', False)]",
+        help='Desdoblea zein modulurekin bat datorren (SameStartingTime). '
+             'Bat baino gehiago: talde txikiak gela berean partekatzen dutenean.')
+    # Malgutasuna talde-moduluekin bat egiteko (jatorri zehatzik gabe).
+    # Modulu ZEHARKAKOAK (transversales) = kodean ZIA/KOG/ING/FOL/EIE/EIP/IPE
+    # dutenak; gainerakoak TEKNIKOAK.
+    #   tekniko   → taldeko modulu TEKNIKOEKIN soilik bat egin dezake.
+    #   amankomun → taldeko modulu ZEHARKAKOEKIN soilik.
+    #   biak      → edonon (edozein talde-modulurekin).
+    #   bat ere ez → jatorri_ids zehatzak erabiltzen dira.
+    edozein_tekniko = fields.Boolean(
+        'Edozein tekniko', default=False,
+        help='Desdoblea taldeko modulu teknikoetako edozeinekin bat egin '
+             'dezake (ez zeharkakoak).')
+    edozein_amankomun = fields.Boolean(
+        'Edozein amankomun', default=False,
+        help='Desdoblea taldeko modulu zeharkakoetako edozeinekin bat egin '
+             'dezake (kodean ZIA/KOG/ING/FOL/EIE/EIP/IPE). Biak: edonon.')
     mota = fields.Selection(
         [('desdoblea', 'Desdoblea'), ('eleanitza', 'Eleanitza')],
-        string='Mota', required=True, index=True)
+        string='Mota', compute='_compute_mota', store=True, index=True,
+        help='Kopiaren kodetik ondorioztatzen da: HE_ → eleanitza; '
+             'DESDO_ → desdoblea. Ezin da eskuz aldatu.')
     batch_id = fields.Many2one(
         'op.batch', string='Taldea', related='subject_id.batch_id',
         store=True, readonly=True)
@@ -308,20 +361,41 @@ class OpFetSimultaneity(models.Model):
         'op.department', string='Mintegia',
         related='subject_id.own_department_id', store=True, index=True,
         readonly=True)
-    desdoble_mota = fields.Selection(
-        [('gela_banatua', 'Gela banatua (2 gela / 2 irakasle)'),
-         ('gela_bakarrean', 'Gela bakarrean (gela berean, 2 irakasle)')],
-        string='Desdoble modua', default='gela_banatua',
-        help='Desdoblerako soilik. Gela banatua: taldea bi geletan banatzen '
-             'da, irakasle bana, aldi berean. Gela bakarrean: gela berean, '
-             'bi irakasle.')
-    eleanitza_mota = fields.Selection(
-        [('gela_banatua', 'Aula banatua (2 gela / 2 irakasle)'),
-         ('gela_berean', 'Gela berean (hizkuntza irakaslea sartzen da)')],
-        string='Eleanitza modua', default='gela_banatua',
-        help='Eleanitzarentzat soilik. Aula banatua: taldea bi geletan '
-             'banatzen da, irakasle bana, aldi berean. Gela berean: '
-             'hizkuntza irakaslea gela berean sartzen da, dena gela batean.')
+    # Modu bakarra desdoble/eleanitza-rentzat (lehen bi eremu ziren:
+    # desdoble_mota + eleanitza_mota). 'banatua' = 2 gela; 'berean' = gela
+    # bakarra, 2 irakasle (desdoblean bigarren irakaslea; eleanitzan hizkuntza
+    # irakaslea sartzen da).
+    modua = fields.Selection(
+        [('banatua', 'Banatua'),
+         ('berean', 'Berean')],
+        string='Modu mota', default='banatua', required=True,
+        help='Gela banatuak: taldea gela banatan banatzen da, irakasle bana, '
+             'aldi berean. Gela bakarra: gela bakarrean irakasle bat baino '
+             'gehiago (desdoblean laguntzailea; eleanitzan hizkuntza irakaslea).')
+    # Desdoble baten irakasle/gela kopurua aukeratzeko (banatua zein berean).
+    # Gutxienez 2 (DESDO_ irakaslea + jatorri 1) eta gehienez DESDO_ + jatorri
+    # kopurua. berean → gela bakarra, X irakasle; banatua → X gela / X irakasle.
+    # Adib. DESDO_1MSS2_MUNTAIA + 3 jatorri = 4 profe: 2..4 bitartean hautatu.
+    # Many2one (ez Selection) DOMINIOAK lerroz lerro moztu ahal izateko: aukerak
+    # `value <= irakasle_max` bakarrik erakusten dira (desplegable-a bera mugatuta).
+    irakasle_max = fields.Integer(
+        string='Gehienezko irakasle', compute='_compute_irakasle_max',
+        help='Desdoble honek onar dezakeen gehienezko irakasle kopurua: '
+             'DESDO_ + jatorri kopurua (edozein → irekita).')
+    irakasle_kop_id = fields.Many2one(
+        'op.fet.irakasle.kop', string='Irakasle kop.',
+        domain="[('value', '>=', 2), ('value', '<=', irakasle_max)]",
+        default=lambda self: self.env['op.fet.irakasle.kop'].search(
+            [('value', '=', 2)], limit=1),
+        help='Desdoblean parte hartuko duten irakasle kopurua: DESDO_ '
+             'irakaslea + jatorrizko moduluetako irakasleak. Gutxienez 2, '
+             'gehienez DESDO_ + jatorri kopurua.')
+    # Columna Modua (dinámica): expande el modu_mota. banatua → "Gela banatuak
+    # (N gela / N irakasle)" con N = nº jatorri. berean → "Gela bakarra (X
+    # irakasle)" con X = irakasle_kop (desdoble) o 2 (eleanitza). edozein →
+    # "taldeko edozein".
+    modua_azalpena = fields.Char(
+        string='Modua', compute='_compute_modua_azalpena')
     enabled = fields.Boolean('Gaituta', default=True, index=True)
 
     _sql_constraints = [
@@ -329,11 +403,54 @@ class OpFetSimultaneity(models.Model):
          'Kopia honek lerro bat baino ezin du izan.'),
     ]
 
-    @api.model
+    @api.depends('copy_id', 'copy_id.code')
+    def _compute_mota(self):
+        # HE_ → eleanitza; DESDO_ (o cualquier otro) → desdoblea. Garantiza
+        # que un DESDO_ nunca sea eleanitza y un HE_ nunca desdoblea.
+        for rec in self:
+            code = (rec.copy_id.code or '').upper()
+            rec.mota = 'eleanitza' if code.startswith('HE_') else 'desdoblea'
+
+    @api.depends('jatorri_ids', 'edozein_tekniko', 'edozein_amankomun', 'mota')
+    def _compute_irakasle_max(self):
+        # Máximo = 1 (DESDO_) + nº módulos en jatorri_ids. edozein → abierto (8).
+        for rec in self:
+            if rec.mota != 'desdoblea':
+                rec.irakasle_max = 2
+            elif rec.edozein_tekniko or rec.edozein_amankomun:
+                rec.irakasle_max = 8
+            else:
+                rec.irakasle_max = max(len(rec.jatorri_ids) + 1, 2)
+
+    @api.depends('modua', 'jatorri_ids', 'edozein_tekniko', 'edozein_amankomun',
+                 'irakasle_kop_id', 'irakasle_max', 'mota')
+    def _compute_modua_azalpena(self):
+        # X = irakasle_kop_id hautatua, [2, irakasle_max]-era moztuta.
+        for rec in self:
+            edozein = rec.edozein_tekniko or rec.edozein_amankomun
+            if rec.modua == 'berean':
+                # Gela bakarra: eleanitza = 2 finko (titular + hizkuntza);
+                # desdoblea = irakasle_kop hautatua.
+                if rec.mota == 'eleanitza':
+                    rec.modua_azalpena = 'Gela bakarra (2 irakasle)'
+                else:
+                    n = max(min(rec.irakasle_kop_id.value or 2, rec.irakasle_max), 2)
+                    rec.modua_azalpena = 'Gela bakarra (%d irakasle)' % n
+            else:  # banatua
+                if edozein:
+                    rec.modua_azalpena = 'Gela banatuak (taldeko edozein gela / irakasle)'
+                elif rec.mota == 'eleanitza':
+                    rec.modua_azalpena = 'Gela banatuak (2 gela / 2 irakasle)'
+                else:
+                    # desdoble: irakasle_kop, DESDO_ + jatorri kop.-era moztuta.
+                    n = max(min(rec.irakasle_kop_id.value or 2, rec.irakasle_max), 2)
+                    rec.modua_azalpena = 'Gela banatuak (%d gela / %d irakasle)' % (n, n)
+
     def generate_pairs(self):
         """Crea (idempotente) un par por cada DESDO_/HE_ con su origen.
-        Solo AÑADE los que falten; conserva 'enabled'/'eleanitza_mota' ya
-        editados. Empareja por código (origen = copia sin prefijo)."""
+        Solo AÑADE los que falten; conserva 'enabled'/'modua' ya editados.
+        Empareja por código (origen = copia sin prefijo). 'mota' se computa
+        de la copia (no se fija aquí)."""
         Subject = self.env['op.subject']
         existing = set(self.search([]).mapped('copy_id').ids)
         subjects = Subject.search([('active', '=', True)])
@@ -343,16 +460,17 @@ class OpFetSimultaneity(models.Model):
             if c.id in existing:
                 continue
             if c.code.startswith('DESDO_'):
-                mota, origin_code = 'desdoblea', c.code[6:]
+                origin_code = c.code[6:]
             elif c.code.startswith('HE_'):
-                mota, origin_code = 'eleanitza', c.code[3:]
+                origin_code = c.code[3:]
             else:
                 continue
             origin = by_code.get(origin_code)
             if not origin:
                 continue
             self.create({
-                'subject_id': origin.id, 'copy_id': c.id, 'mota': mota,
+                'subject_id': origin.id, 'copy_id': c.id,
+                'jatorri_ids': [(6, 0, [origin.id])],
             })
             created += 1
         return {

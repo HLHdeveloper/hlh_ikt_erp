@@ -197,7 +197,7 @@
             <field name="model">op.fet.simultaneity</field>
             <field name="arch" type="xml">
                 <tree string="Saio simultaneoak" editable="bottom"
-                      decoration-muted="not enabled">
+                      class="hlh-styled fet-simult-list" decoration-muted="not enabled">
                     <header>
                         <button name="generate_pairs" type="object"
                                 string="Sortu automatikoki" display="always"
@@ -207,15 +207,27 @@
                                 display="always" class="btn-primary"/>
                     </header>
                     <field name="batch_id" readonly="1"/>
-                    <field name="subject_id" options="{'no_create': True}"/>
-                    <field name="copy_id" options="{'no_create': True}"/>
-                    <field name="mota"/>
-                    <field name="desdoble_mota"
-                           readonly="mota != 'desdoblea'"
-                           placeholder="—"/>
-                    <field name="eleanitza_mota"
-                           readonly="mota != 'eleanitza'"
-                           placeholder="—"/>
+                    <field name="copy_code" readonly="1"/>
+                    <field name="copy_desdoble_orduak" string="Desdoble orduak" readonly="1"
+                           class="text-start"/>
+                    <field name="jatorri_ids" widget="many2many_tags"
+                           string="Jatorrizko modulua"
+                           context="{'show_code': 1}"
+                           readonly="mota != 'desdoblea' or edozein_tekniko or edozein_amankomun"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="edozein_tekniko" widget="boolean_toggle"
+                           string="Edozein tekniko"
+                           invisible="mota != 'desdoblea'"/>
+                    <field name="edozein_amankomun" widget="boolean_toggle"
+                           string="Edozein amankomun"
+                           invisible="mota != 'desdoblea'"/>
+                    <field name="mota" readonly="1"/>
+                    <field name="modua"/>
+                    <field name="irakasle_max" column_invisible="1"/>
+                    <field name="irakasle_kop_id" string="Irakasle kop."
+                           options="{'no_create': True, 'no_open': True}"
+                           invisible="mota != 'desdoblea'"/>
+                    <field name="modua_azalpena" string="Modua" readonly="1"/>
                     <field name="enabled" widget="boolean_toggle"/>
                 </tree>
             </field>
@@ -268,7 +280,7 @@
         </record>
 
         <record id="act_fet_simultaneity" model="ir.actions.act_window">
-            <field name="name">Saio simultaneoak</field>
+            <field name="name">DESDOBLE/HE banaketa</field>
             <field name="res_model">op.fet.simultaneity</field>
             <field name="view_mode">tree</field>
             <field name="search_view_id" ref="view_fet_simultaneity_search"/>
@@ -282,7 +294,7 @@
         </record>
 
         <menuitem id="menu_fet_simultaneity"
-                  name="Saio simultaneoak"
+                  name="DESDOBLE/HE banaketa"
                   parent="menu_fet_constraints_root"
                   sequence="40"
                   action="act_fet_simultaneity"/>

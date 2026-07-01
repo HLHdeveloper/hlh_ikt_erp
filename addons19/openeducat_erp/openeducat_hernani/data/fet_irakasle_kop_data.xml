@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Opciones del desplegable "Irakasle kop." de un desdoble.
+             El dominio de la vista recorta por fila (value <= irakasle_max). -->
+        <record id="fet_irakasle_kop_2" model="op.fet.irakasle.kop">
+            <field name="value">2</field>
+            <field name="name">2</field>
+        </record>
+        <record id="fet_irakasle_kop_3" model="op.fet.irakasle.kop">
+            <field name="value">3</field>
+            <field name="name">3</field>
+        </record>
+        <record id="fet_irakasle_kop_4" model="op.fet.irakasle.kop">
+            <field name="value">4</field>
+            <field name="name">4</field>
+        </record>
+        <record id="fet_irakasle_kop_5" model="op.fet.irakasle.kop">
+            <field name="value">5</field>
+            <field name="name">5</field>
+        </record>
+        <record id="fet_irakasle_kop_6" model="op.fet.irakasle.kop">
+            <field name="value">6</field>
+            <field name="name">6</field>
+        </record>
+        <record id="fet_irakasle_kop_7" model="op.fet.irakasle.kop">
+            <field name="value">7</field>
+            <field name="name">7</field>
+        </record>
+        <record id="fet_irakasle_kop_8" model="op.fet.irakasle.kop">
+            <field name="value">8</field>
+            <field name="name">8</field>
+        </record>
+    </data>
+</odoo>

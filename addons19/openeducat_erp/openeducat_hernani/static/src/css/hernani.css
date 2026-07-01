@@ -572,6 +572,29 @@
     text-align: left !important;
 }
 
+/* Saio simultaneoak: leyenda explicativa sobre la lista (edozein tekniko/amankomun). */
+.fet-simult-list .o_list_renderer::before {
+    content: "\2139  Malgutasuna (DESDO_ soilik):  \00AB Edozein tekniko \00BB = taldeko modulu TEKNIKOEKIN bat egin dezake  \00B7  \00AB Edozein amankomun \00BB = modulu ZEHARKAKOEKIN (zia / kog / ing / fol / eie / eip / ipe)  \00B7  biak markatuta = EDONON  \00B7  bat ere ez = goiko \00AB Jatorrizko modulua \00BB zehatzekin.";
+    display: block;
+    padding: 8px 12px;
+    margin: 4px 0 10px;
+    background: #eef4ff;
+    border-left: 4px solid #4a90d9;
+    border-radius: 4px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #2c3e50;
+    white-space: normal;
+}
+
+/* Saio simultaneoak: cabecera "Desdoble orduak" (copy_desdoble_orduak) a la izquierda. */
+.hlh-styled.o_list_view .o_list_table thead th[data-name="copy_desdoble_orduak"] > div.flex-row-reverse {
+    flex-direction: row !important;
+}
+.hlh-styled.o_list_view .o_list_table thead th[data-name="copy_desdoble_orduak"] .o_list_number_th {
+    text-align: left !important;
+}
+
 /* Sustituciones: aplicar el mismo ancho completo que Odoo da al :first-child del tab-pane.
    Sin esto, solo la tabla que sea :first-child hereda --ListRenderer-margin-x.
    Como en este tab el primer hijo es un <separator>, ambas tablas quedan estrechas. */

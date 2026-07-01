@@ -23,6 +23,11 @@ class OpSubjectBanaketa(models.Model):
     name = fields.Char('Banaketa', required=True, index=True)
     guztira = fields.Integer('Guztira (h/aste)', required=True, index=True)
     egun_kopurua = fields.Integer('Egun kopurua')
+    edozein = fields.Boolean(
+        'Edozein (malgua)', default=False, index=True,
+        help='Banaketa malgua: FET-ek orduak nahi bezala kokatzen ditu, '
+             'egun-murrizketarik gabe. DESDO_ moduluetan bakarrik eskaintzen '
+             'da.')
 
     _sql_constraints = [
         ('unique_name', 'unique(name)', 'Banaketa errepikatua.'),
@@ -31,7 +36,9 @@ class OpSubjectBanaketa(models.Model):
     @api.model
     def _populate_options(self, max_total=15, max_days=5):
         """Genera idempotentemente todas las particiones (<= max_days días)
-        para totales de 1 a max_total. Llamado desde data XML <function>."""
+        para totales de 1 a max_total. Llamado desde data XML <function>.
+        Añade además la opción especial 'edozein' (malgua, guztira=0) que se
+        ofrece solo en los DESDO_: FET encaja las horas como quiera."""
         existing = set(self.with_context(active_test=False).search([]).mapped('name'))
         vals = []
         for total in range(1, max_total + 1):
@@ -44,6 +51,11 @@ class OpSubjectBanaketa(models.Model):
                     'guztira': total,
                     'egun_kopurua': len(parts),
                 })
+        if 'edozein' not in existing:
+            vals.append({
+                'name': 'edozein', 'guztira': 0,
+                'egun_kopurua': 0, 'edozein': True,
+            })
         if vals:
             self.create(vals)
         return True

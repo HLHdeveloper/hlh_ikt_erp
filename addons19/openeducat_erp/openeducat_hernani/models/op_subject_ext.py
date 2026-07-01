@@ -52,24 +52,33 @@ class OpSubjectExt(models.Model):
         'Banaketa orduak', compute='_compute_banaketa_orduak', store=True,
         help='Aste banaketaren oinarri diren orduak: DESDO_/ERREF_ '
              'moduluetan RPT Total; gainerakoetan Gela Orduak.')
+    da_desdo = fields.Boolean(
+        'DESDO_ da', compute='_compute_da_desdo', store=True,
+        help='Modulua desdoblea (DESDO_) den. Aste banaketa malgua '
+             '("edozein") DESDO_ moduluetan bakarrik eskaintzeko.')
     banaketa_id = fields.Many2one(
         'op.subject.banaketa', string='Aste Banaketa',
         ondelete='set null',
-        domain="[('guztira', '=', banaketa_orduak)]",
+        # Aukera zehatzak (guztira = banaketa_orduak) BETI; 'edozein' malgua
+        # DESDO_ moduluetan soilik (da_desdo=True).
+        domain="['|', ('guztira', '=', banaketa_orduak),"
+               " '&', ('edozein', '=', True), ('edozein', '=', da_desdo)]",
     )
     aste_banaketa = fields.Char(
         'Aste Banaketa', compute='_compute_aste_banaketa', store=True)
     teoria_praktika_gabe = fields.Boolean(
         'Teoria/Praktika gabe', compute='_compute_teoria_praktika_gabe',
         store=True,
-        help='DESDO_/ERREF_/ERRF_ moduluek edo JARRAIAN banaketa dutenek ez '
-             'dute teoria/praktika ordu banaketarik aukeratzen.')
+        help='ERREF_/ERRF_ moduluek edo JARRAIAN banaketa dutenek ez '
+             'dute teoria/praktika ordu banaketarik aukeratzen. '
+             'DESDO_ moduluek BAI (RPT orduen arabera).')
     teoria_praktika_id = fields.Many2one(
         'op.subject.teoria.praktika', string='Teoria/Praktika Orduak',
         ondelete='set null',
-        domain="[('guztira', '=', gela_orduak)]",
-        help='Gela orduen banaketa Teoria (gela) / Praktika (tailer) artean. '
-             'Aukerak gela orduen kopurua berdintzen dute (ad. 7h → 5T/2P).')
+        domain="[('guztira', '=', banaketa_orduak)]",
+        help='Orduen banaketa Teoria (gela) / Praktika (tailer) artean. '
+             'Aukerak banaketa-orduen kopurua berdintzen dute (gela orduak '
+             'modulu arruntetan; RPT orduak DESDO_ moduluetan; ad. 7h → 5T/2P).')
     # Aula-esleipena (.fet sorkuntzarako; lehen Excel-en zegoena). Aukera anitz:
     # FET-ek bat hautatzen du sortzean. Dominioa gela_mota-ren arabera; mintegiaren
     # gela erabilgarrien araberako filtroa bistan/pantaila dedikatuan aplikatzen da.
@@ -102,16 +111,39 @@ class OpSubjectExt(models.Model):
 
     @api.depends('code', 'banaketa_id', 'banaketa_id.name')
     def _compute_teoria_praktika_gabe(self):
-        # DESDO_/ERREF_/ERRF_ y los módulos con banaketa JARRAIAN no eligen
+        # ERREF_/ERRF_ y los módulos con banaketa JARRAIAN no eligen
         # teoria/praktika: se desactiva (vacío y readonly) la columna.
+        # DESDO_ SÍ pueden (reparten sus horas RPT vía banaketa_orduak).
         for rec in self:
             code = (rec.code or '').upper()
             ban = (rec.banaketa_id.name or '').upper()
-            gabe = (code.startswith('DESDO_') or code.startswith('ERREF')
+            gabe = (code.startswith('ERREF')
                     or code.startswith('ERRF') or ban == 'JARRAIAN')
             rec.teoria_praktika_gabe = gabe
             if gabe and rec.teoria_praktika_id:
                 rec.teoria_praktika_id = False
+
+    da_kopia = fields.Boolean(
+        'Kopia da', compute='_compute_da_desdo', store=True,
+        help='Modulua kopia den (DESDO_ edo HE_). Jatorrizko moduluen '
+             'desplegableetatik kanpo uzteko.')
+
+    @api.depends_context('show_code')
+    @api.depends('code', 'name')
+    def _compute_display_name(self):
+        # Con context {'show_code': 1} (p.ej. en tags de jatorri_ids del
+        # apartado Saio simultaneoak) se muestra el CÓDIGO en vez del name.
+        if not self.env.context.get('show_code'):
+            return super()._compute_display_name()
+        for rec in self:
+            rec.display_name = rec.code or ''
+
+    @api.depends('code')
+    def _compute_da_desdo(self):
+        for rec in self:
+            code = (rec.code or '').upper()
+            rec.da_desdo = code.startswith('DESDO_')
+            rec.da_kopia = code.startswith('DESDO_') or code.startswith('HE_')
 
     @api.depends('code', 'gela_orduak', 'rpt_total')
     def _compute_banaketa_orduak(self):
@@ -257,9 +289,9 @@ class OpSubjectExt(models.Model):
         # valor fuera de dominio (que dispararía el modal de campo inválido al
         # guardar inline en la lista).
         for rec in self:
-            if (rec.banaketa_id
+            if (rec.banaketa_id and not rec.banaketa_id.edozein
                     and rec.banaketa_id.guztira != rec.banaketa_orduak):
                 rec.banaketa_id = False
             if (rec.teoria_praktika_id
-                    and rec.teoria_praktika_id.guztira != rec.gela_orduak):
+                    and rec.teoria_praktika_id.guztira != rec.banaketa_orduak):
                 rec.teoria_praktika_id = False
