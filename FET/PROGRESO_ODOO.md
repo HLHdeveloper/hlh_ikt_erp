@@ -1,11 +1,16 @@
 # Integración FET ↔ Odoo — Progreso (lado Odoo, máquina 108)
 
-> Estado a **2026-06-29** (cifras de datos re-contrastadas contra la BD
-> `kudeaketa` viva). Complementa `INTEGRACION_ODOO.md` (contrato de la API FET en
-> la 104). Aquí se documenta TODO lo construido en Odoo para alimentar el futuro
-> generador del `.fet`.
+> Estado a **2026-07-01** (código; las cifras de datos de la sección 4 son de
+> 2026-06-30). Complementa `INTEGRACION_ODOO.md` (contrato de la API FET en la
+> 104). Aquí se documenta TODO lo construido en Odoo para alimentar el futuro
+> generador del `.fet`. Ver el **Historial de cambios** (sección 7) para el
+> registro por sesiones.
 
 Módulo: `addons19/openeducat_erp/openeducat_hernani` (Odoo 17, BD `kudeaketa`).
+
+**Repositorio GitHub**: `github.com/hlhkudeaketa-odoo/HLH_openeducat`, rama por
+defecto **`17.0`** (autenticación por token en `~/.git-credentials`). El repo
+local trackea `hlh/17.0`; `git push` sube los cambios.
 
 ---
 
@@ -74,22 +79,70 @@ Resuelto automáticamente por `gela_mota` + `op.subject.type` en la generación 
   **Izena/Kodea** y badge **T** para talleres).
 - FET: `ConstraintRoomNotAvailableTimes`.
 
-### #4 · Saio simultaneoak  ✅
-- Modelo `op.fet.simultaneity`: par **origen ↔ copia** (`DESDO_`/`HE_`), `mota`
-  (desdoblea/eleanitza), `batch_id`, `department_id` (related, para filtrar),
-  `enabled`, y dos modos editables por fila:
-  - **`desdoble_mota`** (col. "Desdoble modua"): `gela_banatua` / `gela_bakarrean`.
-  - **`eleanitza_mota`** (col. "Eleanitza modua"): `gela_banatua` / `gela_berean`.
-- **Botones siempre visibles** en la lista (header `display="always"`, slot
-  nativo Odoo 17 `control-panel-always-buttons`; el cog "Ekintzak" solo sale al
-  seleccionar filas):
-  - **"Sortu automatikoki"** → `generate_pairs()` (idempotente): crea un par por
-    cada `DESDO_`/`HE_` emparejando por código sin prefijo (DESDO_=6, HE_=3).
-    Genera **27 desdoble + 15 eleanitza = 42 pares**.
-  - **"Desdoble/agrupazio berria"** → abre `op.fet.grouping` (ver #4b).
-- **Searchpanel** por **Mintegia** + **Mota**.
-- FET: `ConstraintActivitiesSameStartingTime` (+ misma aula cuando el modo es
-  `gela_bakarrean`/`gela_berean`).
+### #4 · DESDOBLE/HE banaketa  ✅  (antes "Saio simultaneoak")
+Menú **DESDOBLE/HE banaketa** (renombrado 2026-07-01; era "Saio simultaneoak").
+Modelo `op.fet.simultaneity`: un registro = una copia `DESDO_`/`HE_` y su
+tratamiento en el `.fet`.
+
+**Campos principales:**
+- **`copy_id`** (Many2one, la copia `DESDO_`/`HE_`) — `unique`, un registro por
+  copia. **`copy_code`** (related, col. "Desdoble modulua") muestra el código.
+- **`copy_desdoble_orduak`** (related `copy_id.rpt_total`, col. "Desdoble
+  orduak") = horas REDUCIDAS asignadas a la copia (p.ej. `DESDO_1MSS2_MUNTAIA`=3h,
+  no las 7h de gela del origen); coincide con "Moduluak Kopiatu" de Perfilazioak.
+- **`mota`** (computed **stored**, readonly): `eleanitza` si `copy_id.code`
+  empieza por `HE_`, si no `desdoblea`. Garantiza que un `DESDO_` nunca sea
+  eleanitza ni al revés; no editable a mano.
+- **`subject_id`** (Many2one, origen, ancla interna) + **`jatorri_ids`**
+  (Many2many `op_fet_simult_jatorri_rel`, col. "Jatorrizko modulua(k)"): los
+  módulos reales del grupo con los que la copia comparte sesión. **Multi-origen**
+  para desdoble (talde txikiak comparten aula); en `HE_` es fijo (1 origen).
+  Widget `many2many_tags` con `context={'show_code':1}` → muestra el **código**.
+- **`edozein_tekniko` / `edozein_amankomun`** (Boolean, solo desdoble): flexibilidad
+  total con módulos del MISMO grupo, sin `jatorri_ids` concretos. **Transversal
+  (amankomun) = código contiene ZIA/KOG/ING/FOL/EIE/EIP/IPE** (lista cerrada); el
+  resto = técnico. tekniko=solo técnicos, amankomun=solo transversales,
+  ambos=en cualquier sitio, ninguno=`jatorri_ids` concretos. Al activar cualquiera,
+  `jatorri_ids` queda readonly/ignorado.
+- **`modua`** (Selection `banatua` / `berean`, col. "Modu mota", editable):
+  banatua = gela banatan, irakasle bana; berean = gela bakarrean varios profes.
+- **`irakasle_kop_id`** (Many2one a **`op.fet.irakasle.kop`**, col. "Irakasle
+  kop.", solo desdoble): nº de profes/gelas del reparto. **Dominio POR FILA**
+  `value <= irakasle_max` (por eso es Many2one, no Selection: un Selection no
+  recorta opciones por registro). **`irakasle_max`** (Integer computed) =
+  **`1 + nº módulos en jatorri_ids`** (el profe `DESDO_` + los orígenes); edozein
+  → 8 (abierto); no-desdoble → 2. Rango: mín 2, máx `1+orígenes`.
+- **`modua_azalpena`** (Char computed, col. **"Modua"**, readonly): expande el
+  modo con el nº de profes → `Gela bakarra (X irakasle)` / `Gela banatuak (X gela
+  / X irakasle)`; eleanitza fijo a 2 (titular + idiomas); edozein → "taldeko
+  edozein". El valor se **recorta en silencio** a `irakasle_max`.
+- **`enabled`** (Boolean, col. "Gaituta"), `batch_id`/`department_id` (related,
+  para filtrar). **Leyenda en pantalla** (CSS `.fet-simult-list …::before`).
+
+**Botones siempre visibles** en la lista (header `display="always"`, slot nativo
+Odoo 17 `control-panel-always-buttons`; el cog "Ekintzak" solo sale al seleccionar
+filas). ⚠️ El método de un botón de cabecera en `<tree>` **NO lleva `@api.model`**
+(el arg extra de IDs da `TypeError`):
+- **"Sortu automatikoki"** → `generate_pairs()` (idempotente): crea un par por
+  cada `DESDO_`/`HE_` emparejando por código sin prefijo (DESDO_=6, HE_=3);
+  pre-rellena `jatorri_ids=[origen]`; conserva `enabled`/`modua` ya editados.
+- **"Desdoble/agrupazio berria"** → abre `op.fet.grouping` (ver #4b).
+
+**Searchpanel** por **Mintegia** + **Mota** (filtros Desdobleak/Eleanitzak).
+
+**Semántica FET (a implementar en el generador):**
+- Las N `copy_desdoble_orduak` de un `DESDO_` son un **POOL de horas** que el profe
+  de apoyo distribuye LIBREMENTE entre los módulos de `jatorri_ids` (mismo grupo).
+  Ej: `DESDO_1MSS2_MUNTAIA`=3h con orígenes MUNTAIA/SEGUR/PBSE → 2h SEGUR+1h
+  MUNTAIA, o 2h PBSE+1h SEGUR, etc. Cada hora coincide con UNA sesión de ALGUNO de
+  los orígenes (NO es una sesión única que bloquee a todos a la vez). Mapeo
+  probable: N sub-actividades de 1h, cada una `SameStartingTime` con una sesión de
+  algún origen. Más orígenes = más combinaciones = horario más flexible.
+- `modua`=**banatua** → `SameStartingTime` + aulas distintas (el profe `DESDO_`
+  cuenta como una gela/irakasle más → máx = 1+orígenes); **berean** → misma aula,
+  `irakasle_kop_id` profes dentro.
+- `edozein_tekniko/amankomun/ambos` → el origen deja de ser fijo: la copia puede
+  coincidir con cualquier módulo del grupo del tipo indicado (a mapear).
 
 ### #4b · Desdoble/Agrupación manual con aforo  ✅
 - Modelos `op.fet.grouping` + `op.fet.grouping.line`.
@@ -120,24 +173,27 @@ Los karguak NO entran al `.fet` (solo informativos para plazas/perfilación).
 
 ---
 
-## 4. Datos pendientes (bloquean parte del `.fet`)  — recontado 2026-06-29
+## 4. Datos pendientes (bloquean parte del `.fet`)  — recontado 2026-06-30
 
-1. **`banaketa_id`** en `op.subject`: **224 de 257** módulos origen con gela>0
-   tienen distribución semanal; **solo faltan 4 origen** (no venían en las hojas)
-   + 29 copias DESDO_/HE_/ERREF (aplazadas). También se está rellenando
-   `teoria_praktika_id` (214). Import en curso desde el Excel del usuario (una
-   pestaña por mintegi) — ver `FET/banaketa_import/PROGRESO_BANAKETA.md` (scripts
-   por mintegi + pendientes). Mintegiak hechos: ELE, MEK, AST, ORIENTAZIO,
-   INGELESA, LPO/FOL. Falta INFORMATIKA y algún suelto.
-2. **`capacity`** (aforo) en `op.classroom`: **28 de 63** (faltan **35**).
-   Necesario para el aviso de aforo de #4b.
+Base: **256 módulos** con `gela_orduak > 0` (los que generan actividad).
 
-> Otros prerequisitos del generador (verificados 2026-06-29, ya OK): `faculty_id`
-> en **272** módulos, `batch_id` en **286**, `op.timing` = **6** franjas,
-> `op.faculty` activos = **165**, `op.batch` activos = **35**. Datos de
-> restricciones ya cargados: #1 teacher_unavail = 4, #4 simultaneity = 32, #6
-> config singleton = 1; #3 room_unavail y #5 fixed_session = 0 (a rellenar por el
-> usuario cuando proceda). **`op.session` = 0** (destino del volcado, aún vacío).
+1. **`banaketa_id`** en `op.subject`: faltan **20** módulos = 2 sueltos
+   (`2MLE2_MUME`, `2FMD3_HAUT_2`) + 18 copias `DESDO_`/`HE_` (las `DESDO_` >1h que
+   el usuario indicará). También faltan **31** `teoria_praktika_id`. Scripts en
+   `FET/banaketa_import/` (ver `PROGRESO_BANAKETA.md`).
+2. **`faculty_id`**: faltan **11** módulos sin profe — `2FMD3_HAUT_2`,
+   `2SEA3_HAUT_2` + copias `DESDO_`/`HE_`. **Sin profe FET no crea la actividad**;
+   revisar si la copia hereda el profe del origen o lleva el de apoyo.
+3. **Aula asignada**: faltan **6** módulos sin gela ni tailerra —
+   `1IEA2A_IPE_I`, `2IEA2A_EIP_II`, `2SEA3_EIP_2`, `1SEA3_EIP_1`, `1IEA2D_IPE_I`,
+   `2IEA2D_EIP_II` (módulos EIP/IPE de proyecto/empresa; **probablemente no
+   necesitan aula** — confirmar; podrían quedar fuera del `.fet`).
+4. **`capacity`** (aforo) en `op.classroom`: **28 de 66** (faltan **38**). Solo
+   afecta al aviso de aforo de #4b, **no bloquea** el `.fet`.
+
+> Prerequisitos ya OK (2026-06-30): `batch_id` en todos los módulos con horas;
+> `op.faculty` activos = **165**; `op.batch` activos = **35**; `op.timing` = **6**
+> franjas. **`op.session` = 0** (destino del volcado, aún vacío).
 
 ---
 
@@ -146,7 +202,8 @@ Los karguak NO entran al `.fet` (solo informativos para plazas/perfilación).
 > El módulo/generador `openeducat_fet` **aún no existe** (verificado 2026-06-29);
 > todo lo construido vive dentro de `openeducat_hernani`.
 
-1. Rellenar `banaketa_id` (**196** módulos) y `capacity` (**35** aulas).
+1. Cerrar datos pendientes (sección 4): `banaketa_id` (20), `faculty_id` (11),
+   decidir las 6 EIP/IPE sin aula y, opcional, `capacity` (38).
 2. **Generador del `.fet`** (FET v5.41):
    - Days (Lun–Vie) + Hours (`op.timing.name`).
    - Teachers (`op.faculty`), Subjects (`op.subject`), Students/Years/Groups
@@ -162,15 +219,56 @@ Los karguak NO entran al `.fet` (solo informativos para plazas/perfilación).
 
 ```
 models/op_fet_constraints.py     # op.fet.* (teacher/room unavail, simultaneity,
-                                 #   grouping(+line), fixed.session, config)
+                                 #   irakasle.kop, grouping(+line), fixed.session,
+                                 #   config)
 models/op_classroom_ext.py       # gela_mota, irakasgela, solairua
 models/op_batch_ext.py           # fet_student_count
+models/op_subject_ext.py         # da_kopia/da_desdo, banaketa/T-P, show_code…
 views/op_fet_constraints_views.xml
 views/op_classroom_views.xml
 views/op_sis_menu.xml            # menús SIS (Aste Saioak, Ordutegi murrizpenak)
+data/fet_irakasle_kop_data.xml   # opciones 2..8 del desplegable Irakasle kop.
 static/src/components/fet_teacher_unavail.js  + xml/fet_teacher_unavail.xml
 static/src/components/fet_room_unavail.js     + xml/fet_room_unavail.xml
-static/src/css/hernani.css       # .feu-* (rejillas)
+static/src/css/hernani.css       # .feu-* (rejillas), .fet-simult-list (leyenda)
 security/ir.model.access.csv     # ACL de los op.fet.*
 ../../../load_timings.py         # carga rejilla op.timing
 ```
+
+---
+
+## 7. Historial de cambios
+
+### 2026-07-01 — DESDOBLE/HE banaketa: flexibilización + GitHub
+Sesión centrada en la lista de simultaneidades (`op.fet.simultaneity`) y en dejar
+constancia/copia del trabajo. Cambios de código:
+- **Menú renombrado** "Saio simultaneoak" → **"DESDOBLE/HE banaketa"** (menuitem
+  + acción).
+- **`mota`** pasó a **computed stored** desde `copy_id.code` (readonly).
+- Fundidos `desdoble_mota`+`eleanitza_mota` en un solo **`modua`** (banatua/berean).
+- Origen **Many2many `jatorri_ids`** (multi-origen para desdoble; `HE_` fijo) que
+  muestra el **código** (override `op.subject._compute_display_name` con
+  `@api.depends_context('show_code')`); nuevo flag `op.subject.da_kopia`.
+- Dos toggles **`edozein_tekniko` / `edozein_amankomun`** (transversal =
+  ZIA/KOG/ING/FOL/EIE/EIP/IPE) + **leyenda** en pantalla.
+- Columna **Modua** dinámica (`modua_azalpena`): "Gela bakarra (X irakasle)" /
+  "Gela banatuak (X gela / X irakasle)".
+- Desplegable **Irakasle kop.** (`irakasle_kop_id` → nuevo modelo
+  **`op.fet.irakasle.kop`**, seed 2..8) con **dominio por fila** `value <=
+  irakasle_max` (= **1 + nº orígenes**), recorte en silencio del display.
+- Permitido editar **teoría/práctica** en `DESDO_` (dominio `banaketa_orduak`) y
+  banaketa **`edozein`** (malgua) para `DESDO_` (ver `PROGRESO_BANAKETA.md`).
+- Eliminado el campo muerto `subject_code` (warning "same label").
+
+**Infra / copia de seguridad:**
+- Commit local `7971878` en rama `17.0`.
+- **Push inicial a GitHub** `hlhkudeaketa-odoo/HLH_openeducat`: el clon era
+  *shallow* (7 commits) → `git fetch --unshallow origin` (1371 commits) → push OK.
+  Rama por defecto puesta a `17.0` y `main` (vacío) borrado.
+- **Backups** en `openeducat-project/backups/`: `kudeaketa_*.sql.gz` (BD, pg_dump)
+  + `filestore_kudeaketa_*.tar.gz` (adjuntos Odoo).
+
+### ≤ 2026-06-30 — Base FET
+Construcción de secciones 1–6: rejilla `op.timing`, `gela_mota`, Gela-esleipena
+(OWL), Ordutegi murrizpenak (#1 #3 #4 #4b #5 #6), imports de banaketa y aulas.
+Ver el resto del documento.

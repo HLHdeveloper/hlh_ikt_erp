@@ -38,9 +38,11 @@ de la API FET en `FET/INTEGRACION_ODOO.md`. Resumen de lo construido:
     (incluidas copias HE_/DESDO_/ERREF), igual que `get_perfilazio_moduluak`.
 - **Ordutegi murrizpenak** (menú SIS seq 57): restricciones FET en
   `models/op_fet_constraints.py` (`op.fet.*`): #1 Irakasleen erabilgarritasuna
-  (OWL grid), #3 Gelen erabilgarritasuna (OWL grid), #4 Saio simultaneoak
-  (desdoble/eleanitza auto + agrupaciones manuales con aforo), #5 Saio finkoak,
-  #6 Murrizpen orokorrak (config única). #2 y #7 sin pantalla (automático/no aplica).
+  (OWL grid), #3 Gelen erabilgarritasuna (OWL grid), #4 **DESDOBLE/HE banaketa**
+  (antes "Saio simultaneoak": desdoble/eleanitza auto con `jatorri_ids`
+  multi-origen, modua banatua/berean, `irakasle_kop` por fila + agrupaciones
+  manuales con aforo), #5 Saio finkoak, #6 Murrizpen orokorrak (config única).
+  #2 y #7 sin pantalla (automático/no aplica). Detalle en `FET/PROGRESO_ODOO.md`.
 - **Pendiente** (recontado 2026-06-29): `banaketa_id` **224/257** módulos origen
   (faltan 4 origen + 29 copias DESDO_/HE_/ERREF aplazadas) y `teoria_praktika_id`
   214 — import en curso desde Excel del usuario, ver
