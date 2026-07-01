@@ -234,9 +234,9 @@ class OpSubjectExt(models.Model):
         """Aulas disponibles del mintegi separadas en columnas teoría/taller."""
         dept = self.env['op.department'].browse(dept_id)
         gelak = dept.gela_ids.filtered(
-            lambda c: c.gela_mota in ('gela', 'gela_tailerra'))
+            lambda c: c.irakasgela and c.gela_mota in ('gela', 'gela_tailerra'))
         tailerrak = dept.gela_ids.filtered(
-            lambda c: c.gela_mota in ('tailerra', 'gela_tailerra'))
+            lambda c: c.irakasgela and c.gela_mota in ('tailerra', 'gela_tailerra'))
 
         def adict(recs):
             return [{'id': c.id, 'code': c.code, 'name': c.name or ''}

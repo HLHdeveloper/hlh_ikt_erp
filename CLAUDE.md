@@ -41,14 +41,18 @@ de la API FET en `FET/INTEGRACION_ODOO.md`. Resumen de lo construido:
   (OWL grid), #3 Gelen erabilgarritasuna (OWL grid), #4 **DESDOBLE/HE banaketa**
   (antes "Saio simultaneoak": desdoble/eleanitza auto con `jatorri_ids`
   multi-origen, modua banatua/berean, `irakasle_kop` por fila + agrupaciones
-  manuales con aforo), #5 Saio finkoak, #6 Murrizpen orokorrak (config única).
+  manuales con aforo), **#4c Modulu Bateratuak** (`op.fet.bateratua`: unir módulos
+  de distinto ziklo/mintegi en una misma aula, ej. 2INF4_EEE + 1ELE1_EEE),
+  #5 Saio finkoak, #6 Murrizpen orokorrak (config única).
   #2 y #7 sin pantalla (automático/no aplica). Detalle en `FET/PROGRESO_ODOO.md`.
-- **Pendiente** (recontado 2026-06-29): `banaketa_id` **224/257** módulos origen
-  (faltan 4 origen + 29 copias DESDO_/HE_/ERREF aplazadas) y `teoria_praktika_id`
-  214 — import en curso desde Excel del usuario, ver
-  `FET/banaketa_import/PROGRESO_BANAKETA.md`; `capacity` (faltan **35** de 63
-  aulas); y el módulo generador `openeducat_fet` (aún no existe): generador
-  `.fet`, cliente HTTP a la 104 y parseo del resultado a `op.session` (hoy = 0).
+- **Datos FET (2026-07-01): COMPLETOS**. `banaketa_id` 0 sin, `faculty_id` 0 sin,
+  aula (Gela Esleipena) 0 sin, 20 DESDO_ en `edozein_tekniko`, **30 aulas docentes**
+  (`irakasgela=True`, las únicas que entran a FET) todas con `capacity`. Solo queda
+  `teoria_praktika_id` en 20 DESDO_ (opcional, no bloquea). Detalle en
+  `FET/banaketa_import/PROGRESO_BANAKETA.md`.
+- **Pendiente principal**: el módulo generador `openeducat_fet` (aún no existe):
+  generador `.fet`, cliente HTTP a la 104 y parseo del resultado a `op.session`
+  (hoy = 0). Ver plan y semánticas en `FET/PROGRESO_ODOO.md`.
 
 ## Stack
 

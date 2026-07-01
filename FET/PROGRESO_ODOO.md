@@ -156,6 +156,31 @@ filas). ⚠️ El método de un botón de cabecera en `<tree>` **NO lleva `@api.
 - ⚠️ **El aviso de aforo solo funciona donde haya `capacity`**: a 2026-06-29 hay
   **28 de 63 aulas** con aforo (faltan 35). Falta rellenar `capacity` en Gelak.
 
+### #4c · Modulu Bateratuak  ✅  (2026-07-01)
+Menú **Modulu Bateratuak** (seq 45). Modelo `op.fet.bateratua`: une módulos de
+**distintos zikloak/mintegiak** que se imparten JUNTOS en la misma aula
+(normalmente el mismo profe). Ej: `2INF4_EEE` + `1ELE1_EEE`.
+- **`subject_ids`** (M2M, col. "Moduluak"): selección **TOTALMENTE ABIERTA** (sin
+  dominio, cualquier `op.subject`); widget `many2many_tags` + `context={'show_code':1}`
+  (muestra el código); `@api.constrains` exige **≥2** módulos.
+- **`irakasle_ids`** (M2M editable, col. "Irakasleak"): profes que REALMENTE
+  estarán en el aula. Dominio al pool `irakasle_erabilgarri_ids` (profes de los
+  módulos); onchange auto-rellena con todos y el usuario **quita** los que no van
+  para dejar **solo uno**. En FET solo esos se asignan; los quitados quedan libres.
+- **`classroom_ids`** (M2M, col. "Gela erabilgarriak"): **opcional**. Dominio al
+  pool `gela_esleipena_ids` (`gela_teoria_ids`+`tailerra_ids` de los módulos, de
+  Gela Esleipena); onchange auto-rellena con todas; muestra el **código** de aula
+  (`context={'show_code':1}`). **Placeholder "Defektuzko Gela Esleipena"**: si se
+  deja vacío → FET usa las aulas de Gela esleipena de cada módulo.
+- `name` (computed = códigos unidos por " + "), `enabled`.
+- **Regla aulas (2026-07-01)**: solo aulas `irakasgela=True` (docentes) entran a
+  FET; enforced en todos los selectores de aula (Gela Esleipena, department.gela_ids,
+  #3, #4b grouping, `get_aula_columns`). 30 docentes (todas con aforo) + 36 no docentes.
+- Lista editable (`class="hlh-styled"`, decoration-muted si no enabled).
+- FET: `ConstraintActivitiesSameStartingTime` + **misma aula** (`SameRoom`) para
+  todos los módulos de la línea → una sola clase física. Distinto de #4
+  (copias DESDO_/HE_) y de #4b (agrupación de taldeak por aforo).
+
 ### #5 · Saio finkoak  ✅
 - Modelo `op.fet.fixed.session` (`subject_id`, `batch_id` related, `day`,
   `timing_id`). Actividad a hora fija (tutoría, etc.).
@@ -259,6 +284,17 @@ constancia/copia del trabajo. Cambios de código:
 - Permitido editar **teoría/práctica** en `DESDO_` (dominio `banaketa_orduak`) y
   banaketa **`edozein`** (malgua) para `DESDO_` (ver `PROGRESO_BANAKETA.md`).
 - Eliminado el campo muerto `subject_code` (warning "same label").
+- **Nuevo apartado #4c "Modulu Bateratuak"** (`op.fet.bateratua`): unir módulos de
+  distintos zikloak/mintegiak en la misma aula (selección abierta, aulas opcionales
+  → Gela esleipena por defecto). Ver sección #4c. Ampliado: `irakasle_ids` editable
+  (quitar profes para dejar solo uno), `classroom_ids` auto-rellenado desde Gela
+  Esleipena con código de aula (`show_code`) y placeholder "Defektuzko Gela Esleipena".
+- **Regla `irakasgela`**: solo aulas docentes entran a FET; filtro añadido en
+  `get_aula_columns` y en #4b grouping (los demás selectores ya lo tenían).
+- **Cierre de datos FET** (todo completo): `banaketa_id` 0 sin (HE_1MLE2_EAEL
+  copiado del origen; 9 DESDO_ a banaketa `edozein`), `faculty_id` 0 sin, aula 0 sin,
+  20 DESDO_ en `edozein_tekniko`, 30 aulas docentes todas con `capacity`. Solo queda
+  T/P de DESDO_ (opcional, no bloquea). `op.session` sigue a 0 (falta el generador).
 
 **Infra / copia de seguridad:**
 - Commit local `7971878` en rama `17.0`.

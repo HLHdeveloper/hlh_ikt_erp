@@ -299,6 +299,71 @@
                   sequence="40"
                   action="act_fet_simultaneity"/>
 
+        <!-- ============================================================= -->
+        <!-- Modulu Bateratuak (op.fet.bateratua): módulos de distintos      -->
+        <!-- zikloak/mintegiak que se imparten juntos en la misma aula      -->
+        <!-- ============================================================= -->
+        <record id="view_fet_bateratua_tree" model="ir.ui.view">
+            <field name="name">op.fet.bateratua.tree</field>
+            <field name="model">op.fet.bateratua</field>
+            <field name="arch" type="xml">
+                <tree string="Modulu bateratuak" editable="bottom"
+                      class="hlh-styled" decoration-muted="not enabled">
+                    <field name="subject_ids" widget="many2many_tags"
+                           string="Moduluak"
+                           context="{'show_code': 1}"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="irakasle_erabilgarri_ids" column_invisible="1"/>
+                    <field name="irakasle_ids" widget="many2many_tags"
+                           string="Irakasleak"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="gela_esleipena_ids" column_invisible="1"/>
+                    <field name="classroom_ids" widget="many2many_tags"
+                           string="Gela erabilgarriak"
+                           placeholder="Defektuzko Gela Esleipena"
+                           context="{'show_code': 1}"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    <field name="enabled" widget="boolean_toggle"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_fet_bateratua_search" model="ir.ui.view">
+            <field name="name">op.fet.bateratua.search</field>
+            <field name="model">op.fet.bateratua</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="subject_ids"/>
+                    <field name="classroom_ids"/>
+                    <filter string="Gaituta" name="f_enabled"
+                            domain="[('enabled','=',True)]"/>
+                    <filter string="Desgaituta" name="f_disabled"
+                            domain="[('enabled','=',False)]"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="act_fet_bateratua" model="ir.actions.act_window">
+            <field name="name">Modulu bateratuak</field>
+            <field name="res_model">op.fet.bateratua</field>
+            <field name="view_mode">tree</field>
+            <field name="search_view_id" ref="view_fet_bateratua_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Gela berean batera ematen diren moduluak (ziklo/mintegi
+                    desberdinetakoak izan daitezke). Adib. 2INF4_EEE + 1ELE1_EEE.
+                    Lerro bakoitzean 2 modulu edo gehiago hautatu; nahi izanez
+                    gero, gela erabilgarriak zehaztu (bestela Gela esleipenekoak).
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_fet_bateratua"
+                  name="Modulu Bateratuak"
+                  parent="menu_fet_constraints_root"
+                  sequence="45"
+                  action="act_fet_bateratua"/>
+
         <!-- ............ Desdoble/Agrupación manual (op.fet.grouping) ........ -->
         <record id="view_fet_grouping_tree" model="ir.ui.view">
             <field name="name">op.fet.grouping.tree</field>
@@ -336,6 +401,7 @@
                                 <field name="batch_ids" widget="many2many_tags"
                                        options="{'no_create': True}"/>
                                 <field name="classroom_ids" widget="many2many_tags"
+                                       domain="[('irakasgela', '=', True)]"
                                        options="{'no_create': True}"/>
                                 <field name="enabled"/>
                             </group>

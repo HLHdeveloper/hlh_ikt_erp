@@ -35,6 +35,16 @@ class OpClassroomExt(models.Model):
         string='Mintegiak',
     )
 
+    @api.depends_context('show_code')
+    @api.depends('code', 'name')
+    def _compute_display_name(self):
+        # Con context {'show_code': 1} (p.ej. tags de gela en Modulu Bateratuak)
+        # se muestra el CÓDIGO del aula (2-L07) en vez del name (polivalentea).
+        if not self.env.context.get('show_code'):
+            return super()._compute_display_name()
+        for rec in self:
+            rec.display_name = rec.code or ''
+
     @api.depends('code')
     def _compute_solairua(self):
         for rec in self:

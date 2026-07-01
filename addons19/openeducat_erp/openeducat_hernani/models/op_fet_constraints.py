@@ -2,6 +2,7 @@
 # Ordutegi murrizpenak — datos que FET necesita y NO salen de perfilazioak.
 # Cada apartado del menú "Ordutegi murrizpenak" es uno de estos modelos.
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 # Días lectivos (Lun-Vie). La clave se mapea al <Day> del .fet en euskera/castellano
 # en el generador; aquí etiquetamos en euskera para la UI.
@@ -480,6 +481,99 @@ class OpFetSimultaneity(models.Model):
             'view_mode': 'tree',
             'target': 'current',
         }
+
+
+class OpFetBateratua(models.Model):
+    """Apartado: Modulu Bateratuak.
+
+    Une módulos de distintos zikloak/mintegiak que se imparten JUNTOS en la
+    misma aula (normalmente el mismo profe), aunque pertenezcan a grupos
+    diferentes. Selección TOTALMENTE ABIERTA (cualquier `op.subject`, sin
+    dominio). Ej: `2INF4_EEE` + `1ELE1_EEE`.
+
+    FET: los módulos unidos van a la MISMA hora y a la MISMA aula
+    (ConstraintActivitiesSameStartingTime + SameRoom). Aulas: las de
+    `classroom_ids` si se indican; si no, las de Gela esleipena de cada módulo.
+    """
+    _name = 'op.fet.bateratua'
+    _description = 'FET: Modulu bateratuak'
+    _order = 'id desc'
+
+    name = fields.Char('Izena', compute='_compute_name', store=True)
+    subject_ids = fields.Many2many(
+        'op.subject', 'op_fet_bateratua_subject_rel', 'bateratua_id',
+        'subject_id', string='Moduluak', required=True,
+        help='Gela berean batera emango diren moduluak (edozein '
+             'ziklo/mintegitakoak). Gutxienez 2.')
+    # Aulas candidatas = las de Gela Esleipena (gela_teoria + tailerra) de los
+    # módulos unidos (pool para el dominio y el auto-relleno).
+    gela_esleipena_ids = fields.Many2many(
+        'op.classroom', string='Gela esleipenako gelak',
+        compute='_compute_gela_esleipena')
+    classroom_ids = fields.Many2many(
+        'op.classroom', 'op_fet_bateratua_room_rel', 'bateratua_id',
+        'classroom_id', string='Gela erabilgarriak',
+        domain="[('id', 'in', gela_esleipena_ids)]",
+        help='Gela esleipenean moduluei esleitutako gelak (lehenetsita '
+             'guztiak). Batzuk kentzeko, murriztu. Hutsik utziz gero, '
+             '**Defektuzko Gela Esleipena** aplikatuko da (modulu bakoitzaren '
+             'gelak).')
+    # Profes disponibles = los de los módulos unidos (pool para el dominio).
+    irakasle_erabilgarri_ids = fields.Many2many(
+        'op.faculty', string='Irakasle erabilgarriak',
+        compute='_compute_irakasle_erabilgarri')
+    # Profes que REALMENTE estarán en el aula. Por defecto todos los implicados;
+    # se pueden quitar para dejar solo uno (el que da la clase conjunta).
+    irakasle_ids = fields.Many2many(
+        'op.faculty', 'op_fet_bateratua_irakasle_rel', 'bateratua_id',
+        'faculty_id', string='Irakasleak',
+        domain="[('id', 'in', irakasle_erabilgarri_ids)]",
+        help='Gelan egongo diren irakasleak. Lehenetsita moduluetako guztiak; '
+             'bat bakarra uzteko, kendu besteak. Horrela FET-en gela berean '
+             'irakasle bakarra egongo da.')
+    enabled = fields.Boolean('Gaituta', default=True, index=True)
+
+    @api.depends('subject_ids', 'subject_ids.code')
+    def _compute_name(self):
+        for rec in self:
+            codes = rec.subject_ids.mapped('code')
+            rec.name = ' + '.join(codes) if codes else '—'
+
+    @api.depends('subject_ids', 'subject_ids.faculty_id')
+    def _compute_irakasle_erabilgarri(self):
+        for rec in self:
+            rec.irakasle_erabilgarri_ids = rec.subject_ids.mapped('faculty_id')
+
+    @api.depends('subject_ids', 'subject_ids.gela_teoria_ids',
+                 'subject_ids.tailerra_ids')
+    def _compute_gela_esleipena(self):
+        for rec in self:
+            rec.gela_esleipena_ids = (
+                rec.subject_ids.mapped('gela_teoria_ids')
+                | rec.subject_ids.mapped('tailerra_ids'))
+
+    @api.onchange('subject_ids')
+    def _onchange_subject_ids(self):
+        # Auto-rellena irakasle_ids y classroom_ids con lo disponible (profes de
+        # los módulos / aulas de Gela Esleipena); conserva lo que el usuario ya
+        # haya dejado (aunque cambie de módulos), y si no queda nada válido
+        # vuelve a todo. classroom_ids vacío = Defektuzko Gela Esleipena.
+        for rec in self:
+            available = rec.subject_ids.mapped('faculty_id')
+            keep_i = rec.irakasle_ids.filtered(lambda f: f in available)
+            rec.irakasle_ids = keep_i if keep_i else available
+
+            pool = (rec.subject_ids.mapped('gela_teoria_ids')
+                    | rec.subject_ids.mapped('tailerra_ids'))
+            keep_g = rec.classroom_ids.filtered(lambda c: c in pool)
+            rec.classroom_ids = keep_g if keep_g else pool
+
+    @api.constrains('subject_ids')
+    def _check_min_two(self):
+        for rec in self:
+            if len(rec.subject_ids) < 2:
+                raise ValidationError(
+                    'Modulu bateratu batek gutxienez 2 modulu behar ditu.')
 
 
 class OpFetGrouping(models.Model):
