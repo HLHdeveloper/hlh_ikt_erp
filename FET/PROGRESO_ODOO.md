@@ -160,9 +160,18 @@ filas). ⚠️ El método de un botón de cabecera en `<tree>` **NO lleva `@api.
 Menú **Modulu Bateratuak** (seq 45). Modelo `op.fet.bateratua`: une módulos de
 **distintos zikloak/mintegiak** que se imparten JUNTOS en la misma aula
 (normalmente el mismo profe). Ej: `2INF4_EEE` + `1ELE1_EEE`.
-- **`subject_ids`** (M2M, col. "Moduluak"): selección **TOTALMENTE ABIERTA** (sin
-  dominio, cualquier `op.subject`); widget `many2many_tags` + `context={'show_code':1}`
-  (muestra el código); `@api.constrains` exige **≥2** módulos.
+- **`subject_ids`** (M2M, col. "Moduluak"): solo **módulos primarios**
+  (`domain="[('da_kopia','=',False)]"` → **excluye `DESDO_`/`HE_`**); widget
+  `many2many_tags` + `context={'show_code':1}` (muestra el código);
+  `@api.constrains` exige **≥2** módulos.
+- **Regla de responsabilidad única (2026-07-02)**: las copias `DESDO_`/`HE_` se
+  configuran **solo** en #4 *DESDOBLE/HE banaketa*; los módulos primarios
+  (jatorrizkoak) se agrupan **solo** aquí. Evita el solapamiento de configuración
+  (un `DESDO_` no puede quedar a la vez en #4 y en #4c, generando `SameStartingTime`
+  contradictorios). Enforced con el dominio `da_kopia=False` en `subject_ids`
+  (reutiliza el flag `op.subject.da_kopia`). Un módulo primario en #4c **sí** puede
+  tener su copia `DESDO_` en #4: no es duplicidad — el bateratua fija hora+aula del
+  primario y el desdoble añade el 2º profe sobre esa misma clase física.
 - **`irakasle_ids`** (M2M editable, col. "Irakasleak"): profes que REALMENTE
   estarán en el aula. Dominio al pool `irakasle_erabilgarri_ids` (profes de los
   módulos); onchange auto-rellena con todos y el usuario **quita** los que no van
@@ -263,6 +272,17 @@ security/ir.model.access.csv     # ACL de los op.fet.*
 ---
 
 ## 7. Historial de cambios
+
+### 2026-07-02 — Modulu Bateratuak: sin copias DESDO_/HE_
+- **Regla de responsabilidad única** entre #4 y #4c para evitar solapamiento de
+  configuración: las copias `DESDO_`/`HE_` van **solo** en *DESDOBLE/HE banaketa*;
+  los primarios se agrupan **solo** en *Modulu Bateratuak*.
+- Añadido `domain="[('da_kopia','=',False)]"` al campo `subject_ids` de
+  `op.fet.bateratua` (`op_fet_constraints.py`): el buscador de "Moduluak" ya no
+  muestra `DESDO_`/`HE_`. `help` actualizado. Dominio a nivel de campo → aplica en
+  lista, búsqueda y vistas futuras (sin tocar XML).
+- Verificado: 1 registro `op.fet.bateratua` existente, **sin** copias → sin
+  limpieza de datos. Módulo recargado (`-u openeducat_hernani`) + `docker restart`.
 
 ### 2026-07-01 — DESDOBLE/HE banaketa: flexibilización + GitHub
 Sesión centrada en la lista de simultaneidades (`op.fet.simultaneity`) y en dejar

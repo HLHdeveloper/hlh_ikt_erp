@@ -503,8 +503,11 @@ class OpFetBateratua(models.Model):
     subject_ids = fields.Many2many(
         'op.subject', 'op_fet_bateratua_subject_rel', 'bateratua_id',
         'subject_id', string='Moduluak', required=True,
+        domain="[('da_kopia', '=', False)]",
         help='Gela berean batera emango diren moduluak (edozein '
-             'ziklo/mintegitakoak). Gutxienez 2.')
+             'ziklo/mintegitakoak). Gutxienez 2. DESDO_/HE_ kopiak EZ dira '
+             'hemen konfiguratzen (DESDOBLE/HE banaketa atalean baizik); '
+             'jatorrizko moduluak soilik.')
     # Aulas candidatas = las de Gela Esleipena (gela_teoria + tailerra) de los
     # módulos unidos (pool para el dominio y el auto-relleno).
     gela_esleipena_ids = fields.Many2many(

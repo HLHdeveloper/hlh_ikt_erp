@@ -42,7 +42,9 @@ de la API FET en `FET/INTEGRACION_ODOO.md`. Resumen de lo construido:
   (antes "Saio simultaneoak": desdoble/eleanitza auto con `jatorri_ids`
   multi-origen, modua banatua/berean, `irakasle_kop` por fila + agrupaciones
   manuales con aforo), **#4c Modulu Bateratuak** (`op.fet.bateratua`: unir módulos
-  de distinto ziklo/mintegi en una misma aula, ej. 2INF4_EEE + 1ELE1_EEE),
+  de distinto ziklo/mintegi en una misma aula, ej. 2INF4_EEE + 1ELE1_EEE; el
+  selector "Moduluak" **excluye copias DESDO_/HE_** vía `domain da_kopia=False` —
+  regla de responsabilidad única: las copias solo en #4, los primarios solo en #4c),
   #5 Saio finkoak, #6 Murrizpen orokorrak (config única).
   #2 y #7 sin pantalla (automático/no aplica). Detalle en `FET/PROGRESO_ODOO.md`.
 - **Datos FET (2026-07-01): COMPLETOS**. `banaketa_id` 0 sin, `faculty_id` 0 sin,
